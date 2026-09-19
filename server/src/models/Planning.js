@@ -7,6 +7,7 @@ const recurrenceSchema = new mongoose.Schema(
 
 const billSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true }, amount: { type: Number, required: true, min: 0.01 },
     category: { type: String, default: 'Bills' }, accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' },
     dueDate: { type: Date, required: true, index: true }, recurrence: recurrenceSchema,
@@ -17,6 +18,7 @@ const billSchema = new mongoose.Schema(
 
 const subscriptionSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true }, amount: { type: Number, required: true, min: 0.01 },
     currency: { type: String, default: 'DZD' }, billingCycle: { type: String, enum: ['weekly', 'monthly', 'quarterly', 'yearly', 'custom'], default: 'monthly' },
     nextBillingDate: { type: Date, required: true, index: true }, accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' },
@@ -27,6 +29,7 @@ const subscriptionSchema = new mongoose.Schema(
 
 const goalSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true, trim: true }, description: String,
     type: { type: String, enum: ['financial', 'personal'], default: 'financial' }, targetAmount: { type: Number, min: 0 },
     currentAmount: { type: Number, min: 0, default: 0 }, accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' },

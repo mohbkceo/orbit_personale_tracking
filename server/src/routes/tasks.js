@@ -6,7 +6,7 @@ import { success } from '../utils/api.js';
 import { archiveTask, createTask, listTasks, updateTask } from '../services/taskService.js';
 
 export const taskRoutes = Router();
-taskRoutes.get('/', asyncHandler(async (req, res) => { const result = await listTasks(req.query); return success(res, result.data, 200, { pagination: result.pagination }); }));
-taskRoutes.post('/', validate(taskInput), asyncHandler(async (req, res) => success(res, await createTask(req.body), 201)));
-taskRoutes.patch('/:id', validate(taskUpdate), asyncHandler(async (req, res) => success(res, await updateTask(req.params.id, req.body))));
-taskRoutes.delete('/:id', asyncHandler(async (req, res) => success(res, await archiveTask(req.params.id))));
+taskRoutes.get('/', asyncHandler(async (req, res) => { const result = await listTasks(req.user._id, req.query); return success(res, result.data, 200, { pagination: result.pagination }); }));
+taskRoutes.post('/', validate(taskInput), asyncHandler(async (req, res) => success(res, await createTask(req.user._id, req.body), 201)));
+taskRoutes.patch('/:id', validate(taskUpdate), asyncHandler(async (req, res) => success(res, await updateTask(req.user._id, req.params.id, req.body))));
+taskRoutes.delete('/:id', asyncHandler(async (req, res) => success(res, await archiveTask(req.user._id, req.params.id))));

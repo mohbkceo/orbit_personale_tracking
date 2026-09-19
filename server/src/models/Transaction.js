@@ -13,6 +13,7 @@ export const TRANSACTION_TYPES = [
 
 const transactionSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     type: { type: String, enum: TRANSACTION_TYPES, required: true, index: true },
     amount: { type: Number, required: true, min: 0.01 },
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true, index: true },
@@ -31,6 +32,6 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-transactionSchema.index({ date: -1, type: 1, accountId: 1 });
+transactionSchema.index({ user: 1, date: -1, type: 1, accountId: 1 });
 transactionSchema.index({ description: 'text', category: 'text', tags: 'text' });
 export const Transaction = mongoose.model('Transaction', transactionSchema);

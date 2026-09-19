@@ -48,7 +48,6 @@ export const settingsInput = z.object({
   dateFormat: z.string().max(40).optional(), weekStartsOn: z.coerce.number().int().min(0).max(6).optional(), theme: z.enum(['light', 'dark', 'system']).optional(),
   expenseCategories: z.array(z.string().min(1)).optional(), incomeCategories: z.array(z.string().min(1)).optional(),
   telegram: z.object({
-    enabled: z.boolean().optional(), botToken: z.string().min(10).optional(), allowedTelegramUserIds: z.array(z.coerce.number().int().positive()).optional(),
     defaultExpenseAccount: optionalId, defaultIncomeAccount: optionalId, dailySummaryEnabled: z.boolean().optional(),
     dailySummaryTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(), morningSummaryEnabled: z.boolean().optional(),
     morningSummaryTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),

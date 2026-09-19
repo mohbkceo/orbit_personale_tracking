@@ -8,9 +8,9 @@ import { archiveTransaction, createTransaction, listTransactions, updateTransact
 export const transactionRoutes = Router();
 
 transactionRoutes.get('/', asyncHandler(async (req, res) => {
-  const result = await listTransactions(req.query);
+  const result = await listTransactions(req.user._id, req.query);
   return success(res, result.data, 200, { pagination: result.pagination });
 }));
-transactionRoutes.post('/', validate(transactionInput), asyncHandler(async (req, res) => success(res, await createTransaction(req.body), 201)));
-transactionRoutes.patch('/:id', validate(transactionUpdate), asyncHandler(async (req, res) => success(res, await updateTransaction(req.params.id, req.body))));
-transactionRoutes.delete('/:id', asyncHandler(async (req, res) => success(res, await archiveTransaction(req.params.id))));
+transactionRoutes.post('/', validate(transactionInput), asyncHandler(async (req, res) => success(res, await createTransaction(req.user._id, req.body), 201)));
+transactionRoutes.patch('/:id', validate(transactionUpdate), asyncHandler(async (req, res) => success(res, await updateTransaction(req.user._id, req.params.id, req.body))));
+transactionRoutes.delete('/:id', asyncHandler(async (req, res) => success(res, await archiveTransaction(req.user._id, req.params.id))));

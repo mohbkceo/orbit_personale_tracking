@@ -14,6 +14,7 @@ const recurrenceSchema = new mongoose.Schema(
 
 const taskSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true, trim: true, maxlength: 180 },
     description: { type: String, default: '', maxlength: 3000 },
     status: { type: String, enum: ['todo', 'in_progress', 'completed', 'cancelled'], default: 'todo', index: true },
@@ -35,4 +36,5 @@ const taskSchema = new mongoose.Schema(
 );
 
 taskSchema.index({ title: 'text', description: 'text', tags: 'text' });
+taskSchema.index({ user: 1, archived: 1, dueDate: 1 });
 export const Task = mongoose.model('Task', taskSchema);

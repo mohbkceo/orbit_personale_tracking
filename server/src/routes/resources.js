@@ -18,10 +18,10 @@ const inputs = {
 
 export const resourceRoutes = Router();
 for (const [path, [Model, schema]] of Object.entries(inputs)) {
-  resourceRoutes.get(`/${path}`, asyncHandler(async (_req, res) => success(res, await Model.find().sort({ pinned: -1, createdAt: -1 }).limit(100))));
-  resourceRoutes.post(`/${path}`, validate(schema), asyncHandler(async (req, res) => success(res, await Model.create(req.body), 201)));
-  resourceRoutes.patch(`/${path}/:id`, validate(schema.partial()), asyncHandler(async (req, res) => { const item = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }); if (!item) throw new AppError('Record not found', 404); return success(res, item); }));
-  resourceRoutes.delete(`/${path}/:id`, asyncHandler(async (req, res) => { const item = await Model.findByIdAndDelete(req.params.id); if (!item) throw new AppError('Record not found', 404); return success(res, { deleted: true }); }));
+  resourceRoutes.get(`/${path}`, asyncHandler(async (req, res) => success(res, await Model.find({ user: req.user._id }).sort({ pinned: -1, createdAt: -1 }).limit(100))));
+  resourceRoutes.post(`/${path}`, validate(schema), asyncHandler(async (req, res) => success(res, await Model.create({ ...req.body, user: req.user._id }), 201)));
+  resourceRoutes.patch(`/${path}/:id`, validate(schema.partial()), asyncHandler(async (req, res) => { const item = await Model.findOneAndUpdate({ _id: req.params.id, user: req.user._id }, req.body, { new: true, runValidators: true }); if (!item) throw new AppError('Record not found', 404); return success(res, item); }));
+  resourceRoutes.delete(`/${path}/:id`, asyncHandler(async (req, res) => { const item = await Model.findOneAndDelete({ _id: req.params.id, user: req.user._id }); if (!item) throw new AppError('Record not found', 404); return success(res, { deleted: true }); }));
 }
 
-resourceRoutes.post('/habits/:id/log', asyncHandler(async (req, res) => { const habit = await Habit.findByIdAndUpdate(req.params.id, { $push: { logs: { date: req.body.date || new Date(), value: req.body.value || 1 } } }, { new: true }); if (!habit) throw new AppError('Habit not found', 404); return success(res, habit); }));
+resourceRoutes.post('/habits/:id/log', validate(z.object({ date: z.coerce.date().optional(), value: z.coerce.number().positive().max(1000).optional() })), asyncHandler(async (req, res) => { const habit = await Habit.findOneAndUpdate({ _id: req.params.id, user: req.user._id }, { $push: { logs: { date: req.body.date || new Date(), value: req.body.value || 1 } } }, { new: true }); if (!habit) throw new AppError('Habit not found', 404); return success(res, habit); }));

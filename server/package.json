@@ -6,15 +6,20 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/seed.js",
+    "bootstrap:admin": "node src/scripts/bootstrapAdmin.js",
+    "migrate:legacy": "node src/scripts/migrateLegacy.js",
     "test": "vitest run"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dayjs": "^1.11.18",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.18.0",
     "node-cron": "^4.2.1",
     "zod": "^4.1.5"

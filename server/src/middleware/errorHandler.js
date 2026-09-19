@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 export function notFound(req, _res, next) {
-  const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
+  const error = new Error('Route not found');
   error.status = 404;
   next(error);
 }
@@ -10,6 +10,7 @@ export function errorHandler(error, _req, res, _next) {
   let status = error.status || 500;
   let message = error.message || 'Internal server error';
   let errors = error.errors;
+  let code = error.code && typeof error.code === 'string' ? error.code : undefined;
 
   if (error instanceof mongoose.Error.ValidationError) {
     status = 422;
@@ -23,6 +24,10 @@ export function errorHandler(error, _req, res, _next) {
     message = 'A record with those values already exists';
   }
 
-  if (status >= 500 && process.env.NODE_ENV !== 'test') console.error(error);
-  res.status(status).json({ success: false, message, ...(errors ? { errors } : {}) });
+  if (status >= 500) {
+    if (process.env.NODE_ENV !== 'test') console.error(error);
+    message = 'Internal server error';
+    code = 'INTERNAL_ERROR';
+  }
+  res.status(status).json({ success: false, message, ...(code ? { code } : {}), ...(errors ? { errors } : {}) });
 }

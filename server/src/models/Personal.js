@@ -8,7 +8,10 @@ const schemas = {
   Wishlist: new mongoose.Schema({ name: { type: String, required: true }, expectedPrice: Number, priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' }, category: String, url: String, targetDate: Date, status: { type: String, enum: ['wanted', 'saving', 'purchased', 'cancelled'], default: 'wanted' }, notes: String, goalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Goal' } }, { timestamps: true }),
 };
 
-for (const schema of Object.values(schemas)) schema.index({ createdAt: -1 });
+for (const schema of Object.values(schemas)) {
+  schema.add({ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true } });
+  schema.index({ user: 1, createdAt: -1 });
+}
 schemas.Contact.index({ name: 'text', notes: 'text' });
 schemas.Project.index({ name: 'text', description: 'text' });
 schemas.Note.index({ title: 'text', content: 'text', tags: 'text' });

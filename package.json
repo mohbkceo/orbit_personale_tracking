@@ -9,6 +9,8 @@
     "build": "npm run build -w client",
     "start": "npm run start -w server",
     "seed": "npm run seed -w server",
+    "bootstrap:admin": "npm run bootstrap:admin -w server",
+    "migrate:legacy": "npm run migrate:legacy -w server",
     "test": "npm run test -w server",
     "lint": "eslint .",
     "format": "prettier --write ."

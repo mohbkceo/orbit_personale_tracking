@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.AUTH_JWT_SECRET = 'unit-test-auth-secret-that-is-long-and-random-enough';
+process.env.ORBIT_TELEGRAM_BOT_TOKEN = 'test-bot-token';
+process.env.ORBIT_TELEGRAM_BOT_USERNAME = 'orbit_test_bot';
+process.env.SUPER_ADMIN_EMAIL = 'root@example.com';
+process.env.SUPER_ADMIN_PASSWORD = 'very-long-root-password';
+process.env.SUPER_ADMIN_NAME = 'Root Admin';
+process.env.ORBIT_OWNER_EMAIL = 'legacy@example.com';
+process.env.ORBIT_OWNER_NAME = 'Legacy Owner';
+process.env.ORBIT_OWNER_INITIAL_PASSWORD = 'very-long-owner-password';

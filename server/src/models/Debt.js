@@ -13,6 +13,7 @@ const paymentSchema = new mongoose.Schema(
 
 const debtSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     personName: { type: String, required: true, trim: true, maxlength: 120 },
     personId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contact', default: null, index: true },
     type: { type: String, enum: ['receivable', 'payable'], required: true, index: true },
