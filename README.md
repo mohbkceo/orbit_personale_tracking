@@ -20,6 +20,22 @@ server/                      Express + Mongoose
 
 The unified `Transaction` ledger is the financial source of truth. Account balances are derived from the opening balance plus ledger movements. Transfers and savings movements decrease one owned account and increase another without affecting income or expenses. Debt payments create a distinct ledger movement and update the debt once, while creating a debt alone never changes cash.
 
+## Reminders and prospective memory
+
+Reminders are independent records with an optional link to a task, debt, bill, subscription, or goal. Each record has a trigger, status, delivery state, and dedicated `ReminderEvent` history. A due date does not itself mean a notification was delivered or an item was completed. New entities use `Automatic` mode by default, while `Custom` and `Off` are available in their forms and on the linked reminder plan page. Existing documents without a mode behave as Automatic. The defaults are product choices informed by prospective-memory principles, not scientifically proven exact intervals.
+
+The reminder policy creates conservative cues: dated tasks get an action cue and at most one planned follow-up; exact-time high-priority tasks can get preparation; debts and bills get pre-due, due, and limited overdue cues; subscriptions get a renewal warning; goals get a weekly progress review. Users can edit or cancel each generated cue without later regeneration overwriting that choice. A task completion, debt payment, bill payment, or other linked entity resolution closes its remaining cues through the domain service. Financial reminder buttons call the existing payment flow.
+
+The minute worker reads indexed due reminders, claims each in MongoDB with a lease, checks the linked entity, quiet and active hours, follow-up cap, and recent equivalent delivery, then sends through Telegram or surfaces it in the web attention schedule. Two or three simple low-priority task or standalone cues can be bundled into one Telegram message. A sent cue remains unresolved until the user completes, snoozes, blocks, cancels, or resolves its linked entity. Recurring cues retain their event history and advance to a later occurrence. Old standalone cues beyond seven days expire; old recurring occurrences advance without replaying the backlog. The morning summary reports counts rather than re-sending the same item as a separate due-today alert.
+
+The web **Reminders** page offers Now, Upcoming, Snoozed, Waiting, Recurring, and History views. Creation keeps title, date, time, repeat, and optional link visible; priority, delivery, and context live under advanced settings. **Settings → Reminders** controls automatic generation, hours, follow-ups, and new-entity defaults. Telegram understands `/reminders`, `show reminders`, `remind me tomorrow at 9 to call Karim`, `remind me in 2 hours to check deployment`, `remind me every Friday to review debts`, `cancel reminder <id>`, and `update reminder <id> tomorrow at 9 to ...`. Ambiguous times receive a clarification request. Inline reminder actions support Done, Later, Blocked, snooze choices, and Resume. For arbitrary snoozes use `/snooze <id> YYYY-MM-DD HH:mm`; for a partial debt payment use `/debtpay <id> AMOUNT` after setting a default payment account.
+
+Authenticated reminder endpoints are under `/api/reminders`: list, create, read, update, cancel, complete, snooze, block, resume, event history, and entity plan/mode endpoints. All linked entities are checked against the requesting user. Timestamps are stored in UTC and scheduling uses the workspace timezone (default `Africa/Algiers`). The first-class `Reminder` and `ReminderEvent` collections require indexes; the backfill command creates them.
+
+After deploying to an existing workspace, run `npm run backfill:reminders` once. It is repeat-safe, does not delete records, and scans at most 100 open/upcoming records of each supported type per user within a 60-day horizon (plus active goals). It does not run automatically on server startup or replay old overdue notifications. Re-enabling smart reminders from Settings also reconciles the same bounded horizon. Increase the cap deliberately in the backfill service if a workspace needs a larger historical rollout.
+
+MongoDB claims prevent overlapping workers from sending the same due cue during normal operation. Telegram does not provide an idempotency key for `sendMessage`, so a process crash in the narrow interval after Telegram accepts a message but before MongoDB records success can still produce a retry; check `ReminderEvent` delivery history when investigating such a case.
+
 ## Prerequisites
 
 - Node.js 20.19+ or 22.12+
@@ -78,6 +94,7 @@ npm run build     # production client build
 npm start         # run Express; serves client/dist when NODE_ENV=production
 npm run bootstrap:admin # create the first Super Admin only if none exists
 npm run migrate:legacy  # assign unowned legacy data to the owner, repeat-safe
+npm run backfill:reminders # create reminder indexes and seed upcoming automatic plans
 npm run seed      # add sample data only if the owner has none; never deletes data
 npm test          # authentication, activation, tenancy, Telegram, migration and ledger tests
 npm run lint      # ESLint across both workspaces

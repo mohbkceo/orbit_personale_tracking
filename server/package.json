@@ -8,6 +8,7 @@
     "seed": "node src/seed.js",
     "bootstrap:admin": "node src/scripts/bootstrapAdmin.js",
     "migrate:legacy": "node src/scripts/migrateLegacy.js",
+    "backfill:reminders": "node src/scripts/backfillReminders.js",
     "test": "vitest run"
   },
   "dependencies": {

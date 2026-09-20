@@ -25,6 +25,7 @@ import { adminUserRoutes } from './routes/adminUsers.js';
 import { adminAdminRoutes } from './routes/adminAdmins.js';
 import { adminOperationRoutes } from './routes/adminOperations.js';
 import { telegramLinkRoutes } from './routes/telegramLink.js';
+import { reminderRoutes } from './routes/reminders.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -54,6 +55,7 @@ app.use('/api/expenses', userAuth, accessGuard, (req, _res, next) => { req.query
 app.use('/api/income', userAuth, accessGuard, (req, _res, next) => { req.query.type = 'income'; if (req.method === 'POST') req.body.type = 'income'; next(); }, transactionRoutes);
 app.use('/api/debts', userAuth, accessGuard, debtRoutes);
 app.use('/api/tasks', userAuth, accessGuard, taskRoutes);
+app.use('/api/reminders', userAuth, accessGuard, reminderRoutes);
 app.use('/api/bills', userAuth, accessGuard, billRoutes);
 app.use('/api/subscriptions', userAuth, accessGuard, subscriptionRoutes);
 app.use('/api/goals', userAuth, accessGuard, goalRoutes);

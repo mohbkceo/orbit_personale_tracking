@@ -21,10 +21,15 @@ const taskSchema = new mongoose.Schema(
     priority: { type: String, enum: ['low', 'medium', 'high', 'urgent'], default: 'medium', index: true },
     dueDate: { type: Date, default: null, index: true },
     dueTime: { type: String, default: '' },
+    reminderMode: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
     category: { type: String, default: 'Personal' },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
     recurring: { type: Boolean, default: false },
     recurringRule: recurrenceSchema,
+    seriesId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
+    occurrenceKey: { type: String, default: null },
+    nextOccurrenceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
+    recurrenceEnded: { type: Boolean, default: false },
     tags: [{ type: String, trim: true }],
     relatedEntityType: String,
     relatedEntityId: mongoose.Schema.Types.ObjectId,
@@ -37,4 +42,5 @@ const taskSchema = new mongoose.Schema(
 
 taskSchema.index({ title: 'text', description: 'text', tags: 'text' });
 taskSchema.index({ user: 1, archived: 1, dueDate: 1 });
+taskSchema.index({ user: 1, seriesId: 1, occurrenceKey: 1 }, { unique: true, partialFilterExpression: { seriesId: { $type: 'objectId' }, occurrenceKey: { $type: 'string' } } });
 export const Task = mongoose.model('Task', taskSchema);

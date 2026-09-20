@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowDownLeft, ArrowUpRight, HandCoins, Plus, UserRound } from 'lucide-react';
 import { endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
@@ -6,8 +7,345 @@ import { useData } from '../hooks/useData.js';
 import { cn, formatDate, formatMoney, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 
-function DebtForm({ open, onClose, onSaved }) { const { settings, toast } = useApp(); const [busy, setBusy] = useState(false); const [form, setForm] = useState({ personName: '', type: 'receivable', originalAmount: '', currency: settings.defaultCurrency || 'DZD', description: '', date: todayInput(), dueDate: '' }); const set = (k) => (e) => setForm((v) => ({ ...v, [k]: e.target.value })); async function submit(e) { e.preventDefault(); setBusy(true); try { await endpoints.create('debts', form); toast('Debt created'); onSaved(); onClose(); } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); } } return <Modal open={open} onClose={onClose} title="Add debt" description="Creating a debt does not change an account balance"><form onSubmit={submit} className="space-y-4"><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setForm((v) => ({ ...v, type: 'receivable' }))} className={cn('rounded-xl border p-3 text-left text-sm font-bold', form.type === 'receivable' ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10' : 'border-[#dce1dc] dark:border-white/10')}><ArrowDownLeft size={18} className="mb-2"/>They owe me</button><button type="button" onClick={() => setForm((v) => ({ ...v, type: 'payable' }))} className={cn('rounded-xl border p-3 text-left text-sm font-bold', form.type === 'payable' ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-400/10' : 'border-[#dce1dc] dark:border-white/10')}><ArrowUpRight size={18} className="mb-2"/>I owe them</button></div><label><span className="label">Person</span><input required autoFocus className="field" value={form.personName} onChange={set('personName')} placeholder="Name"/></label><label><span className="label">Amount</span><input required type="number" min="0.01" className="field text-lg font-bold" value={form.originalAmount} onChange={set('originalAmount')} placeholder="0"/></label><div className="grid grid-cols-2 gap-3"><label><span className="label">Created</span><input type="date" className="field" value={form.date} onChange={set('date')}/></label><label><span className="label">Due date</span><input type="date" className="field" value={form.dueDate} onChange={set('dueDate')}/></label></div><label><span className="label">What for?</span><input className="field" value={form.description} onChange={set('description')}/></label><button disabled={busy} className="btn-primary w-full">{busy ? 'Saving…' : 'Create debt'}</button></form></Modal>; }
+function DebtForm({ open, onClose, onSaved }) {
+  const { settings, toast } = useApp();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    personName: '',
+    type: 'receivable',
+    originalAmount: '',
+    currency: settings.defaultCurrency || 'DZD',
+    description: '',
+    date: todayInput(),
+    dueDate: '',
+    reminderMode: 'automatic',
+  });
+  const set = (key) => (event) => setForm((value) => ({ ...value, [key]: event.target.value }));
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const result = await endpoints.create('debts', form);
+      toast('Debt created');
+      onSaved();
+      onClose();
+      if (form.reminderMode === 'custom')
+        navigate(`/reminders?entityType=debt&entityId=${result.data._id}`);
+    } catch (error) {
+      toast(error.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Add debt"
+      description="Creating a debt does not change an account balance"
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setForm((value) => ({ ...value, type: 'receivable' }))}
+            className={cn(
+              'rounded-xl border p-3 text-left text-sm font-bold',
+              form.type === 'receivable'
+                ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10'
+                : 'border-[#dce1dc] dark:border-white/10',
+            )}
+          >
+            <ArrowDownLeft size={18} className="mb-2" />
+            They owe me
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm((value) => ({ ...value, type: 'payable' }))}
+            className={cn(
+              'rounded-xl border p-3 text-left text-sm font-bold',
+              form.type === 'payable'
+                ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-400/10'
+                : 'border-[#dce1dc] dark:border-white/10',
+            )}
+          >
+            <ArrowUpRight size={18} className="mb-2" />I owe them
+          </button>
+        </div>
+        <label>
+          <span className="label">Person</span>
+          <input
+            required
+            autoFocus
+            className="field"
+            value={form.personName}
+            onChange={set('personName')}
+            placeholder="Name"
+          />
+        </label>
+        <label>
+          <span className="label">Amount</span>
+          <input
+            required
+            type="number"
+            min="0.01"
+            className="field text-lg font-bold"
+            value={form.originalAmount}
+            onChange={set('originalAmount')}
+            placeholder="0"
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label>
+            <span className="label">Created</span>
+            <input type="date" className="field" value={form.date} onChange={set('date')} />
+          </label>
+          <label>
+            <span className="label">Due date</span>
+            <input type="date" className="field" value={form.dueDate} onChange={set('dueDate')} />
+          </label>
+        </div>
+        <label>
+          <span className="label">What for?</span>
+          <input className="field" value={form.description} onChange={set('description')} />
+        </label>
+        <label>
+          <span className="label">Reminders</span>
+          <select className="field" value={form.reminderMode} onChange={set('reminderMode')}>
+            <option value="automatic">Automatic</option>
+            <option value="custom">Custom</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <button disabled={busy} className="btn-primary w-full">
+          {busy ? 'Saving…' : 'Create debt'}
+        </button>
+      </form>
+    </Modal>
+  );
+}
 
-function PaymentForm({ debt, onClose, onSaved }) { const { toast } = useApp(); const [accounts, setAccounts] = useState([]); const [busy, setBusy] = useState(false); const [form, setForm] = useState({ amount: debt?.remainingAmount || '', accountId: '', date: todayInput(), notes: '' }); useEffect(() => { if (debt) endpoints.list('accounts').then((r) => { setAccounts(r.data); setForm((v) => ({ ...v, accountId: r.data[0]?._id || '' })); }); }, [debt]); const set = (k) => (e) => setForm((v) => ({ ...v, [k]: e.target.value })); async function submit(e) { e.preventDefault(); setBusy(true); try { await endpoints.create(`debts/${debt._id}/payments`, form); toast('Payment recorded in the ledger'); onSaved(); onClose(); } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); } } return <Modal open={Boolean(debt)} onClose={onClose} title="Record payment" description={`${debt?.personName} · ${formatMoney(debt?.remainingAmount, debt?.currency)} remaining`}><form onSubmit={submit} className="space-y-4"><label><span className="label">Amount</span><input autoFocus required max={debt?.remainingAmount} min="0.01" type="number" className="field text-lg font-bold" value={form.amount} onChange={set('amount')}/></label><label><span className="label">Account</span><select required className="field" value={form.accountId} onChange={set('accountId')}>{accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}</select></label><label><span className="label">Date</span><input type="date" className="field" value={form.date} onChange={set('date')}/></label><button disabled={busy} className="btn-primary w-full">{busy ? 'Recording…' : 'Record payment'}</button></form></Modal>; }
+function PaymentForm({ debt, onClose, onSaved }) {
+  const { toast } = useApp();
+  const [accounts, setAccounts] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    amount: debt?.remainingAmount || '',
+    accountId: '',
+    date: todayInput(),
+    notes: '',
+  });
+  useEffect(() => {
+    if (debt)
+      endpoints.list('accounts').then((r) => {
+        setAccounts(r.data);
+        setForm((v) => ({ ...v, accountId: r.data[0]?._id || '' }));
+      });
+  }, [debt]);
+  const set = (k) => (e) => setForm((v) => ({ ...v, [k]: e.target.value }));
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await endpoints.create(`debts/${debt._id}/payments`, form);
+      toast('Payment recorded in the ledger');
+      onSaved();
+      onClose();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal
+      open={Boolean(debt)}
+      onClose={onClose}
+      title="Record payment"
+      description={`${debt?.personName} · ${formatMoney(debt?.remainingAmount, debt?.currency)} remaining`}
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <label>
+          <span className="label">Amount</span>
+          <input
+            autoFocus
+            required
+            max={debt?.remainingAmount}
+            min="0.01"
+            type="number"
+            className="field text-lg font-bold"
+            value={form.amount}
+            onChange={set('amount')}
+          />
+        </label>
+        <label>
+          <span className="label">Account</span>
+          <select required className="field" value={form.accountId} onChange={set('accountId')}>
+            {accounts.map((a) => (
+              <option key={a._id} value={a._id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="label">Date</span>
+          <input type="date" className="field" value={form.date} onChange={set('date')} />
+        </label>
+        <button disabled={busy} className="btn-primary w-full">
+          {busy ? 'Recording…' : 'Record payment'}
+        </button>
+      </form>
+    </Modal>
+  );
+}
 
-export default function Debts() { const { settings } = useApp(); const [formOpen, setFormOpen] = useState(false); const [paying, setPaying] = useState(null); const [type, setType] = useState(''); const { data, loading, error, reload } = useData(() => endpoints.list('debts', { type: type || undefined, limit: 100 }), [type]); const debts = data?.data || []; const totals = debts.reduce((v, d) => ({ ...v, [d.type]: v[d.type] + d.remainingAmount }), { receivable: 0, payable: 0 }); const currency = settings.defaultCurrency || 'DZD'; return <><PageHeader eyebrow="Money" title="Debts" description="Keep promises visible and payments connected to the right account." actions={<button className="btn-primary" onClick={() => setFormOpen(true)}><Plus size={17}/>Add debt</button>}/><div className="mb-5 grid gap-3 sm:grid-cols-2"><article className="panel-flat flex items-center gap-4 p-5"><span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10"><ArrowDownLeft/></span><div><p className="text-xs text-[#748078]">Owed to you</p><p className="font-display text-2xl font-bold text-emerald-600">{formatMoney(totals.receivable, currency)}</p></div></article><article className="panel-flat flex items-center gap-4 p-5"><span className="grid h-11 w-11 place-items-center rounded-xl bg-red-50 text-red-600 dark:bg-red-400/10"><ArrowUpRight/></span><div><p className="text-xs text-[#748078]">You owe</p><p className="font-display text-2xl font-bold text-red-600">{formatMoney(totals.payable, currency)}</p></div></article></div><div className="mb-4 flex gap-1 rounded-xl border border-[#dfe4de] bg-white p-1 dark:border-white/10 dark:bg-white/5 sm:w-fit">{[['', 'All'], ['receivable', 'Owed to me'], ['payable', 'I owe']].map(([id, label]) => <button key={id} onClick={() => setType(id)} className={cn('rounded-lg px-4 py-2 text-xs font-bold', type === id ? 'bg-ink text-white dark:bg-lime dark:text-ink' : 'text-[#758078]')}>{label}</button>)}</div>{loading ? <Spinner/> : error ? <EmptyState icon={HandCoins} title="Debts unavailable" description={error}/> : debts.length === 0 ? <div className="panel"><EmptyState icon={HandCoins} title="No open debts" description="Add a receivable or payable to track it here."/></div> : <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{debts.map((debt) => { const progress = 100 - (debt.remainingAmount / debt.originalAmount * 100); return <article key={debt._id} className="panel p-5"><div className="flex items-start justify-between"><div className="flex gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#edf1ec] dark:bg-white/10"><UserRound size={18}/></span><div><h3 className="font-display font-bold">{debt.personName}</h3><p className="mt-0.5 text-[11px] text-[#849087]">{debt.description || (debt.type === 'receivable' ? 'Owes you' : 'You owe')}</p></div></div><StatusBadge tone={debt.status === 'overdue' ? 'danger' : debt.status === 'partial' ? 'warning' : 'neutral'}>{debt.status}</StatusBadge></div><div className="mt-6"><p className="text-[10px] font-bold uppercase tracking-wider text-[#859087]">Remaining</p><p className="mt-1 font-display text-2xl font-bold">{formatMoney(debt.remainingAmount, debt.currency)}</p><p className="mt-1 text-xs text-[#849087]">of {formatMoney(debt.originalAmount, debt.currency)}</p></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e8ece6] dark:bg-white/10"><div className="h-full rounded-full bg-accent dark:bg-lime" style={{ width: `${progress}%` }}/></div><div className="mt-4 flex items-center justify-between"><p className="text-xs text-[#7d8881]">Due {formatDate(debt.dueDate)}</p><button onClick={() => setPaying(debt)} className="btn-secondary h-9">Add payment</button></div></article>; })}</section>}<DebtForm open={formOpen} onClose={() => setFormOpen(false)} onSaved={reload}/><PaymentForm debt={paying} onClose={() => setPaying(null)} onSaved={reload}/></>; }
+export default function Debts() {
+  const { settings } = useApp();
+  const [formOpen, setFormOpen] = useState(false);
+  const [paying, setPaying] = useState(null);
+  const [type, setType] = useState('');
+  const { data, loading, error, reload } = useData(
+    () => endpoints.list('debts', { type: type || undefined, limit: 100 }),
+    [type],
+  );
+  const debts = data?.data || [];
+  const totals = debts.reduce((v, d) => ({ ...v, [d.type]: v[d.type] + d.remainingAmount }), {
+    receivable: 0,
+    payable: 0,
+  });
+  const currency = settings.defaultCurrency || 'DZD';
+  return (
+    <>
+      <PageHeader
+        eyebrow="Money"
+        title="Debts"
+        description="Keep promises visible and payments connected to the right account."
+        actions={
+          <button className="btn-primary" onClick={() => setFormOpen(true)}>
+            <Plus size={17} />
+            Add debt
+          </button>
+        }
+      />
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        <article className="panel-flat flex items-center gap-4 p-5">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10">
+            <ArrowDownLeft />
+          </span>
+          <div>
+            <p className="text-xs text-[#748078]">Owed to you</p>
+            <p className="font-display text-2xl font-bold text-emerald-600">
+              {formatMoney(totals.receivable, currency)}
+            </p>
+          </div>
+        </article>
+        <article className="panel-flat flex items-center gap-4 p-5">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-red-50 text-red-600 dark:bg-red-400/10">
+            <ArrowUpRight />
+          </span>
+          <div>
+            <p className="text-xs text-[#748078]">You owe</p>
+            <p className="font-display text-2xl font-bold text-red-600">
+              {formatMoney(totals.payable, currency)}
+            </p>
+          </div>
+        </article>
+      </div>
+      <div className="mb-4 flex gap-1 rounded-xl border border-[#dfe4de] bg-white p-1 dark:border-white/10 dark:bg-white/5 sm:w-fit">
+        {[
+          ['', 'All'],
+          ['receivable', 'Owed to me'],
+          ['payable', 'I owe'],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setType(id)}
+            className={cn(
+              'rounded-lg px-4 py-2 text-xs font-bold',
+              type === id ? 'bg-ink text-white dark:bg-lime dark:text-ink' : 'text-[#758078]',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {loading ? (
+        <Spinner />
+      ) : error ? (
+        <EmptyState icon={HandCoins} title="Debts unavailable" description={error} />
+      ) : debts.length === 0 ? (
+        <div className="panel">
+          <EmptyState
+            icon={HandCoins}
+            title="No open debts"
+            description="Add a receivable or payable to track it here."
+          />
+        </div>
+      ) : (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {debts.map((debt) => {
+            const progress = 100 - (debt.remainingAmount / debt.originalAmount) * 100;
+            return (
+              <article key={debt._id} className="panel p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-[#edf1ec] dark:bg-white/10">
+                      <UserRound size={18} />
+                    </span>
+                    <div>
+                      <h3 className="font-display font-bold">{debt.personName}</h3>
+                      <p className="mt-0.5 text-[11px] text-[#849087]">
+                        {debt.description || (debt.type === 'receivable' ? 'Owes you' : 'You owe')}
+                      </p>
+                    </div>
+                  </div>
+                  <StatusBadge
+                    tone={
+                      debt.status === 'overdue'
+                        ? 'danger'
+                        : debt.status === 'partial'
+                          ? 'warning'
+                          : 'neutral'
+                    }
+                  >
+                    {debt.status}
+                  </StatusBadge>
+                </div>
+                <div className="mt-6">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#859087]">
+                    Remaining
+                  </p>
+                  <p className="mt-1 font-display text-2xl font-bold">
+                    {formatMoney(debt.remainingAmount, debt.currency)}
+                  </p>
+                  <p className="mt-1 text-xs text-[#849087]">
+                    of {formatMoney(debt.originalAmount, debt.currency)}
+                  </p>
+                </div>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e8ece6] dark:bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-accent dark:bg-lime"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-xs text-[#7d8881]">Due {formatDate(debt.dueDate)}</p>
+                  <button onClick={() => setPaying(debt)} className="btn-secondary h-9">
+                    Add payment
+                  </button>
+                </div>
+                <Link className="mt-3 inline-block text-xs font-semibold text-accent" to={`/reminders?entityType=debt&entityId=${debt._id}`}>
+                  🔔 {debt.reminderMode || 'automatic'} reminders
+                </Link>
+              </article>
+            );
+          })}
+        </section>
+      )}
+      <DebtForm open={formOpen} onClose={() => setFormOpen(false)} onSaved={reload} />
+      <PaymentForm debt={paying} onClose={() => setPaying(null)} onSaved={reload} />
+    </>
+  );
+}

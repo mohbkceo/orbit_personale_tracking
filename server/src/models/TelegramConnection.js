@@ -7,6 +7,7 @@ const telegramConnectionSchema = new mongoose.Schema({
   telegramUsername: String,
   linkedAt: { type: Date, default: Date.now },
   lastInteractionAt: Date,
+  lastUpdateAt: Date,
 }, { timestamps: true });
 
 export const TelegramConnection = mongoose.model('TelegramConnection', telegramConnectionSchema);

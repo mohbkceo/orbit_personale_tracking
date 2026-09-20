@@ -3,8 +3,8 @@ import { TelegramConnection } from '../models/TelegramConnection.js';
 import { checkAccess } from '../services/accessService.js';
 import { env } from '../config/env.js';
 import { sendMessage } from './botClient.js';
+import { escapeHtml } from './formatters.js';
 
-const escapeHtml = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 export async function sendTelegramNotification(userId, { title, message, buttons = [] }) {
   if (!env.ORBIT_TELEGRAM_BOT_TOKEN) return { sent: 0 };
   const [user, connection] = await Promise.all([User.findById(userId), TelegramConnection.findOne({ user: userId })]);

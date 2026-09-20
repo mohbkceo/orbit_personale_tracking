@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Check, CreditCard, Goal as GoalIcon, Plus, Sparkles } from 'lucide-react';
 import { endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
@@ -29,6 +30,7 @@ const config = {
 
 function ItemForm({ kind, open, onClose, onSaved }) {
   const { settings, toast } = useApp();
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
   const defaults =
@@ -40,6 +42,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
           accountId: '',
           dueDate: todayInput(),
           autoCreateExpense: true,
+          reminderMode: 'automatic',
         }
       : kind === 'subscriptions'
         ? {
@@ -51,6 +54,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
             accountId: '',
             category: 'Subscriptions',
             website: '',
+            reminderMode: 'automatic',
           }
         : {
             title: '',
@@ -59,6 +63,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
             currentAmount: 0,
             targetDate: '',
             description: '',
+            reminderMode: 'automatic',
           };
   const [form, setForm] = useState(defaults);
   useEffect(() => {
@@ -77,10 +82,11 @@ function ItemForm({ kind, open, onClose, onSaved }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await endpoints.create(kind, form);
+      const result = await endpoints.create(kind, form);
       toast(`${config[kind].title.slice(0, -1)} created`);
       onSaved();
       onClose();
+      if (form.reminderMode === 'custom') navigate(`/reminders?entityType=${kind.slice(0, -1)}&entityId=${result.data._id}`);
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -241,6 +247,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
             )}
           </>
         )}
+        <label><span className="label">Reminders</span><select className="field" value={form.reminderMode} onChange={set('reminderMode')}><option value="automatic">Automatic</option><option value="custom">Custom</option><option value="off">Off</option></select><span className="mt-1 block text-xs text-[#7b867f]">{form.reminderMode === 'automatic' ? 'Smart reminders are created after saving.' : form.reminderMode === 'custom' ? 'Add your own reminders after saving.' : 'No automatic reminders.'}</span></label>
         <button disabled={busy} className="btn-primary w-full">
           {busy ? 'Saving…' : 'Save'}
         </button>
@@ -264,6 +271,7 @@ function GoalCard({ item, currency, onManage }) {
         </StatusBadge>
       </div>
       <h3 className="mt-5 font-display text-lg font-bold">{item.title}</h3>
+      <Link className="mt-2 inline-block text-xs font-semibold text-accent" to={`/reminders?entityType=goal&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
       <p className="mt-1 line-clamp-2 text-xs text-[#7c8780]">
         {item.description || `Target ${formatDate(item.targetDate)}`}
       </p>
@@ -508,6 +516,7 @@ export default function Planning({ kind }) {
               </span>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-bold">{item.name}</h3>
+                <Link className="text-xs font-semibold text-accent" to={`/reminders?entityType=${kind.slice(0, -1)}&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
                 <p className="mt-1 text-xs text-[#808a84]">
                   {kind === 'bills'
                     ? `Due ${formatDate(item.dueDate)}`

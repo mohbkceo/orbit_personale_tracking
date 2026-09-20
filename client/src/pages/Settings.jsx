@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Bot,
+  Bell,
   Database,
   Globe2,
   Moon,
@@ -19,6 +20,7 @@ const tabs = [
   ['general', 'General', Globe2],
   ['appearance', 'Appearance', Palette],
   ['telegram', 'Telegram', Bot],
+  ['reminders', 'Reminders', Bell],
   ['account', 'Account & access', UserRound],
   ['data', 'Data', Database],
   ['security', 'Security', ShieldCheck],
@@ -65,6 +67,10 @@ export default function Settings() {
         [key]: event.target.type === 'checkbox' ? event.target.checked : event.target.value,
       },
     }));
+  const onReminder = (key, group) => (event) => setForm((value) => ({
+    ...value,
+    reminders: group ? { ...value.reminders, [group]: { ...value.reminders?.[group], [key]: event.target.type === 'checkbox' ? event.target.checked : event.target.value } } : { ...value.reminders, [key]: event.target.type === 'checkbox' ? event.target.checked : event.target.value },
+  }));
   async function save() {
     setBusy(true);
     try {
@@ -78,6 +84,7 @@ export default function Settings() {
         expenseCategories,
         incomeCategories,
         telegram: preferences,
+        reminders,
       } = form;
       const response = await api.patch('/settings', {
         name,
@@ -89,6 +96,7 @@ export default function Settings() {
         expenseCategories,
         incomeCategories,
         telegram: preferences,
+        reminders,
       });
       setForm(response.data);
       app.setSettings(response.data);
@@ -304,6 +312,17 @@ export default function Settings() {
                     </select>
                   </label>
                 </div>
+                {(!form.telegram?.defaultExpenseAccount || !form.telegram?.defaultIncomeAccount) && (
+                  <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    {!form.telegram?.defaultExpenseAccount && 'Choose a default expense account for Telegram expenses and outgoing debt payments. '}
+                    {!form.telegram?.defaultIncomeAccount && 'Choose a default income account for Telegram sales, income and incoming debt payments.'}
+                  </p>
+                )}
+                <div className="mt-4 rounded-xl border border-[#dde2dd] p-4 text-xs dark:border-white/10">
+                  <p className="font-bold">Quick syntax</p>
+                  <p className="mt-2">t Task · din Incoming debt · dout Outgoing debt · s Sale · e Expense · i Income</p>
+                  <p className="mt-2 font-mono">t Call supplier tomorrow<br />din Ahmed 5000<br />s 12500 Stand x3</p>
+                </div>
               </Section>
               <Section title="Scheduled summaries" description="Sent in your configured timezone">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -335,6 +354,13 @@ export default function Settings() {
               </Section>
             </>
           )}
+          {tab === 'reminders' && <>
+            <Section title="Smart reminders" description="Product defaults informed by prospective memory, editable at any time"><div className="space-y-4"><label className="flex items-center justify-between text-sm font-semibold">Reminders enabled<input type="checkbox" checked={form.reminders?.enabled ?? true} onChange={onReminder('enabled')} /></label><label className="flex items-center justify-between text-sm font-semibold">Automatic reminders<input type="checkbox" checked={form.reminders?.automaticEnabled ?? true} onChange={onReminder('automaticEnabled')} /></label></div></Section>
+            <Section title="Active and quiet hours" description={`Scheduled in ${form.timezone}`}><div className="grid gap-4 sm:grid-cols-2"><label><span className="label">Active from</span><input className="field" type="time" value={form.reminders?.activeHours?.start || '08:00'} onChange={onReminder('start', 'activeHours')} /></label><label><span className="label">Active until</span><input className="field" type="time" value={form.reminders?.activeHours?.end || '22:00'} onChange={onReminder('end', 'activeHours')} /></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.reminders?.quietHours?.enabled ?? true} onChange={onReminder('enabled', 'quietHours')} />Quiet hours enabled</label><div className="grid grid-cols-2 gap-2"><input className="field" type="time" value={form.reminders?.quietHours?.start || '22:00'} onChange={onReminder('start', 'quietHours')} /><input className="field" type="time" value={form.reminders?.quietHours?.end || '08:00'} onChange={onReminder('end', 'quietHours')} /></div></div></Section>
+            <Section title="Follow-ups" description="Keep incomplete cues useful without repeated noise"><div className="grid gap-4 sm:grid-cols-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.reminders?.incompleteFollowUpsEnabled ?? true} onChange={onReminder('incompleteFollowUpsEnabled')} />Incomplete follow-ups</label><label><span className="label">Maximum automatic follow-ups</span><input className="field" type="number" min="0" max="5" value={form.reminders?.maxAutomaticFollowUps ?? 2} onChange={onReminder('maxAutomaticFollowUps')} /></label><label><span className="label">Minimum spacing · minutes</span><input className="field" type="number" min="0" max="1440" value={form.reminders?.minimumReminderSpacingMinutes ?? 120} onChange={onReminder('minimumReminderSpacingMinutes')} /></label></div></Section>
+            <Section title="Default entity behavior" description="Existing items may have their own reminder mode"><div className="grid gap-3 sm:grid-cols-2">{['task', 'debt', 'bill', 'subscription', 'goal'].map((type) => <label key={type}><span className="label capitalize">{type}</span><select className="field" value={form.reminders?.defaultEntityModes?.[type] || 'automatic'} onChange={onReminder(type, 'defaultEntityModes')}><option value="automatic">Automatic</option><option value="custom">Custom</option><option value="off">Off</option></select></label>)}</div></Section>
+            <Section title="Delivery" description="Choose where reminders may appear"><div className="flex flex-wrap gap-6 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={form.reminders?.deliveryChannels?.telegram ?? true} onChange={onReminder('telegram', 'deliveryChannels')} />Telegram</label><label className="flex items-center gap-2"><input type="checkbox" checked={form.reminders?.deliveryChannels?.web ?? true} onChange={onReminder('web', 'deliveryChannels')} />Web attention schedule</label></div></Section>
+          </>}
           {tab === 'account' && (
             <Section
               title="Account & access"

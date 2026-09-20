@@ -8,7 +8,7 @@ const paymentSchema = new mongoose.Schema(
     transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
     notes: { type: String, default: '' },
   },
-  { timestamps: true },
+  { timestamps: true, optimisticConcurrency: true },
 );
 
 const debtSchema = new mongoose.Schema(
@@ -23,6 +23,7 @@ const debtSchema = new mongoose.Schema(
     description: { type: String, default: '' },
     date: { type: Date, default: Date.now },
     dueDate: { type: Date, default: null, index: true },
+    reminderMode: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
     status: { type: String, enum: ['unpaid', 'partial', 'paid', 'overdue'], default: 'unpaid', index: true },
     payments: [paymentSchema],
     createdVia: { type: String, enum: ['web', 'telegram', 'system'], default: 'web' },

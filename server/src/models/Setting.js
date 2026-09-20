@@ -17,6 +17,23 @@ const settingSchema = new mongoose.Schema(
       dailySummaryEnabled: { type: Boolean, default: false }, dailySummaryTime: { type: String, default: '20:00' },
       morningSummaryEnabled: { type: Boolean, default: false }, morningSummaryTime: { type: String, default: '08:00' },
     },
+    reminders: {
+      enabled: { type: Boolean, default: true },
+      automaticEnabled: { type: Boolean, default: true },
+      activeHours: { start: { type: String, default: '08:00' }, end: { type: String, default: '22:00' } },
+      quietHours: { enabled: { type: Boolean, default: true }, start: { type: String, default: '22:00' }, end: { type: String, default: '08:00' } },
+      incompleteFollowUpsEnabled: { type: Boolean, default: true },
+      maxAutomaticFollowUps: { type: Number, default: 2, min: 0, max: 5 },
+      minimumReminderSpacingMinutes: { type: Number, default: 120, min: 0, max: 1440 },
+      defaultEntityModes: {
+        task: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
+        debt: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
+        bill: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
+        subscription: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
+        goal: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
+      },
+      deliveryChannels: { telegram: { type: Boolean, default: true }, web: { type: Boolean, default: true } },
+    },
   },
   { timestamps: true },
 );

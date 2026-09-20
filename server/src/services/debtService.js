@@ -5,11 +5,15 @@ import { AppError } from '../utils/AppError.js';
 import { escapeRegex, pagination } from '../utils/query.js';
 import { recordActivity } from './activityService.js';
 import { createTransaction, ensureAccount } from './financeService.js';
+import { cancelEntityReminders, regenerateAutomaticReminderPlan, resolveEntityReminders } from './reminders/reminderService.js';
+import { getSettingsDocument } from './settingsService.js';
 
 export async function createDebt(userId, input) {
   if (input.personId && !(await Contact.exists({ _id: input.personId, user: userId }))) throw new AppError('Contact not found', 404);
-  const debt = await Debt.create({ ...input, user: userId, remainingAmount: input.originalAmount });
+  const settings = await getSettingsDocument(userId);
+  const debt = await Debt.create({ ...input, user: userId, remainingAmount: input.originalAmount, reminderMode: input.reminderMode || settings.reminders?.defaultEntityModes?.debt || 'automatic' });
   await recordActivity(userId, { action: 'created', entityType: 'Debt', entityId: debt._id, description: `${debt.personName} · ${debt.type}`, newData: debt.toObject(), source: input.createdVia });
+  await regenerateAutomaticReminderPlan(userId, 'debt', debt._id);
   return debt;
 }
 
@@ -27,6 +31,7 @@ export async function listDebts(userId, query = {}) {
 }
 
 export async function recordDebtPayment(userId, id, input) {
+  if (!Number.isFinite(input.amount) || input.amount <= 0) throw new AppError('Amount must be greater than 0.', 400);
   const debt = await Debt.findOne({ _id: id, user: userId, archived: false });
   if (!debt) throw new AppError('Debt not found', 404);
   if (debt.status === 'paid') throw new AppError('This debt is already paid', 409);
@@ -51,5 +56,18 @@ export async function recordDebtPayment(userId, id, input) {
     throw error;
   }
   await recordActivity(userId, { action: 'payment_recorded', entityType: 'Debt', entityId: debt._id, description: `Payment recorded for ${debt.personName}`, newData: { amount: input.amount, remainingAmount: debt.remainingAmount }, source: input.createdVia });
+  if (debt.status === 'paid') await resolveEntityReminders(userId, 'debt', debt._id);
+  else await regenerateAutomaticReminderPlan(userId, 'debt', debt._id);
   return debt.populate({ path: 'payments.accountId', match: { user: userId } });
+}
+
+export async function archiveUnpaidDebt(userId, id) {
+  const debt = await Debt.findOneAndUpdate(
+    { _id: id, user: userId, archived: false, 'payments.0': { $exists: false } },
+    { $set: { archived: true }, $inc: { __v: 1 } },
+    { new: true },
+  );
+  if (!debt) throw new AppError('A debt with payments cannot be deleted.', 409);
+  await cancelEntityReminders(userId, 'debt', debt._id);
+  return debt;
 }

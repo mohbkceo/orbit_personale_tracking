@@ -9,6 +9,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/api.js';
 import { env } from '../config/env.js';
 import { telegramRequest } from '../telegram/botClient.js';
+import { telegramStatus } from '../telegram/statusService.js';
 
 export const adminOperationRoutes = Router();
 adminOperationRoutes.use(adminAuth);
@@ -41,7 +42,14 @@ adminOperationRoutes.get('/settings', adminRoleGuard('SUPER_ADMIN'), (_req, res)
 adminOperationRoutes.post('/settings/telegram/webhook/register', adminRoleGuard('SUPER_ADMIN'), asyncHandler(async (_req, res) => {
   const url = `${env.APP_BASE_URL.replace(/\/$/, '')}/api/telegram/webhook/${env.TELEGRAM_WEBHOOK_SECRET}`;
   await telegramRequest(env.ORBIT_TELEGRAM_BOT_TOKEN, 'setWebhook', { url, secret_token: env.TELEGRAM_WEBHOOK_SECRET, allowed_updates: ['message', 'callback_query'] });
+  await telegramRequest(env.ORBIT_TELEGRAM_BOT_TOKEN, 'setMyCommands', { commands: [
+    'start', 'today', 'quick', 'tasks', 'debts', 'sales', 'money', 'expenses', 'income',
+    'accounts', 'month', 'bills', 'subscriptions', 'goals', 'last', 'reminders', 'help', 'cancel',
+  ].map((command) => ({ command, description: command === 'quick' ? 'Quick Add' : command[0].toUpperCase() + command.slice(1) })) });
   return success(res, { active: true });
+}));
+adminOperationRoutes.get('/settings/telegram/status', adminRoleGuard('SUPER_ADMIN'), asyncHandler(async (_req, res) => {
+  return success(res, await telegramStatus());
 }));
 adminOperationRoutes.post('/settings/telegram/webhook/remove', adminRoleGuard('SUPER_ADMIN'), asyncHandler(async (_req, res) => {
   await telegramRequest(env.ORBIT_TELEGRAM_BOT_TOKEN, 'deleteWebhook', { drop_pending_updates: false });

@@ -27,11 +27,18 @@ const transactionSchema = new mongoose.Schema(
     tags: [{ type: String, trim: true }],
     notes: { type: String, maxlength: 2000, default: '' },
     recurring: { type: Boolean, default: false },
+    saleDetails: { type: new mongoose.Schema({
+      business: { type: String, trim: true, default: '' },
+      product: { type: String, trim: true, default: '' },
+      quantity: { type: Number, min: 1, default: 1 },
+      customerName: { type: String, trim: true, default: '' },
+    }, { _id: false }), default: undefined },
     deletedAt: { type: Date, default: null, index: true },
   },
   { timestamps: true },
 );
 
 transactionSchema.index({ user: 1, date: -1, type: 1, accountId: 1 });
+transactionSchema.index({ user: 1, type: 1, category: 1, deletedAt: 1, date: -1 });
 transactionSchema.index({ description: 'text', category: 'text', tags: 'text' });
 export const Transaction = mongoose.model('Transaction', transactionSchema);

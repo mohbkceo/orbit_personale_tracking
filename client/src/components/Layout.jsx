@@ -8,7 +8,7 @@ import { QuickAdd } from './QuickAdd.jsx';
 import { SearchPalette } from './SearchPalette.jsx';
 
 const sections = [
-  { label: null, items: [['Dashboard', '/', Gauge], ['Tasks', '/tasks', CalendarCheck2]] },
+  { label: null, items: [['Dashboard', '/', Gauge], ['Tasks', '/tasks', CalendarCheck2], ['Reminders', '/reminders', Bell]] },
   { label: 'Money', items: [['Accounts', '/money/accounts', WalletCards], ['Transactions', '/money/transactions', LayoutList], ['Expenses', '/money/expenses', ReceiptText], ['Income', '/money/income', CircleDollarSign], ['Debts', '/money/debts', Landmark], ['Bills', '/planning/bills', CreditCard], ['Subscriptions', '/planning/subscriptions', Bell]] },
   { label: 'Planning', items: [['Goals & savings', '/planning/goals', Goal], ['Projects', '/personal/projects', FolderKanban], ['Habits', '/personal/habits', Sparkles], ['Wishlist', '/personal/wishlist', BookOpenText]] },
   { label: 'Personal', items: [['Contacts', '/personal/contacts', ContactRound], ['Notes', '/personal/notes', BookOpenText], ['Settings', '/settings', Settings]] },
