@@ -8,7 +8,10 @@ const accessSubscriptionSchema = new mongoose.Schema({
   activatedAt: { type: Date, required: true },
   expiresAt: { type: Date, required: true, index: true },
   status: { type: String, enum: ['ACTIVE', 'EXPIRED'], default: 'ACTIVE', index: true },
-  planSnapshot: { name: String, durationValue: Number, durationUnit: String },
+  planSnapshot: {
+    name: String, durationValue: Number, durationUnit: String,
+    features: [{ key: String, type: String, enabled: Boolean, limit: Number, value: String }],
+  },
 }, { timestamps: true });
 accessSubscriptionSchema.index({ user: 1, expiresAt: -1 });
 

@@ -18,6 +18,11 @@ const activationLinkSchema = new mongoose.Schema({
   firstOpenedAt: Date,
   lastOpenedAt: Date,
   note: { type: String, maxlength: 500, default: '' },
+  qrBatch: { type: mongoose.Schema.Types.ObjectId, ref: 'QrBatch', index: true },
+  batchSequence: { type: Number, min: 1 },
+  batchCode: { type: String, trim: true, uppercase: true, index: true },
 }, { timestamps: true });
+
+activationLinkSchema.index({ qrBatch: 1, batchSequence: 1 }, { unique: true, sparse: true });
 
 export const ActivationLink = mongoose.model('ActivationLink', activationLinkSchema);

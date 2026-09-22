@@ -36,24 +36,28 @@ export async function findValidLink(key, { session, countOpen = false } = {}) {
   return link;
 }
 
-export async function createActivationLink(planId, adminId, { validityDays = 7, note = '', intendedUser } = {}) {
+export async function createActivationLink(planId, adminId, { validityDays = 7, note = '', intendedUser, qrBatch, batchSequence, batchCode, session, planDocument } = {}) {
   if (!mongoose.isValidObjectId(planId)) throw new AppError('Invalid plan', 422);
-  if (intendedUser && (!mongoose.isValidObjectId(intendedUser) || !(await User.exists({ _id: intendedUser })))) throw new AppError('User not found', 404);
-  const plan = await Plan.findOne({ _id: planId, status: 'ACTIVE' });
+  if (intendedUser && (!mongoose.isValidObjectId(intendedUser) || !(await User.exists({ _id: intendedUser }).session(session || null)))) throw new AppError('User not found', 404);
+  const plan = planDocument || await Plan.findOne({ _id: planId, status: 'ACTIVE' }).session(session || null);
   if (!plan) throw new AppError('The plan is inactive or unavailable.', 409, undefined, 'PLAN_INACTIVE');
   const token = makeToken();
   const encrypted = encryptSecret(token);
-  const link = await ActivationLink.create({ tokenHash: hashToken(token), encryptedToken: encrypted.encrypted, tokenIv: encrypted.iv, tokenAuthTag: encrypted.authTag, plan: plan._id, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit }, createdByAdmin: adminId, expiresAt: new Date(Date.now() + validityDays * 86400000), note, intendedUser });
-  await audit('ACTIVATION_LINK_CREATED', { actorType: 'ADMIN', actorId: adminId, targetType: 'ActivationLink', targetId: link._id, metadata: { planId: String(plan._id) } });
-  return { link: { _id: link._id, plan: link.plan, planSnapshot: link.planSnapshot, status: link.status, expiresAt: link.expiresAt, note: link.note, intendedUser: link.intendedUser, createdAt: link.createdAt }, url: `${env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')}/activate/${token}` };
+  const [link] = await ActivationLink.create([{ tokenHash: hashToken(token), encryptedToken: encrypted.encrypted, tokenIv: encrypted.iv, tokenAuthTag: encrypted.authTag, plan: plan._id, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit }, createdByAdmin: adminId, expiresAt: new Date(Date.now() + validityDays * 86400000), note, intendedUser, qrBatch, batchSequence, batchCode }], session ? { session } : {});
+  await audit('ACTIVATION_LINK_CREATED', { actorType: 'ADMIN', actorId: adminId, targetType: 'ActivationLink', targetId: link._id, metadata: { planId: String(plan._id), ...(qrBatch ? { qrBatch: String(qrBatch) } : {}) }, session });
+  return { link: { _id: link._id, plan: link.plan, planSnapshot: link.planSnapshot, status: link.status, expiresAt: link.expiresAt, note: link.note, intendedUser: link.intendedUser, qrBatch: link.qrBatch, batchSequence: link.batchSequence, batchCode: link.batchCode, createdAt: link.createdAt }, url: `${env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')}/activate/${token}` };
 }
 
-export async function activationUrl(linkId) {
-  const link = await ActivationLink.findById(linkId).select('+encryptedToken +tokenIv +tokenAuthTag');
+export function activationUrlFromLink(link) {
   if (!link || link.status !== 'ACTIVE' || (link.expiresAt && link.expiresAt <= new Date())) throw new AppError('Active Activation Link not found', 404);
   if (!link.encryptedToken) throw new AppError('This legacy link cannot be copied; create a new link.', 409);
   const token = decryptSecret({ encrypted: link.encryptedToken, iv: link.tokenIv, authTag: link.tokenAuthTag });
   return `${env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')}/activate/${token}`;
+}
+
+export async function activationUrl(linkId) {
+  const link = await ActivationLink.findById(linkId).select('+encryptedToken +tokenIv +tokenAuthTag');
+  return activationUrlFromLink(link);
 }
 
 export async function registerWithLink(key, input) {
@@ -90,12 +94,17 @@ export async function activateLink(key, user) {
       const now = new Date();
       const previous = await currentSubscription(user._id, session);
       const base = previous?.expiresAt > now ? previous.expiresAt : now;
-      const plan = await Plan.findById(link.plan._id).session(session);
+      const plan = await Plan.findById(link.plan._id).populate('features.feature', 'key type').session(session);
       if (!plan) throw new AppError('Plan unavailable', 409, undefined, 'PLAN_INACTIVE');
       const expiresAt = addDuration(base, plan.durationValue, plan.durationUnit);
       const used = await ActivationLink.updateOne({ _id: link._id, status: 'ACTIVE', $or: [{ reservedByUser: user._id }, { reservedByUser: null }] }, { $set: { status: 'USED', activatedUser: user._id, activatedAt: now } }, { session });
       if (used.modifiedCount !== 1) throw new AppError('This Activation Link has already been used.', 409, undefined, 'ACTIVATION_USED');
-      [grant] = await AccessSubscription.create([{ user: user._id, plan: plan._id, activationLink: link._id, startedAt: base, activatedAt: now, expiresAt, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit } }], { session });
+      const features = (plan.features || []).filter((entry) => entry.feature).map((entry) => ({
+        key: entry.feature.key, type: entry.feature.type, enabled: entry.enabled,
+        ...(entry.feature.type === 'LIMIT' ? { limit: entry.limit } : {}),
+        ...(entry.feature.type === 'TEXT' ? { value: entry.value } : {}),
+      }));
+      [grant] = await AccessSubscription.create([{ user: user._id, plan: plan._id, activationLink: link._id, startedAt: base, activatedAt: now, expiresAt, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit, features } }], { session });
       await User.updateOne({ _id: user._id, onboardingCompletedAt: null }, { $set: { onboardingCompletedAt: now } }, { session });
       await audit('ACTIVATION_LINK_USED', { actorType: 'USER', actorId: user._id, targetType: 'ActivationLink', targetId: link._id, session });
       await audit('ACCESS_ACTIVATED', { actorType: 'USER', actorId: user._id, targetType: 'AccessSubscription', targetId: grant._id, metadata: { expiresAt }, session });

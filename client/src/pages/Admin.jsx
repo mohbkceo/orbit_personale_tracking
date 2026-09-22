@@ -20,7 +20,9 @@ const nav = [
   ['Dashboard', '/admin'],
   ['Users', '/admin/users'],
   ['Plans', '/admin/plans'],
+  ['Features', '/admin/features'],
   ['Activation Links', '/admin/activation-links'],
+  ['QR Batches', '/admin/qr-batches'],
   ['Activity', '/admin/activity'],
 ];
 function ErrorText({ error }) {
@@ -407,144 +409,6 @@ export function AdminUserDetail() {
           </section>
         </div>
       )}
-    </>
-  );
-}
-
-export function AdminPlans() {
-  const { data, error, loading, refresh } = useResource('/admin/plans');
-  const [form, setForm] = useState({
-    name: '',
-    durationValue: 3,
-    durationUnit: 'MONTH',
-    description: '',
-    status: 'ACTIVE',
-  });
-  const [editing, setEditing] = useState(null);
-  const [actionError, setActionError] = useState('');
-  async function save(event) {
-    event.preventDefault();
-    try {
-      if (editing) await api.patch(`/admin/plans/${editing}`, form);
-      else await api.post('/admin/plans', form);
-      setForm({
-        name: '',
-        durationValue: 3,
-        durationUnit: 'MONTH',
-        description: '',
-        status: 'ACTIVE',
-      });
-      setEditing(null);
-      setActionError('');
-      refresh();
-    } catch (failure) {
-      setActionError(failure.message);
-    }
-  }
-  async function toggle(plan) {
-    try {
-      await api.patch(`/admin/plans/${plan._id}`, {
-        status: plan.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-      });
-      refresh();
-    } catch (failure) {
-      setActionError(failure.message);
-    }
-  }
-  return (
-    <>
-      <PageHeader
-        eyebrow="Access"
-        title="Plans"
-        description="Plans grant time only—no quotas or feature tiers."
-      />
-      <ErrorText error={error || actionError} />
-      <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
-        <form onSubmit={save} className="panel h-fit space-y-3 p-5">
-          <h2 className="font-bold">{editing ? 'Edit plan' : 'Create plan'}</h2>
-          <label>
-            <span className="label">Name</span>
-            <input
-              required
-              className="field"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <label>
-              <span className="label">Duration</span>
-              <input
-                type="number"
-                min="1"
-                required
-                className="field"
-                value={form.durationValue}
-                onChange={(e) => setForm({ ...form, durationValue: Number(e.target.value) })}
-              />
-            </label>
-            <label>
-              <span className="label">Unit</span>
-              <select
-                className="field"
-                value={form.durationUnit}
-                onChange={(e) => setForm({ ...form, durationUnit: e.target.value })}
-              >
-                {['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'].map((unit) => (
-                  <option key={unit}>{unit}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label>
-            <span className="label">Description</span>
-            <input
-              className="field"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </label>
-          <button className="btn-primary">{editing ? 'Save plan' : 'Create plan'}</button>
-        </form>
-        <div className="space-y-3">
-          {loading ? (
-            <Spinner />
-          ) : (
-            data?.map((plan) => (
-              <div key={plan._id} className="panel flex flex-wrap items-center gap-3 p-4">
-                <div className="flex-1">
-                  <b>{plan.name}</b>
-                  <p className="text-xs text-[#7a857e]">
-                    {plan.durationValue} {plan.durationUnit.toLowerCase()}
-                    {plan.durationValue === 1 ? '' : 's'} · {plan.description}
-                  </p>
-                </div>
-                <StatusBadge tone={plan.status === 'ACTIVE' ? 'success' : 'warning'}>
-                  {plan.status}
-                </StatusBadge>
-                <button
-                  className="text-xs text-accent underline"
-                  onClick={() => {
-                    setEditing(plan._id);
-                    setForm({
-                      name: plan.name,
-                      durationValue: plan.durationValue,
-                      durationUnit: plan.durationUnit,
-                      description: plan.description || '',
-                      status: plan.status,
-                    });
-                  }}
-                >
-                  Edit
-                </button>
-                <button className="text-xs text-accent underline" onClick={() => toggle(plan)}>
-                  {plan.status === 'ACTIVE' ? 'Disable' : 'Activate'}
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
     </>
   );
 }
