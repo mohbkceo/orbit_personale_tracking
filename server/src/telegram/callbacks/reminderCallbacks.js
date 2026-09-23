@@ -17,6 +17,7 @@ import { telegramRequest } from '../botClient.js';
 import { AppError } from '../../utils/AppError.js';
 import { resolveTelegramAccount } from '../accountResolver.js';
 import { escapeHtml } from '../formatters.js';
+import { executeTask } from '../../services/taskExecution.service.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -47,6 +48,21 @@ export async function handleReminderCallback(callback, userId, token, settings) 
   }
   const reminder = await getReminder(userId, id);
   const action = parts[1];
+  const taskAutomation = reminder.entityType === 'task' && Boolean(reminder.metadata?.automation);
+  if (taskAutomation && ['start', 'continue', 'stop', 'backlog', 'drop'].includes(action)) {
+    await executeTask(userId, reminder.entityId, action, { channel: 'telegram', reminderId: id });
+    await edit(callback, token, `${action === 'start' ? '▶️ Started' : action === 'continue' ? '↻ Continuing' : action === 'drop' ? 'Dropped' : action === 'backlog' ? 'Returned to backlog' : 'Stopped for now'}\n\n<b>${escapeHtml(reminder.title)}</b>`);
+  } else if (taskAutomation && action === 'notime') {
+    await executeTask(userId, reminder.entityId, 'later', { channel: 'telegram', reminderId: id, reason: 'no_time' });
+    await edit(callback, token, `⏰ Snoozed\n\n<b>${escapeHtml(reminder.title)}</b>`);
+  } else if (taskAutomation && action === 'notimportant') {
+    await executeTask(userId, reminder.entityId, 'backlog', { channel: 'telegram', reminderId: id });
+    await edit(callback, token, `Returned to backlog\n\n<b>${escapeHtml(reminder.title)}</b>`);
+  } else if (taskAutomation && action === 'date') {
+    await edit(callback, token, `Send <code>/taskdate ${reminder.entityId} YYYY-MM-DD</code> to choose a date.\n\n<b>${escapeHtml(reminder.title)}</b>`);
+  } else if (taskAutomation && action === 'next') {
+    await edit(callback, token, `Send <code>/nextaction ${reminder.entityId} your concrete next step</code>.\n\n<b>${escapeHtml(reminder.title)}</b>`);
+  } else
   if (action === 'cancel') {
     await cancelReminder(userId, id, 'telegram');
     await edit(callback, token, `Cancelled\n\n<b>${escapeHtml(reminder.title)}</b>`);
@@ -72,7 +88,8 @@ export async function handleReminderCallback(callback, userId, token, settings) 
             ? local.add(1, 'day').hour(9).minute(0)
             : local.hour(18).minute(0);
     const future = until.isAfter(local) ? until : until.add(1, 'day');
-    await snoozeReminder(userId, id, future.toDate(), 'telegram');
+    if (taskAutomation) await executeTask(userId, reminder.entityId, 'later', { channel: 'telegram', reminderId: id, until: future.toDate() });
+    else await snoozeReminder(userId, id, future.toDate(), 'telegram');
     await edit(
       callback,
       token,
@@ -96,15 +113,18 @@ export async function handleReminderCallback(callback, userId, token, settings) 
       btime: 'not_enough_time',
       bother: 'other',
     }[action];
-    await markReminderBlocked(userId, id, reason, '', 'telegram');
+    if (taskAutomation) await executeTask(userId, reminder.entityId, 'blocked', { channel: 'telegram', reminderId: id, reason });
+    else await markReminderBlocked(userId, id, reason, '', 'telegram');
     await edit(callback, token, `⏸ Waiting\n\n<b>${escapeHtml(reminder.title)}</b>`, [
       row(['Remind tomorrow', `r:stomorrow:${id}`], ['Resume', `r:resume:${id}`]),
     ]);
   } else if (action === 'resume') {
     await resumeReminder(userId, id, new Date(), 'telegram');
+    if (taskAutomation) await executeTask(userId, reminder.entityId, 'resume', { channel: 'telegram', reminderId: id });
     await edit(callback, token, `▶️ Resumed\n\n<b>${escapeHtml(reminder.title)}</b>`);
   } else if (action === 'done') {
-    await completeReminder(userId, id, 'telegram');
+    if (taskAutomation) await executeTask(userId, reminder.entityId, 'done', { channel: 'telegram', reminderId: id });
+    else await completeReminder(userId, id, 'telegram');
     await edit(callback, token, `✓ Done\n\n<b>${escapeHtml(reminder.title)}</b>`);
   } else if (action === 'paid') {
     if (reminder.entityType === 'debt') {

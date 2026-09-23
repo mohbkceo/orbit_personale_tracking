@@ -6,6 +6,7 @@ import { Reminder } from '../models/Reminder.js';
 import { event } from '../services/reminders/reminderService.js';
 import { nextOccurrence } from '../services/reminders/reminderTime.js';
 import { coordinateReminder } from '../services/reminders/reminderCoordinatorService.js';
+import { getAutomationSettings } from '../services/automationSettings.service.js';
 import {
   deliverReminder,
   deliverReminderBundle,
@@ -17,9 +18,12 @@ dayjs.extend(timezone);
 
 async function processLowPriorityBundle(now, limit) {
   if (limit < 2) return 0;
+  const automation = await getAutomationSettings();
+  if (!automation.reminderBehavior.allowBundling || !automation.reminderBehavior.bundleLowPriority) return 0;
   const first = await Reminder.findOne({
     archived: false,
     priority: 'low',
+    'metadata.automation': { $exists: false },
     entityType: { $in: ['task', 'custom'] },
     'trigger.type': 'datetime',
     status: { $in: ['scheduled', 'snoozed'] },
@@ -34,6 +38,7 @@ async function processLowPriorityBundle(now, limit) {
         user: first.user,
         archived: false,
         priority: 'low',
+        'metadata.automation': { $exists: false },
         entityType: { $in: ['task', 'custom'] },
         'trigger.type': 'datetime',
         status: { $in: ['scheduled', 'snoozed'] },

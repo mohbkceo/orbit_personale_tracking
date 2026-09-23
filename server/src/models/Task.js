@@ -34,6 +34,17 @@ const taskSchema = new mongoose.Schema(
     relatedEntityType: String,
     relatedEntityId: mongoose.Schema.Types.ObjectId,
     completedAt: Date,
+    nextAction: { type: String, default: '', trim: true, maxlength: 500 },
+    estimatedMinutes: { type: Number, default: null, min: 1, max: 10080 },
+    startedAt: Date,
+    lastStartedAt: Date,
+    startCount: { type: Number, default: 0 },
+    lastProgressAt: Date,
+    lastReminderInteractionAt: Date,
+    ignoreCount: { type: Number, default: 0 },
+    postponeCount: { type: Number, default: 0 },
+    blockedCount: { type: Number, default: 0 },
+    executionState: { type: String, enum: ['idle', 'planned', 'started', 'blocked', 'postponed', 'completed', 'cancelled'], default: 'idle' },
     createdVia: { type: String, enum: ['web', 'telegram', 'system'], default: 'web' },
     archived: { type: Boolean, default: false },
   },
@@ -42,5 +53,6 @@ const taskSchema = new mongoose.Schema(
 
 taskSchema.index({ title: 'text', description: 'text', tags: 'text' });
 taskSchema.index({ user: 1, archived: 1, dueDate: 1 });
+taskSchema.index({ user: 1, archived: 1, status: 1, reminderMode: 1, dueDate: 1 });
 taskSchema.index({ user: 1, seriesId: 1, occurrenceKey: 1 }, { unique: true, partialFilterExpression: { seriesId: { $type: 'objectId' }, occurrenceKey: { $type: 'string' } } });
 export const Task = mongoose.model('Task', taskSchema);

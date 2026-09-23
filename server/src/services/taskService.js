@@ -28,7 +28,7 @@ export async function materializeNextTaskOccurrence(userId, task) {
   let following;
   try {
     const projectId = task.projectId && await Project.exists({ _id: task.projectId, user: userId }) ? task.projectId : null;
-    following = await createTask(userId, { title: task.title, description: task.description, status: 'todo', priority: task.priority, dueDate: new Date(`${day}T00:00:00.000Z`), dueTime: task.dueTime, category: task.category, projectId, recurring: true, recurringRule: task.recurringRule.toObject(), tags: task.tags, reminderMode: task.reminderMode, seriesId, occurrenceKey: day, createdVia: 'system' });
+    following = await createTask(userId, { title: task.title, description: task.description, nextAction: task.nextAction, estimatedMinutes: task.estimatedMinutes, status: 'todo', priority: task.priority, dueDate: new Date(`${day}T00:00:00.000Z`), dueTime: task.dueTime, category: task.category, projectId, recurring: true, recurringRule: task.recurringRule.toObject(), tags: task.tags, reminderMode: task.reminderMode, seriesId, occurrenceKey: day, createdVia: 'system' });
   } catch (error) {
     if (error.code !== 11000) throw error;
     following = await Task.findOne({ user: userId, seriesId, occurrenceKey: day });
@@ -75,6 +75,9 @@ export async function updateTask(userId, id, input) {
   if (['dueDate', 'dueTime', 'recurring', 'recurringRule'].some((key) => key in input)) current.recurrenceEnded = false;
   if (input.status === 'completed' && previousStatus !== 'completed') current.completedAt = new Date();
   if (input.status && input.status !== 'completed') current.completedAt = null;
+  if (input.status === 'completed') current.executionState = 'completed';
+  if (input.status === 'cancelled') current.executionState = 'cancelled';
+  if (input.status === 'todo' && ['completed', 'cancelled'].includes(previousStatus)) current.executionState = 'idle';
   await current.save();
   await recordActivity(userId, { action: input.status === 'completed' ? 'completed' : 'updated', entityType: 'Task', entityId: current._id, description: current.title, previousData: { status: previousStatus }, newData: input });
   if (current.status === 'completed') {
@@ -82,7 +85,9 @@ export async function updateTask(userId, id, input) {
     if (previousStatus !== 'completed') await materializeNextTaskOccurrence(userId, current);
   }
   else if (current.status === 'cancelled') await cancelEntityReminders(userId, 'task', current._id);
-  else if (['dueDate', 'dueTime', 'priority', 'status', 'recurring', 'recurringRule', 'reminderMode'].some((key) => key in input)) await regenerateAutomaticReminderPlan(userId, 'task', current._id);
+  else if (['dueDate', 'dueTime', 'priority', 'status', 'recurring', 'recurringRule', 'reminderMode', 'nextAction'].some((key) => key in input)) {
+    await regenerateAutomaticReminderPlan(userId, 'task', current._id);
+  }
   return current;
 }
 

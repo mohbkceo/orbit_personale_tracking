@@ -46,6 +46,7 @@ export const taskInput = z.object({
   dueTime: z.string().regex(/^$|^([01]\d|2[0-3]):[0-5]\d$/).default(''), category: z.string().max(80).default('Personal'), projectId: id.nullish(),
   recurring: z.boolean().default(false), recurringRule: taskRecurrence.optional(), tags: z.array(z.string()).default([]), createdVia: z.enum(['web', 'telegram', 'system']).default('web'),
   reminderMode: reminderMode.optional(),
+  nextAction: z.string().trim().max(500).optional(), estimatedMinutes: z.coerce.number().int().min(1).max(10080).nullish(),
 });
 
 export const taskUpdate = taskInput.partial();

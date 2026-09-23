@@ -122,6 +122,18 @@ task call dentist tomorrow
 
 Commands include `/start`, `/help`, `/today`, `/tasks`, `/money`, `/expenses`, `/income`, `/debts`, and `/accounts`. Every message and callback is routed through that Telegram sender's unique Orbit connection and checked for active access before touching personal data. Connections remain intact after access expiry.
 
+## Smart task execution and Daily Focus
+
+Tasks can store a concrete **Next action** and an estimate. Starting a task records its first and latest start, changes its status to `in_progress`, and schedules a configurable check-in. Continue, block, postpone, reschedule, complete, and drop actions are recorded in task execution history. Dropping cancels a task; it does not delete it.
+
+**Today's Focus** appears on the dashboard and Tasks page. Add existing tasks by title or enter a new title to create one. You can finish planning after one or two tasks with **Done planning** or Telegram `done`; reaching the configured maximum finishes planning automatically. Remove a focus item to replace it. Focus records reference tasks and retain their order. Unfinished items remain where they are after the evening review until the user chooses Tomorrow, Backlog, Reschedule, or Drop.
+
+Telegram `/focus` starts or shows the daily plan, `/focus <task title>` adds an item, and `/focus done` finishes it. During active planning, plain text can add focus items; normal finance, task creation, and lookup commands continue to work. `/nextaction <task ID> <step>` saves a concrete next action; `/taskdate <task ID> YYYY-MM-DD` reschedules a task. The bot supplies inline execution and evening review buttons.
+
+A Super Admin edits all automation rules at **Admin → Settings → Automation Settings**. These global settings cover active and quiet hours, Daily Focus times and limits, deadline bands and cadence, escalation thresholds, check-in delays, duplicate suppression, and bundling. Each user's timezone determines the local day and delivery window by default; UTC behavior is optional. Existing user reminder settings and custom reminders remain available. Automatic cues use the existing Reminder and ReminderEvent infrastructure, unique policy keys, and worker delivery leases. TaskExecutionEvent stores task and focus decisions that do not belong to a specific reminder.
+
+Run `npm run migrate:automation` during deployment. It creates the production indexes and fills only missing execution states on existing tasks; reruns are safe. Then run `npm run backfill:reminders` to initialize cues for upcoming tasks. Run a smoke check with a connected Telegram account to verify local morning and evening timing before broad rollout.
+
 ## Production
 
 Build the client and run the server:

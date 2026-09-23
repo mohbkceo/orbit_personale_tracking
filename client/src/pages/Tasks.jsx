@@ -16,6 +16,7 @@ import { useApp } from '../context/useApp.js';
 import { useData } from '../hooks/useData.js';
 import { cn, formatDate, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
+import { DailyFocusPanel } from '../components/DailyFocusPanel.jsx';
 
 const views = ['all', 'today', 'upcoming', 'overdue', 'completed'];
 const priorityTone = { low: 'neutral', medium: 'info', high: 'warning', urgent: 'danger' };
@@ -35,6 +36,8 @@ function TaskForm({ open, onClose, onSaved, task }) {
     category: task?.category || 'Personal',
     repeat: task?.recurringRule?.frequency || 'never',
     reminderMode: task?.reminderMode || 'automatic',
+    nextAction: task?.nextAction || '',
+    estimatedMinutes: task?.estimatedMinutes || '',
   }));
   useEffect(() => {
     if (task?._id)
@@ -55,7 +58,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
     setBusy(true);
     try {
       const { repeat, ...taskFields } = form;
-      const payload = { ...taskFields, recurring: repeat !== 'never', ...(repeat === 'never' ? {} : { recurringRule: { frequency: repeat, interval: 1 } }) };
+      const payload = { ...taskFields, estimatedMinutes: taskFields.estimatedMinutes ? Number(taskFields.estimatedMinutes) : null, recurring: repeat !== 'never', ...(repeat === 'never' ? {} : { recurringRule: { frequency: repeat, interval: 1 } }) };
       const result = task
         ? await endpoints.update('tasks', task._id, payload)
         : await endpoints.create('tasks', payload);
@@ -105,6 +108,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
             placeholder="Context, links or notes"
           />
         </label>
+        <div className="grid gap-3 sm:grid-cols-[1fr_130px]"><label><span className="label">Next action</span><input className="field" value={form.nextAction} onChange={set('nextAction')} placeholder="One concrete step" maxLength={500} /></label><label><span className="label">Estimate (min)</span><input className="field" type="number" min="1" max="10080" value={form.estimatedMinutes} onChange={set('estimatedMinutes')} /></label></div>
         <div className="grid grid-cols-2 gap-3">
           <label>
             <span className="label">Due date</span>
@@ -183,12 +187,17 @@ export default function Tasks() {
   const tasks = data?.data || [];
   async function setStatus(task, status) {
     try {
-      await endpoints.update('tasks', task._id, { status });
+      if (status === 'completed') await endpoints.create(`tasks/${task._id}/execute`, { action: 'done' });
+      else await endpoints.update('tasks', task._id, { status });
       toast(status === 'completed' ? 'Task completed' : 'Task reopened');
       reload();
     } catch (err) {
       toast(err.message, 'error');
     }
+  }
+  async function execute(task, action) {
+    try { await endpoints.create(`tasks/${task._id}/execute`, { action }); toast(action === 'start' ? 'Task started' : 'Task marked blocked'); reload(); }
+    catch (err) { toast(err.message, 'error'); }
   }
   async function remove(task) {
     if (!window.confirm(`Archive “${task.title}”?`)) return;
@@ -223,6 +232,7 @@ export default function Tasks() {
           </button>
         }
       />
+      <DailyFocusPanel onTaskChanged={reload} />
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#dfe4de] bg-white p-1 dark:border-white/10 dark:bg-white/5">
           {views.map((item) => (
@@ -321,7 +331,9 @@ export default function Tasks() {
                         {task.category}
                         {task.description ? ` · ${task.description}` : ''}
                       </p>
+                      {task.nextAction && <p className="mt-1 truncate text-[11px] text-[#6c7b71]">Next: {task.nextAction}</p>}
                     </button>
+                    {!complete && task.status !== 'cancelled' && <div className="flex shrink-0 gap-2 text-[11px]"><button className="text-accent underline" onClick={() => execute(task, 'start')}>Start</button><button className="text-[#7b867f] underline" onClick={() => execute(task, 'blocked')}>Blocked</button></div>}
                   </div>
                   <div
                     className={cn(

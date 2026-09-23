@@ -4,6 +4,8 @@ import { getSettingsDocument } from '../settingsService.js';
 import { checkAccess } from '../accessService.js';
 import { isEntityResolved, linkedEntity } from './reminderService.js';
 import { afterQuietHours, inQuietHours, nextActiveTime } from './reminderTime.js';
+import { getAutomationSettings, automationTimezone } from '../automationSettings.service.js';
+import { DailyFocus } from '../../models/DailyFocus.js';
 
 export async function coordinateReminder(reminder, now = new Date()) {
   const user = await User.findById(reminder.user);
@@ -11,6 +13,14 @@ export async function coordinateReminder(reminder, now = new Date()) {
   if (!(await checkAccess(user)).eligible)
     return { action: 'defer', at: new Date(now.getTime() + 86400000), reason: 'Access inactive' };
   const settings = await getSettingsDocument(reminder.user);
+  const automation = reminder.metadata?.automation ? await getAutomationSettings() : null;
+  if (automation && (!automation.general.enabled || !automation.general.workerEnabled)) return { action: 'defer', at: new Date(now.getTime() + 3600000), reason: 'Automation disabled' };
+  const timing = automation ? { timezone: automationTimezone(settings, automation), reminders: { activeHours: { start: automation.general.activeStart, end: automation.general.activeEnd }, quietHours: { enabled: automation.general.quietEnabled, start: automation.general.quietStart, end: automation.general.quietEnd } } } : settings;
+  if (reminder.metadata?.automation?.startsWith('focus-')) {
+    if (!automation.dailyFocus.enabled) return { action: 'defer', at: new Date(now.getTime() + 3600000), reason: 'Daily Focus disabled' };
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: timing.timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+    if (reminder.metadata.date !== today) return { action: 'suppress', reason: 'Focus day passed' };
+  }
   if (!settings.reminders?.enabled)
     return { action: 'defer', at: new Date(now.getTime() + 3600000), reason: 'Reminders disabled' };
   if (
@@ -34,6 +44,13 @@ export async function coordinateReminder(reminder, now = new Date()) {
     );
     if (isEntityResolved(reminder.entityType, entity))
       return { action: 'resolve', reason: 'Linked entity resolved' };
+    if (reminder.metadata?.automation === 'smart' && entity?.executionState === 'blocked' && automation?.reminderBehavior.blockedTaskPolicy === 'pause') return { action: 'defer', at: new Date(now.getTime() + 86400000), reason: 'Task blocked' };
+    if (reminder.metadata?.automation === 'focus-task' && entity?.executionState === 'started' && automation?.taskExecution.startFollowUpEnabled) return { action: 'resolve', reason: 'Start check-in handles task' };
+    if (reminder.metadata?.automation === 'focus-task' && entity?.executionState === 'blocked' && automation?.reminderBehavior.blockedTaskPolicy === 'pause') return { action: 'defer', at: new Date(now.getTime() + automation.escalation.cooldownMinutes * 60000), reason: 'Task blocked' };
+  }
+  if (reminder.metadata?.automation === 'focus-morning') {
+    const focus = await DailyFocus.findOne({ _id: reminder.metadata.focusId, user: reminder.user });
+    if (!focus || focus.planningCompleted) return { action: 'suppress', reason: 'Planning complete' };
   }
   if (reminder.status === 'waiting') return { action: 'defer', reason: 'Waiting for blocker' };
   if (
@@ -43,12 +60,12 @@ export async function coordinateReminder(reminder, now = new Date()) {
       reminder.followUpCount >= (settings.reminders?.maxAutomaticFollowUps ?? 2))
   )
     return { action: 'suppress', reason: 'Follow-up limit' };
-  if (inQuietHours(now, settings) && reminder.priority !== 'urgent')
-    return { action: 'defer', at: afterQuietHours(now, settings), reason: 'Quiet hours' };
-  const activeAt = nextActiveTime(now, settings);
-  if (activeAt > now && reminder.priority !== 'urgent')
+  if (inQuietHours(now, timing))
+    return { action: 'defer', at: afterQuietHours(now, timing), reason: 'Quiet hours' };
+  const activeAt = nextActiveTime(now, timing);
+  if (activeAt > now)
     return { action: 'defer', at: activeAt, reason: 'Outside active hours' };
-  const spacing = (settings.reminders?.minimumReminderSpacingMinutes ?? 120) * 60000;
+  const spacing = (automation ? automation.reminderBehavior.duplicateSuppressionMinutes : settings.reminders?.minimumReminderSpacingMinutes ?? 120) * 60000;
   if (reminder.entityId && reminder.priority !== 'urgent') {
     const recent = await Reminder.findOne({
       user: reminder.user,

@@ -133,7 +133,7 @@ describe('reminder lifecycle', () => {
     expect(buildReminderPlan('goal', goal, settings)[0].purpose).toBe('review');
     const task = await createTask(user._id, { title: 'Call supplier', dueDate: tomorrow() });
     const plan = await Reminder.find({ entityType: 'task', entityId: task._id });
-    expect(plan).toHaveLength(2);
+    expect(plan).toHaveLength(1);
     await updateReminder(user._id, plan[0]._id, { title: 'My preferred copy' });
     await updateTask(user._id, task._id, { dueDate: new Date(Date.now() + 2 * 86400000) });
     expect((await Reminder.findById(plan[0]._id)).title).toBe('My preferred copy');
@@ -155,7 +155,7 @@ describe('reminder lifecycle', () => {
     });
     expect(await Reminder.countDocuments({ entityId: task._id })).toBe(0);
     await updateTask(user._id, task._id, { reminderMode: 'automatic' });
-    expect((await regenerateAutomaticReminderPlan(user._id, 'task', task._id)).length).toBe(2);
+    expect((await regenerateAutomaticReminderPlan(user._id, 'task', task._id)).length).toBe(1);
   });
 
   it('completes a linked task through its service', async () => {
@@ -175,7 +175,7 @@ describe('reminder lifecycle', () => {
     });
     await backfillUpcomingReminders(user._id);
     await backfillUpcomingReminders(user._id);
-    expect(await Reminder.countDocuments({ entityId: upcoming._id })).toBe(2);
+    expect(await Reminder.countDocuments({ entityId: upcoming._id })).toBe(1);
     expect(await Reminder.countDocuments({ entityId: historical._id })).toBe(0);
   });
 
@@ -190,8 +190,8 @@ describe('reminder lifecycle', () => {
     const following = await Task.findOne({ user: user._id, seriesId: first._id });
     expect(following).toBeTruthy();
     expect(following.status).toBe('todo');
-    expect(await Reminder.countDocuments({ entityId: first._id, status: 'completed' })).toBe(2);
-    expect(await Reminder.countDocuments({ entityId: following._id, status: 'scheduled' })).toBe(2);
+    expect(await Reminder.countDocuments({ entityId: first._id, status: 'completed' })).toBe(1);
+    expect(await Reminder.countDocuments({ entityId: following._id, status: 'scheduled' })).toBe(1);
     await updateTask(user._id, first._id, { status: 'completed' });
     expect(await Task.countDocuments({ user: user._id, seriesId: first._id })).toBe(1);
   });

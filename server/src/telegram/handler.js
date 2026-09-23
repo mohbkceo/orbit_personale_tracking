@@ -19,6 +19,10 @@ import { parseAmount, parseTelegramMessage } from './parser.js';
 import { executeCommand, executeIntent, helpText, lastAction, paymentReply, quickMenu } from './commandHandlers.js';
 import { handleCallbackAction } from './callbackHandlers.js';
 import { handleReminderCallback } from './callbacks/reminderCallbacks.js';
+import { handleFocusCallback } from './callbacks/focusCallbacks.js';
+import { addFocusTask, finishFocusPlanning, getDailyFocus, reviewFocusTask } from '../services/dailyFocus.service.js';
+import { getAutomationSettings } from '../services/automationSettings.service.js';
+import { executeTask } from '../services/taskExecution.service.js';
 import { clearPending, getPending, pendingExpired, setPending } from './sessionService.js';
 import { escapeHtml as h } from './formatters.js';
 
@@ -85,6 +89,35 @@ async function pendingMessage(text, pending, userId, settings, identity) {
 
 async function dispatchMessage(text, userId, settings, identity) {
   const command = text.trim().toLowerCase().split(/\s+/)[0];
+  const nextAction = text.match(/^\/nextaction\s+([a-f\d]{24})\s+(.+)$/i);
+  if (nextAction) {
+    const task = await updateTask(userId, nextAction[1], { nextAction: nextAction[2].trim().slice(0, 500) });
+    return { text: `✓ Next action saved for <b>${h(task.title)}</b>.` };
+  }
+  const focusDateCommand = text.match(/^\/focusdate\s+(\d{4}-\d{2}-\d{2})\s+([a-f\d]{24})\s+(\d{4}-\d{2}-\d{2})$/i);
+  if (focusDateCommand) {
+    await reviewFocusTask(userId, focusDateCommand[1], focusDateCommand[2], 'reschedule', 'telegram', new Date(`${focusDateCommand[3]}T00:00:00.000Z`));
+    return { text: '✓ Focus task rescheduled.' };
+  }
+  const taskDate = text.match(/^\/taskdate\s+([a-f\d]{24})\s+(\d{4}-\d{2}-\d{2})$/i);
+  if (taskDate) {
+    const date = dayjs.tz(`${taskDate[2]} 12:00`, 'YYYY-MM-DD HH:mm', settings.timezone);
+    if (date.format('YYYY-MM-DD') !== taskDate[2]) return { text: 'Choose a valid date.' };
+    await executeTask(userId, taskDate[1], 'reschedule', { channel: 'telegram', dueDate: new Date(`${taskDate[2]}T00:00:00.000Z`) });
+    return { text: '✓ Task rescheduled.' };
+  }
+  if (command === '/focus') {
+    const content = text.slice(6).trim();
+    if (content.toLowerCase() === 'done') { const focus = await finishFocusPlanning(userId, 'telegram'); return { text: `✓ Focus plan saved: ${focus.items.length} task${focus.items.length === 1 ? '' : 's'}.` }; }
+    if (!content) {
+      const focus = await getDailyFocus(userId);
+      if (!focus.planningStartedAt && !focus.planningCompleted) { focus.planningStartedAt = new Date(); await focus.save(); }
+      return { text: focus.planningCompleted ? `Today's focus has ${focus.items.length} task${focus.items.length === 1 ? '' : 's'}.` : `What are your priorities today? ${focus.items.length} selected. Send a task or type done.` };
+    }
+    const focus = await addFocusTask(userId, { title: content }, 'telegram');
+    const max = (await getAutomationSettings()).dailyFocus.maxTasks;
+    return { text: focus.planningCompleted ? `✓ ${focus.items.length}/${max} — focus plan saved.` : `${focus.items.length}/${max} — ${h(content)}. What's next? Type done if that's enough.` };
+  }
   if (['/cancel', 'cancel'].includes(text.toLowerCase())) { await clearPending(identity.userId, identity.chatId); return { text: 'Cancelled.' }; }
   if (['/quick', '/add'].includes(command)) { await clearPending(identity.userId, identity.chatId); return quickMenu(); }
   if (['/start', '/menu', '/help'].includes(command)) return { text: helpText() };
@@ -106,6 +139,15 @@ async function dispatchMessage(text, userId, settings, identity) {
   if (existing) return existing;
   const pending = await getPending(identity.userId, identity.chatId);
   const direct = parseTelegramMessage(text, { timezone: settings.timezone });
+  if (!pending && direct.intent === 'UNKNOWN' && !text.startsWith('/')) {
+    const focus = await getDailyFocus(userId);
+    if (focus.planningStartedAt && !focus.planningCompleted) {
+      if (text.toLowerCase() === 'done') { const complete = await finishFocusPlanning(userId, 'telegram'); return { text: `✓ Focus plan saved: ${complete.items.length} tasks.` }; }
+      const updated = await addFocusTask(userId, { title: text }, 'telegram');
+      const max = (await getAutomationSettings()).dailyFocus.maxTasks;
+      return { text: updated.planningCompleted ? `✓ ${updated.items.length}/${max} — focus plan saved.` : `${updated.items.length}/${max} — ${h(text)}. What's next? Type done if that's enough.` };
+    }
+  }
   const interruptsPending = ['CANCEL_REMINDER', 'UPDATE_REMINDER'].includes(direct.intent) || (!['EDIT_TASK', 'EDIT_TX'].includes(pending?.action) && /^(CREATE_|RECORD_)/.test(direct.intent));
   if (pending && interruptsPending) {
     await clearPending(identity.userId, identity.chatId);
@@ -154,6 +196,10 @@ export async function handleTelegramUpdate(update) {
   const settings = await getSettingsDocument(user._id);
   const identity = { userId: from.id, chatId };
   if (callback) {
+    if (String(callback.data).startsWith('f:')) {
+      try { return await handleFocusCallback(callback, user._id, token); }
+      catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }
+    }
     if (String(callback.data).startsWith('r:')) {
       try { return await handleReminderCallback(callback, user._id, token, settings); }
       catch (error) { console.error('Telegram reminder callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }

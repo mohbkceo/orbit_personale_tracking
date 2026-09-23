@@ -75,7 +75,7 @@ function durationText(plan) {
   return `${plan.durationValue} ${plural} access`;
 }
 
-function PricingCard({ plan, index }) {
+function PricingCard({ plan }) {
   const accent = plan.appearance?.color || '#c8ff00';
   const accentText = plan.appearance?.textColor || '#081000';
   const highlighted = Boolean(plan.appearance?.highlighted);
@@ -394,7 +394,6 @@ export default function Pricing() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0d100f] text-white">
-      {/* global background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-[-350px] h-[700px] w-[1000px] -translate-x-1/2 rounded-full bg-white/[0.035] blur-[120px]" />
 

@@ -74,11 +74,11 @@ describe('REST API', () => {
   it('updates a linked task reminder mode without exposing another entity', async () => {
     const task = await request(app).post('/api/tasks').set('Cookie', cookie).send({ title: 'Call dentist', dueDate: new Date(Date.now() + 86400000) }).expect(201);
     const id = task.body.data._id;
-    expect((await request(app).get(`/api/reminders/entity/task/${id}`).set('Cookie', cookie).expect(200)).body.data).toHaveLength(2);
+    expect((await request(app).get(`/api/reminders/entity/task/${id}`).set('Cookie', cookie).expect(200)).body.data).toHaveLength(1);
     await request(app).patch(`/api/reminders/entity/task/${id}/mode`).set('Cookie', cookie).send({ mode: 'off' }).expect(200);
     expect((await request(app).get(`/api/reminders/entity/task/${id}`).set('Cookie', cookie).expect(200)).body.data.filter((item) => item.status === 'scheduled')).toHaveLength(0);
     await request(app).patch(`/api/reminders/entity/task/${id}/mode`).set('Cookie', cookie).send({ mode: 'automatic' }).expect(200);
-    expect((await request(app).get(`/api/reminders/entity/task/${id}`).set('Cookie', cookie).expect(200)).body.data.filter((item) => item.status === 'scheduled')).toHaveLength(2);
+    expect((await request(app).get(`/api/reminders/entity/task/${id}`).set('Cookie', cookie).expect(200)).body.data.filter((item) => item.status === 'scheduled')).toHaveLength(1);
     await request(app).get(`/api/reminders/entity/task/${new mongoose.Types.ObjectId()}/mode`).set('Cookie', cookie).expect(404);
   });
 });

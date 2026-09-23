@@ -69,6 +69,7 @@ export function AdminLayout() {
                 ? [
                     ['Admins', '/admin/admins'],
                     ['Settings', '/admin/settings'],
+                    ['Automation Settings', '/admin/settings/automation'],
                   ]
                 : []),
             ].map(([label, to]) => (
@@ -766,6 +767,7 @@ export function AdminSettings() {
         title="Platform settings"
         description="Telegram infrastructure is configured through server environment variables."
       />
+      <Link to="/admin/settings/automation" className="btn-secondary mb-5 inline-flex">Automation Settings</Link>
       <ErrorText error={error || actionError} />
       {loading ? (
         <Spinner />

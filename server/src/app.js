@@ -29,6 +29,8 @@ import { adminAdminRoutes } from './routes/adminAdmins.js';
 import { adminOperationRoutes } from './routes/adminOperations.js';
 import { telegramLinkRoutes } from './routes/telegramLink.js';
 import { reminderRoutes } from './routes/reminders.js';
+import { dailyFocusRoutes } from './routes/dailyFocus.js';
+import { adminAutomationSettingsRoutes } from './routes/adminAutomationSettings.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -53,6 +55,7 @@ app.use('/api/admin/activation-links', adminActivationLinkRoutes);
 app.use('/api/admin/qr-batches', adminQrBatchRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/admins', adminAdminRoutes);
+app.use('/api/admin/settings/automation', adminAutomationSettingsRoutes);
 app.use('/api/admin', adminOperationRoutes);
 app.use('/api/telegram-link', userAuth, telegramLinkRoutes);
 app.use('/api/accounts', userAuth, accessGuard, accountRoutes);
@@ -61,6 +64,7 @@ app.use('/api/expenses', userAuth, accessGuard, (req, _res, next) => { req.query
 app.use('/api/income', userAuth, accessGuard, (req, _res, next) => { req.query.type = 'income'; if (req.method === 'POST') req.body.type = 'income'; next(); }, transactionRoutes);
 app.use('/api/debts', userAuth, accessGuard, debtRoutes);
 app.use('/api/tasks', userAuth, accessGuard, taskRoutes);
+app.use('/api/daily-focus', userAuth, accessGuard, dailyFocusRoutes);
 app.use('/api/reminders', userAuth, accessGuard, reminderRoutes);
 app.use('/api/bills', userAuth, accessGuard, billRoutes);
 app.use('/api/subscriptions', userAuth, accessGuard, subscriptionRoutes);

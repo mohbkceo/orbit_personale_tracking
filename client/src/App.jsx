@@ -6,6 +6,7 @@ import { AppProvider } from './context/AppContext.jsx';
 import { useAuth, useAdminAuth } from './context/useAuth.js';
 import { AdminLayout, AdminDashboard, AdminUsers, AdminUserDetail, AdminActivationLinks, AdminActivity, AdminAdmins, AdminSettings } from './pages/Admin.jsx';
 import { AdminQrBatches, AdminQrBatchDetail } from './pages/admin/QrBatches.jsx';
+import AdminAutomationSettings from './pages/admin/AutomationSettings.jsx';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
@@ -47,7 +48,7 @@ export default function App() {
     <Route path="admin/login" element={<AdminLogin/>}/>
     <Route path="admin" element={<AdminProtectedRoute><AdminLayout/></AdminProtectedRoute>}>
       <Route index element={<AdminDashboard/>}/><Route path="users" element={<AdminUsers/>}/><Route path="users/:id" element={<AdminUserDetail/>}/><Route path="plans" element={<AdminPlans/>}/><Route path="features" element={<AdminFeatures/>}/><Route path="activation-links" element={<AdminActivationLinks/>}/><Route path="qr-batches" element={<AdminQrBatches/>}/><Route path="qr-batches/:id" element={<AdminQrBatchDetail/>}/><Route path="activity" element={<AdminActivity/>}/>
-      <Route path="admins" element={<AdminProtectedRoute superOnly><AdminAdmins/></AdminProtectedRoute>}/><Route path="settings" element={<AdminProtectedRoute superOnly><AdminSettings/></AdminProtectedRoute>}/>
+      <Route path="admins" element={<AdminProtectedRoute superOnly><AdminAdmins/></AdminProtectedRoute>}/><Route path="settings" element={<AdminProtectedRoute superOnly><AdminSettings/></AdminProtectedRoute>}/><Route path="settings/automation" element={<AdminProtectedRoute superOnly><AdminAutomationSettings/></AdminProtectedRoute>}/>
     </Route>
     <Route element={<ProtectedRoute><AppProvider><Layout/></AppProvider></ProtectedRoute>}><Route index element={<Dashboard/>}/><Route path="tasks" element={<Tasks/>}/><Route path="reminders" element={<Reminders/>}/><Route path="money/accounts" element={<Accounts/>}/><Route path="money/transactions" element={<Transactions/>}/><Route path="money/expenses" element={<Transactions mode="expense"/>}/><Route path="money/income" element={<Transactions mode="income"/>}/><Route path="money/debts" element={<Debts/>}/><Route path="planning/bills" element={<Planning kind="bills"/>}/><Route path="planning/subscriptions" element={<Planning kind="subscriptions"/>}/><Route path="planning/goals" element={<Planning kind="goals"/>}/><Route path="personal/:kind" element={<PersonalRoute/>}/><Route path="settings" element={<Settings/>}/><Route path="*" element={<NotFound/>}/></Route>
   </Routes></Suspense>;
