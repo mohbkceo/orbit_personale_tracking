@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useParams } from 'react-router-dom';
+import { Link, NavLink, useLocation, useOutlet, useParams } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
+import { AnimatedPage } from '../animations/AnimatedPage.jsx';
 import { api } from '../api/client.js';
 import { useAdminAuth } from '../context/useAuth.js';
 import { PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
@@ -55,6 +57,8 @@ function useResource(path) {
 
 export function AdminLayout() {
   const { admin, logout } = useAdminAuth();
+  const location = useLocation();
+  const outlet = useOutlet();
   return (
     <div className="min-h-screen bg-canvas dark:bg-[#0d1310]">
       <header className="border-b border-[#e1e5df] bg-ink px-4 text-white dark:border-white/10">
@@ -92,7 +96,7 @@ export function AdminLayout() {
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-8">
-        <Outlet />
+        <AnimatePresence mode="wait" initial={false}><AnimatedPage key={location.pathname}>{outlet}</AnimatedPage></AnimatePresence>
       </main>
     </div>
   );

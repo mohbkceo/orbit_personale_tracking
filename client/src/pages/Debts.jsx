@@ -6,9 +6,12 @@ import { useApp } from '../context/useApp.js';
 import { useData } from '../hooks/useData.js';
 import { cn, formatDate, formatMoney, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
+import { AnimatedList } from '../animations/AnimatedList.jsx';
+import { AnimatedNumber } from '../animations/AnimatedNumber.jsx';
+import { AnimatedProgress } from '../animations/AnimatedProgress.jsx';
 
 function DebtForm({ open, onClose, onSaved }) {
-  const { settings, toast } = useApp();
+  const { settings, toast, reward } = useApp();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
@@ -28,6 +31,7 @@ function DebtForm({ open, onClose, onSaved }) {
     try {
       const result = await endpoints.create('debts', form);
       toast('Debt created');
+      reward('DEBT_CREATED');
       onSaved();
       onClose();
       if (form.reminderMode === 'custom')
@@ -127,7 +131,7 @@ function DebtForm({ open, onClose, onSaved }) {
 }
 
 function PaymentForm({ debt, onClose, onSaved }) {
-  const { toast } = useApp();
+  const { toast, reward } = useApp();
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
@@ -148,8 +152,9 @@ function PaymentForm({ debt, onClose, onSaved }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await endpoints.create(`debts/${debt._id}/payments`, form);
+      const result = await endpoints.create(`debts/${debt._id}/payments`, form);
       toast('Payment recorded in the ledger');
+      if (result.data.remainingAmount === 0) reward('DEBT_PAID');
       onSaved();
       onClose();
     } catch (err) {
@@ -275,7 +280,7 @@ export default function Debts() {
         <Spinner />
       ) : error ? (
         <EmptyState icon={HandCoins} title="Debts unavailable" description={error} />
-      ) : debts.length === 0 ? (
+      ) : (<>{debts.length === 0 && (
         <div className="panel">
           <EmptyState
             icon={HandCoins}
@@ -283,9 +288,8 @@ export default function Debts() {
             description="Add a receivable or payable to track it here."
           />
         </div>
-      ) : (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {debts.map((debt) => {
+      )}
+        <AnimatedList as="section" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" items={debts} renderItem={(debt) => {
             const progress = 100 - (debt.remainingAmount / debt.originalAmount) * 100;
             return (
               <article key={debt._id} className="panel p-5">
@@ -318,18 +322,13 @@ export default function Debts() {
                     Remaining
                   </p>
                   <p className="mt-1 font-display text-2xl font-bold">
-                    {formatMoney(debt.remainingAmount, debt.currency)}
+                    <AnimatedNumber value={debt.remainingAmount} format={(value) => formatMoney(value, debt.currency)} />
                   </p>
                   <p className="mt-1 text-xs text-[#849087]">
                     of {formatMoney(debt.originalAmount, debt.currency)}
                   </p>
                 </div>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e8ece6] dark:bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-accent dark:bg-lime"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
+                <AnimatedProgress value={progress} className="mt-4 h-2" />
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-xs text-[#7d8881]">Due {formatDate(debt.dueDate)}</p>
                   <button onClick={() => setPaying(debt)} className="btn-secondary h-9">
@@ -341,8 +340,7 @@ export default function Debts() {
                 </Link>
               </article>
             );
-          })}
-        </section>
+          }} /></>
       )}
       <DebtForm open={formOpen} onClose={() => setFormOpen(false)} onSaved={reload} />
       <PaymentForm debt={paying} onClose={() => setPaying(null)} onSaved={reload} />

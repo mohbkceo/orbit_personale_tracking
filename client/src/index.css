@@ -3,11 +3,15 @@
 @tailwind utilities;
 
 :root { color-scheme: light; font-synthesis: none; }
+:root { --orbit-button-duration: 160ms; }
 .dark { color-scheme: dark; }
 * { scrollbar-width: thin; scrollbar-color: #c7cec7 transparent; }
 body { @apply m-0 min-w-[320px] bg-canvas font-sans text-ink antialiased dark:bg-[#0d1310] dark:text-[#edf4ef]; }
 button, input, select, textarea { font: inherit; }
 button { @apply transition duration-150; }
+button.btn-primary, button.btn-secondary, button.btn-ghost, button.icon-btn { transition: transform var(--orbit-button-duration) ease, background-color var(--orbit-button-duration) ease, color var(--orbit-button-duration) ease; }
+button.btn-primary:hover:not(:disabled), button.btn-secondary:hover:not(:disabled), button.btn-ghost:hover:not(:disabled) { transform: scale(1.012); }
+button.btn-primary:active:not(:disabled), button.btn-secondary:active:not(:disabled), button.btn-ghost:active:not(:disabled), button.icon-btn:active:not(:disabled) { transform: scale(.97); }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-canvas dark:ring-[#77d7ad] dark:ring-offset-[#0d1310]; }
 
 @layer components {
@@ -27,3 +31,4 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .recharts-cartesian-grid line { stroke: #e4e8e2; }
 .dark .recharts-cartesian-grid line { stroke: rgba(255,255,255,.08); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+@media (prefers-reduced-motion: reduce) { button.btn-primary:hover, button.btn-secondary:hover, button.btn-ghost:hover, button.btn-primary:active, button.btn-secondary:active, button.btn-ghost:active, button.icon-btn:active { transform: none !important; } }

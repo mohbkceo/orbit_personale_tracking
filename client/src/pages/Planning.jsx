@@ -6,6 +6,10 @@ import { useApp } from '../context/useApp.js';
 import { useData } from '../hooks/useData.js';
 import { formatDate, formatMoney, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
+import { AnimatedList } from '../animations/AnimatedList.jsx';
+import { AnimatedNumber } from '../animations/AnimatedNumber.jsx';
+import { AnimatedProgress } from '../animations/AnimatedProgress.jsx';
+import { crossedGoalMilestone } from '../animations/rewardConfig.js';
 
 const config = {
   bills: {
@@ -29,7 +33,7 @@ const config = {
 };
 
 function ItemForm({ kind, open, onClose, onSaved }) {
-  const { settings, toast } = useApp();
+  const { settings, toast, reward } = useApp();
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -84,6 +88,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
     try {
       const result = await endpoints.create(kind, form);
       toast(`${config[kind].title.slice(0, -1)} created`);
+      if (kind === 'goals') reward('GOAL_CREATED');
       onSaved();
       onClose();
       if (form.reminderMode === 'custom') navigate(`/reminders?entityType=${kind.slice(0, -1)}&entityId=${result.data._id}`);
@@ -277,18 +282,13 @@ function GoalCard({ item, currency, onManage }) {
       </p>
       <div className="mt-6 flex items-end justify-between">
         <p className="font-display text-xl font-bold">
-          {formatMoney(item.currentAmount, currency)}
+          <AnimatedNumber value={item.currentAmount} format={(value) => formatMoney(value, currency)} />
         </p>
         <p className="text-xs text-[#7c8780]">of {formatMoney(item.targetAmount, currency)}</p>
       </div>
-      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e8ece6] dark:bg-white/10">
-        <div
-          className="h-full rounded-full bg-accent dark:bg-lime"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <AnimatedProgress value={progress} className="mt-3 h-2.5" />
       <div className="mt-3 flex items-center justify-between">
-        <p className="text-[11px] font-bold text-[#768179]">{Math.round(progress)}%</p>
+        <p className="text-[11px] font-bold text-[#768179]"><AnimatedNumber value={progress} />%</p>
         {item.type === 'financial' && (
           <button className="btn-secondary h-8 px-3 text-xs" onClick={onManage}>
             Manage savings
@@ -300,7 +300,7 @@ function GoalCard({ item, currency, onManage }) {
 }
 
 function SavingsForm({ goal, onClose, onSaved }) {
-  const { toast } = useApp();
+  const { toast, reward } = useApp();
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
@@ -325,7 +325,7 @@ function SavingsForm({ goal, onClose, onSaved }) {
     event.preventDefault();
     setBusy(true);
     try {
-      await endpoints.create(`goals/${goal._id}/${form.action}`, {
+      const result = await endpoints.create(`goals/${goal._id}/${form.action}`, {
         amount: form.amount,
         accountId: form.accountId,
         destinationAccountId: form.destinationAccountId,
@@ -335,6 +335,11 @@ function SavingsForm({ goal, onClose, onSaved }) {
           ? 'Savings contribution recorded'
           : 'Savings withdrawal recorded',
       );
+      if (form.action === 'contribute') {
+        const before = goal.targetAmount ? goal.currentAmount / goal.targetAmount * 100 : 0;
+        const after = goal.targetAmount ? result.data.currentAmount / goal.targetAmount * 100 : 0;
+        reward(crossedGoalMilestone(before, after) || 'SAVINGS_CONTRIBUTED');
+      }
       onSaved();
       onClose();
     } catch (error) {
@@ -480,7 +485,7 @@ export default function Planning({ kind }) {
         <Spinner />
       ) : error ? (
         <EmptyState icon={Icon} title={`${details.title} unavailable`} description={error} />
-      ) : items.length === 0 ? (
+      ) : (<>{items.length === 0 && (
         <div className="panel">
           <EmptyState
             icon={Icon}
@@ -493,22 +498,12 @@ export default function Planning({ kind }) {
             }
           />
         </div>
-      ) : kind === 'goals' ? (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((item) => (
-            <GoalCard
-              key={item._id}
-              item={item}
-              currency={settings.defaultCurrency}
-              onManage={() => setManaging(item)}
-            />
-          ))}
-        </section>
+      )}{kind === 'goals' ? (
+        <AnimatedList as="section" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" items={items} renderItem={(item) => <GoalCard item={item} currency={settings.defaultCurrency} onManage={() => setManaging(item)} />} />
       ) : (
         <section className="panel overflow-hidden">
-          {items.map((item) => (
+          <AnimatedList items={items} renderItem={(item) => (
             <article
-              key={item._id}
               className="flex flex-col gap-3 border-b border-[#edf0ec] p-4 last:border-0 dark:border-white/5 sm:flex-row sm:items-center sm:p-5"
             >
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f0f2ed] text-[#657168] dark:bg-white/10">
@@ -546,9 +541,9 @@ export default function Planning({ kind }) {
                 </button>
               )}
             </article>
-          ))}
+          )} />
         </section>
-      )}
+      )}</>)}
       <ItemForm
         key={kind}
         kind={kind}

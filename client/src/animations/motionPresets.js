@@ -1,0 +1,17 @@
+export const timing = Object.freeze({ micro: .13, button: .16, list: .22, modal: .25, page: .21, task: .55, rewardSmall: .75, rewardMedium: 1.05, rewardMajor: 1.4 });
+export const rewardHold = Object.freeze({ small: 1700, medium: 1700, major: 2200 });
+export const ease = [0.22, 1, 0.36, 1];
+export const spring = { type: 'spring', stiffness: 340, damping: 30 };
+export const progressSpring = { type: 'spring', stiffness: 110, damping: 22 };
+export const fade = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: timing.list } };
+export const slide = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 5 }, transition: { duration: timing.list, ease } };
+export const scale = { initial: { opacity: 0, scale: .98 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: .98 }, transition: { duration: timing.list, ease } };
+export const page = { initial: { opacity: 0, y: 5 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0 }, transition: { duration: timing.page, ease } };
+export const listItem = { initial: { opacity: 0, y: -8, scale: .98 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: 5, scale: .98 }, transition: { duration: timing.list, ease, layout: spring } };
+export const modalDesktop = { initial: { opacity: 0, scale: .97, y: 8 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: .97, y: 8 }, transition: { duration: timing.modal, ease } };
+export const modalMobile = { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' }, transition: { duration: timing.modal, ease } };
+export const backdrop = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: timing.modal } };
+export const toastMotion = { initial: { opacity: 0, x: 20, scale: .96 }, animate: { opacity: 1, x: 0, y: 0, scale: 1 }, exit: { opacity: 0, y: 8 }, transition: { duration: timing.list, ease } };
+export const buttonMotion = { whileHover: { scale: 1.012 }, whileTap: { scale: .97 }, transition: { duration: timing.button } };
+export const taskMotion = { checkboxTap: { scale: .82 }, checkInitial: { scale: .25, opacity: 0 }, checkExit: { scale: .25, opacity: 0 }, rippleInitial: { scale: 1, opacity: .8 }, rippleFinal: { scale: 2.1, opacity: 0 }, startedInitial: { opacity: .7, scale: .95 } };
+export const reduced = (preset) => ({ ...preset, initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: timing.micro } });

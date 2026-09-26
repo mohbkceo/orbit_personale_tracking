@@ -1,13 +1,22 @@
 import { LoaderCircle, X } from 'lucide-react';
 import { cn, formatMoney } from '../utils/format.js';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { backdrop, modalDesktop, modalMobile, reduced } from '../animations/motionPresets.js';
 
 export function PageHeader({ eyebrow, title, description, actions }) {
   return <header className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="eyebrow mb-2">{eyebrow}</p><h1 className="font-display text-3xl font-bold tracking-tight sm:text-[34px]">{title}</h1>{description && <p className="mt-1.5 max-w-2xl text-sm text-[#6d7871] dark:text-[#a4afa8]">{description}</p>}</div>{actions && <div className="flex gap-2">{actions}</div>}</header>;
 }
 
 export function Modal({ open, onClose, title, description, children, wide = false }) {
-  if (!open) return null;
-  return <div className="fixed inset-0 z-[70] flex items-end justify-center bg-[#07110c]/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" onMouseDown={(e) => e.target === e.currentTarget && onClose()}><section role="dialog" aria-modal="true" className={cn('max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-lift dark:bg-[#151c18] sm:rounded-2xl sm:p-6', wide ? 'max-w-2xl' : 'max-w-lg')}><header className="mb-5 flex items-start justify-between gap-4"><div><h2 className="font-display text-xl font-bold">{title}</h2>{description && <p className="mt-1 text-sm text-[#6d7871] dark:text-[#9ca9a1]">{description}</p>}</div><button className="icon-btn -mr-1 -mt-1" onClick={onClose} aria-label="Close"><X size={19} /></button></header>{children}</section></div>;
+  const reduce = useReducedMotion();
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 639px)').matches);
+  useEffect(() => { const media = window.matchMedia('(max-width: 639px)'); const change = () => setMobile(media.matches); media.addEventListener('change', change); return () => media.removeEventListener('change', change); }, []);
+  useEffect(() => { if (!open) return undefined; const handle = (event) => { if (event.key === 'Escape') onClose(); }; window.addEventListener('keydown', handle); return () => window.removeEventListener('keydown', handle); }, [open, onClose]);
+  return <div className="pointer-events-none fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-5"><AnimatePresence>{open && [
+    <motion.div key="backdrop" {...(reduce ? reduced(backdrop) : backdrop)} className="pointer-events-auto absolute inset-0 bg-[#07110c]/55 backdrop-blur-[2px]" onMouseDown={onClose} />,
+    <motion.section key="dialog" {...(reduce ? reduced(modalDesktop) : mobile ? modalMobile : modalDesktop)} role="dialog" aria-modal="true" aria-label={title} className={cn('pointer-events-auto relative max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-lift dark:bg-[#151c18] sm:rounded-2xl sm:p-6', wide ? 'max-w-2xl' : 'max-w-lg')}><header className="mb-5 flex items-start justify-between gap-4"><div><h2 className="font-display text-xl font-bold">{title}</h2>{description && <p className="mt-1 text-sm text-[#6d7871] dark:text-[#9ca9a1]">{description}</p>}</div><button className="icon-btn -mr-1 -mt-1" onClick={onClose} aria-label="Close"><X size={19} /></button></header>{children}</motion.section>
+  ]}</AnimatePresence></div>;
 }
 
 export function EmptyState({ icon: Icon, title, description, action }) {

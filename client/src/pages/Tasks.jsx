@@ -17,12 +17,15 @@ import { useData } from '../hooks/useData.js';
 import { cn, formatDate, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 import { DailyFocusPanel } from '../components/DailyFocusPanel.jsx';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { AnimatedList } from '../animations/AnimatedList.jsx';
+import { spring, timing, taskMotion, buttonMotion } from '../animations/motionPresets.js';
 
 const views = ['all', 'today', 'upcoming', 'overdue', 'completed'];
 const priorityTone = { low: 'neutral', medium: 'info', high: 'warning', urgent: 'danger' };
 
 function TaskForm({ open, onClose, onSaved, task }) {
-  const { toast } = useApp();
+  const { toast, reward } = useApp();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [planned, setPlanned] = useState([]);
@@ -69,6 +72,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
             ? 'Task added · Smart reminders enabled'
             : 'Task added',
       );
+      if (!task) reward('TASK_CREATED');
       onSaved();
       onClose();
       if (form.reminderMode === 'custom' && !task)
@@ -169,7 +173,8 @@ function TaskForm({ open, onClose, onSaved, task }) {
 }
 
 export default function Tasks() {
-  const { toast } = useApp();
+  const { toast, reward } = useApp();
+  const reduce = useReducedMotion();
   const [view, setView] = useState('all');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null);
@@ -190,6 +195,7 @@ export default function Tasks() {
       if (status === 'completed') await endpoints.create(`tasks/${task._id}/execute`, { action: 'done' });
       else await endpoints.update('tasks', task._id, { status });
       toast(status === 'completed' ? 'Task completed' : 'Task reopened');
+      if (status === 'completed') reward('TASK_COMPLETED');
       reload();
     } catch (err) {
       toast(err.message, 'error');
@@ -279,7 +285,7 @@ export default function Tasks() {
               </button>
             }
           />
-        ) : tasks.length === 0 ? (
+        ) : (<>{tasks.length === 0 && (
           <EmptyState
             icon={CalendarCheck2}
             title="Nothing here"
@@ -294,9 +300,8 @@ export default function Tasks() {
               </button>
             }
           />
-        ) : (
-          <div>
-            {tasks.map((task) => {
+        )}
+          <AnimatedList items={tasks} renderItem={(task) => {
               const complete = task.status === 'completed';
               const overdue =
                 !complete && task.dueDate && dayjs(task.dueDate).isBefore(dayjs(), 'day');
@@ -306,26 +311,30 @@ export default function Tasks() {
                   className="group grid gap-3 border-b border-[#edf0ec] px-4 py-4 last:border-0 hover:bg-[#fbfcfa] dark:border-white/5 dark:hover:bg-white/[.02] md:grid-cols-[1fr_130px_130px_100px_50px] md:items-center md:px-5"
                 >
                   <div className="flex min-w-0 items-start gap-3">
-                    <button
+                    <motion.button
+                      whileTap={reduce ? undefined : taskMotion.checkboxTap}
+                      transition={{ duration: timing.micro }}
                       onClick={() => setStatus(task, complete ? 'todo' : 'completed')}
                       className={cn(
-                        'mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border',
+                        'relative mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border',
                         complete
                           ? 'border-accent bg-accent text-white'
                           : 'border-[#b9c2bc] hover:border-accent',
                       )}
                       aria-label={complete ? 'Reopen task' : 'Complete task'}
                     >
-                      {complete ? <Check size={13} /> : <Circle size={10} className="opacity-0" />}
-                    </button>
+                      <AnimatePresence>{complete && <motion.span key="check" initial={reduce ? { opacity: 0 } : taskMotion.checkInitial} animate={{ scale: 1, opacity: 1 }} exit={taskMotion.checkExit} transition={spring}><Check size={13} /></motion.span>}</AnimatePresence>
+                      <AnimatePresence initial={false}>{complete && !reduce && <motion.span key="ripple" className="pointer-events-none absolute inset-0 rounded-full border border-accent" initial={taskMotion.rippleInitial} animate={taskMotion.rippleFinal} exit={{ opacity: 0 }} transition={{ duration: timing.task }} />}</AnimatePresence>
+                      {!complete && <Circle size={10} className="opacity-0" />}
+                    </motion.button>
                     <button onClick={() => openEdit(task)} className="min-w-0 text-left">
                       <p
                         className={cn(
-                          'truncate text-sm font-semibold',
-                          complete && 'text-[#8b948e] line-through',
+                          'relative truncate text-sm font-semibold transition-colors',
+                          complete && 'text-[#8b948e]',
                         )}
                       >
-                        {task.title}
+                        <span className="relative">{task.title}{complete && <motion.span className="absolute inset-x-0 top-1/2 h-px bg-current" style={{ transformOrigin: 'left' }} initial={{ scaleX: reduce ? 1 : 0 }} animate={{ scaleX: 1 }} transition={{ duration: timing.task }} />}</span>
                       </p>
                       <p className="mt-1 truncate text-[11px] text-[#89928c]">
                         {task.category}
@@ -333,7 +342,7 @@ export default function Tasks() {
                       </p>
                       {task.nextAction && <p className="mt-1 truncate text-[11px] text-[#6c7b71]">Next: {task.nextAction}</p>}
                     </button>
-                    {!complete && task.status !== 'cancelled' && <div className="flex shrink-0 gap-2 text-[11px]"><button className="text-accent underline" onClick={() => execute(task, 'start')}>Start</button><button className="text-[#7b867f] underline" onClick={() => execute(task, 'blocked')}>Blocked</button></div>}
+                    {!complete && task.status !== 'cancelled' && <div className="flex shrink-0 gap-2 text-[11px]"><motion.button whileTap={reduce ? undefined : buttonMotion.whileTap} transition={buttonMotion.transition} className="text-accent underline" onClick={() => execute(task, 'start')}>Start</motion.button><button className="text-[#7b867f] underline" onClick={() => execute(task, 'blocked')}>Blocked</button></div>}
                   </div>
                   <div
                     className={cn(
@@ -348,13 +357,13 @@ export default function Tasks() {
                     <StatusBadge tone={priorityTone[task.priority]}>{task.priority}</StatusBadge>
                   </div>
                   <div>
-                    <StatusBadge
+                    <motion.span key={task.status} initial={reduce ? { opacity: 0 } : taskMotion.startedInitial} animate={{ opacity: 1, scale: 1 }} transition={{ duration: timing.list }}><StatusBadge
                       tone={
                         complete ? 'success' : task.status === 'in_progress' ? 'info' : 'neutral'
                       }
                     >
                       {task.status}
-                    </StatusBadge>
+                    </StatusBadge></motion.span>
                   </div>
                   <button
                     onClick={() => remove(task)}
@@ -365,8 +374,7 @@ export default function Tasks() {
                   </button>
                 </article>
               );
-            })}
-          </div>
+            }} /></>
         )}
       </section>
       <TaskForm

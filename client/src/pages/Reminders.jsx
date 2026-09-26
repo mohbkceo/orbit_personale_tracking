@@ -7,6 +7,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 import { Bell, Plus } from 'lucide-react';
 import { api, endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
+import { AnimatedList } from '../animations/AnimatedList.jsx';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 
 dayjs.extend(utc);
@@ -703,10 +704,8 @@ export default function Reminders() {
                     <h2 className="mb-3 text-xs font-bold uppercase tracking-[.15em] text-[#728078]">
                       {name}
                     </h2>
-                    <div className="grid gap-3 lg:grid-cols-2">
-                      {rows.map((item) => (
+                    <AnimatedList className="grid gap-3 lg:grid-cols-2" items={rows} renderItem={(item) => (
                         <ReminderCard
-                          key={item._id}
                           item={item}
                           onAction={action}
                           onEdit={(value) => {
@@ -715,8 +714,7 @@ export default function Reminders() {
                           }}
                           settings={settings}
                         />
-                      ))}
-                    </div>
+                      )} />
                   </section>
                 ),
             )}
