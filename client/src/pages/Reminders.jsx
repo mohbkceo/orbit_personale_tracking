@@ -215,13 +215,13 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
         )}
         <button
           type="button"
-          className="text-xs font-semibold text-accent"
+          className="text-xs font-semibold text-primary"
           onClick={() => setAdvanced(!advanced)}
         >
           {advanced ? 'Hide' : 'Show'} advanced settings
         </button>
         {advanced && (
-          <div className="space-y-3 rounded-xl border border-[#e1e6e0] p-4 dark:border-white/10">
+          <div className="space-y-3 rounded-xl border border-border p-4 ">
             <label>
               <span className="label">Context</span>
               <textarea
@@ -380,7 +380,7 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display font-bold">{item.title}</h3>
-          <p className="mt-1 text-xs text-[#748078]">
+          <p className="mt-1 text-xs text-muted">
             {item.message ||
               (item.purpose === 'review' ? 'Review your progress' : 'Ready to handle')}{' '}
             · {dayjs(item.nextTriggerAt).tz(settings.timezone).format('ddd, D MMM · HH:mm')}
@@ -395,11 +395,11 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
         </StatusBadge>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-[#819087]">
+        <span className="text-muted">
           {item.source === 'automatic' ? 'Automatic' : 'Custom'} · {item.entityType}
         </span>
         {item.metadata?.explanation && (
-          <details className="text-[#738077]">
+          <details className="text-muted">
             <summary className="cursor-pointer">Why this reminder?</summary>
             <p className="mt-1 max-w-md whitespace-pre-line">
               {item.metadata.explanation}
@@ -536,11 +536,11 @@ function EntityReminderControls({ entityType, entityId, count, onChanged }) {
     <section className="panel mb-5 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#7b867f]">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">
             Reminder plan · {entityType}
           </p>
           <h2 className="mt-1 font-display font-bold">{entity.title}</h2>
-          <p className="mt-1 text-xs text-[#7b867f]">
+          <p className="mt-1 text-xs text-muted">
             {count} open reminder{count === 1 ? '' : 's'}
           </p>
         </div>
@@ -663,11 +663,11 @@ export default function Reminders() {
           onChanged={load}
         />
       )}
-      <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-[#dfe4de] bg-white p-1 dark:border-white/10 dark:bg-white/5">
+      <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface p-1  ">
         {filters.map((name) => (
           <button
             key={name}
-            className={`rounded-lg px-3 py-2 text-xs font-bold ${filter === name ? 'bg-ink text-white dark:bg-lime dark:text-ink' : 'text-[#768179]'}`}
+            className={`rounded-lg px-3 py-2 text-xs font-bold ${filter === name ? 'bg-primary text-primary-text  ' : 'text-muted'}`}
             onClick={() => setFilter(name)}
           >
             {name}
@@ -701,7 +701,7 @@ export default function Reminders() {
               ([name, rows]) =>
                 rows.length > 0 && (
                   <section key={name}>
-                    <h2 className="mb-3 text-xs font-bold uppercase tracking-[.15em] text-[#728078]">
+                    <h2 className="mb-3 text-xs font-bold uppercase tracking-[.15em] text-muted">
                       {name}
                     </h2>
                     <AnimatedList className="grid gap-3 lg:grid-cols-2" items={rows} renderItem={(item) => (

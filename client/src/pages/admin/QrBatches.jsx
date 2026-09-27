@@ -80,19 +80,19 @@ function BatchActions({ batch, onError, onRevoked }) {
   }
   return (
     <div className="flex flex-wrap gap-3 text-xs">
-      <Link className="text-accent underline" to={`/admin/qr-batches/${batch._id}`}>
+      <Link className="text-primary underline" to={`/admin/qr-batches/${batch._id}`}>
         View
       </Link>
       <button
         disabled={Boolean(busy)}
-        className="text-accent underline disabled:opacity-50"
+        className="text-primary underline disabled:opacity-50"
         onClick={() => run('zip')}
       >
         {busy === 'zip' ? 'Preparing…' : 'Download ZIP'}
       </button>
       <button
         disabled={Boolean(busy)}
-        className="text-accent underline disabled:opacity-50"
+        className="text-primary underline disabled:opacity-50"
         onClick={() => run('csv')}
       >
         Export CSV

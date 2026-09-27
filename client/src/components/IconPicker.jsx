@@ -26,13 +26,13 @@ export default function IconPicker({ value = '', onChange, label = 'Iconify icon
   return <div>
     <label className="label" htmlFor={`${label.replace(/\W/g, '-')}-id`}>{label}</label>
     <div className="flex items-center gap-2">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#d7ddd7] text-xl dark:border-white/10">{validIcon.test(value) && <Icon icon={value} />}</span>
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border text-xl ">{validIcon.test(value) && <Icon icon={value} />}</span>
       <input id={`${label.replace(/\W/g, '-')}-id`} className="field" placeholder="mdi:telegram" value={value} onChange={(event) => onChange(event.target.value.trim().toLowerCase())} />
     </div>
     <input className="field mt-2" aria-label="Search all Iconify icons" placeholder="Search all Iconify icons" value={query} onChange={(event) => setQuery(event.target.value)} />
-    {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    {!!results.length && <div className="mt-2 grid max-h-44 grid-cols-6 gap-1 overflow-y-auto rounded-xl border border-[#d7ddd7] p-2 sm:grid-cols-10 dark:border-white/10">
-      {results.map((id) => <button key={id} type="button" title={id} aria-label={`Select ${id}`} className="grid h-9 place-items-center rounded-lg hover:bg-black/5 focus:bg-black/5 dark:hover:bg-white/10" onClick={() => { onChange(id); setQuery(''); }}><Icon icon={id} width="22" /></button>)}
+    {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+    {!!results.length && <div className="mt-2 grid max-h-44 grid-cols-6 gap-1 overflow-y-auto rounded-xl border border-border p-2 sm:grid-cols-10 ">
+      {results.map((id) => <button key={id} type="button" title={id} aria-label={`Select ${id}`} className="grid h-9 place-items-center rounded-lg hover:bg-hover focus:bg-selected " onClick={() => { onChange(id); setQuery(''); }}><Icon icon={id} width="22" /></button>)}
     </div>}
   </div>;
 }

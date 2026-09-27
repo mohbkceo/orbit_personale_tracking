@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Bot,
   Bell,
   Database,
   Globe2,
-  Moon,
   Palette,
   Save,
   ShieldCheck,
-  Sun,
   UserRound,
 } from 'lucide-react';
 import { api, endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
 import { useAuth } from '../context/useAuth.js';
 import { EmptyState, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
+import { AppearancePicker } from '../appearance/AppearancePicker.jsx';
+import { normalizeAppearance } from '../appearance/themes.js';
 
 const tabs = [
   ['general', 'General', Globe2],
@@ -28,9 +28,9 @@ const tabs = [
 function Section({ title, description, children }) {
   return (
     <section className="panel p-5 sm:p-6">
-      <div className="mb-5 border-b border-[#edf0ec] pb-4 dark:border-white/5">
+      <div className="mb-5 border-b border-border pb-4">
         <h2 className="font-display text-lg font-bold">{title}</h2>
-        <p className="mt-1 text-xs text-[#7a857e]">{description}</p>
+        <p className="mt-1 text-xs text-muted">{description}</p>
       </div>
       {children}
     </section>
@@ -38,9 +38,8 @@ function Section({ title, description, children }) {
 }
 
 export default function Settings() {
-  const app = useApp();
-  const { toast } = app;
-  const { user, access } = useAuth();
+  const { toast, setSettings } = useApp();
+  const { user, access, refresh } = useAuth();
   const [tab, setTab] = useState('general');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -48,9 +47,12 @@ export default function Settings() {
   const [form, setForm] = useState(null);
   const [telegram, setTelegram] = useState(null);
   const [link, setLink] = useState(null);
+  const [gender, setGender] = useState(user?.gender || '');
+  const savedAppearance = useRef(null);
   useEffect(() => {
     Promise.all([api.get('/settings'), endpoints.list('accounts'), api.get('/telegram-link')])
       .then(([settings, accountList, connection]) => {
+        savedAppearance.current = normalizeAppearance(settings.data.appearance, settings.data.theme);
         setForm(settings.data);
         setAccounts(accountList.data);
         setTelegram(connection.data);
@@ -58,6 +60,9 @@ export default function Settings() {
       .catch((error) => toast(error.message, 'error'))
       .finally(() => setLoading(false));
   }, [toast]);
+  useEffect(() => { if (form?.appearance) setSettings((current) => ({ ...current, appearance: form.appearance })); }, [form?.appearance, setSettings]);
+  useEffect(() => () => { if (savedAppearance.current) setSettings((current) => ({ ...current, appearance: savedAppearance.current })); }, [setSettings]);
+  useEffect(() => { setGender(user?.gender || ''); }, [user?.gender]);
   const set = (key) => (event) => setForm((value) => ({ ...value, [key]: event.target.value }));
   const onTelegram = (key) => (event) =>
     setForm((value) => ({
@@ -80,7 +85,7 @@ export default function Settings() {
         defaultCurrency,
         dateFormat,
         weekStartsOn,
-        theme,
+        appearance,
         expenseCategories,
         incomeCategories,
         telegram: preferences,
@@ -92,20 +97,28 @@ export default function Settings() {
         defaultCurrency,
         dateFormat,
         weekStartsOn,
-        theme,
+        appearance,
         expenseCategories,
         incomeCategories,
         telegram: preferences,
         reminders,
       });
       setForm(response.data);
-      app.setSettings(response.data);
-      app.toast('Settings saved');
+      savedAppearance.current = response.data.appearance;
+      setSettings(response.data);
+      if (gender && gender !== user?.gender) { await api.patch('/auth/me', { gender }); await refresh(); }
+      toast('Settings saved');
     } catch (error) {
-      app.toast(error.message, 'error');
+      toast(error.message, 'error');
     } finally {
       setBusy(false);
     }
+  }
+  async function saveGender() {
+    setBusy(true);
+    try { await api.patch('/auth/me', { gender }); await refresh(); toast('Profile updated'); }
+    catch (error) { toast(error.message, 'error'); }
+    finally { setBusy(false); }
   }
   async function connect() {
     setBusy(true);
@@ -113,9 +126,9 @@ export default function Settings() {
       const response = await api.post('/telegram-link');
       setLink(response.data);
       window.open(response.data.url, '_blank', 'noopener,noreferrer');
-      app.toast('Complete the link in Telegram');
+      toast('Complete the link in Telegram');
     } catch (error) {
-      app.toast(error.message, 'error');
+      toast(error.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -127,9 +140,9 @@ export default function Settings() {
       await api.delete('/telegram-link');
       setTelegram({ connected: false });
       setLink(null);
-      app.toast('Telegram disconnected');
+      toast('Telegram disconnected');
     } catch (error) {
-      app.toast(error.message, 'error');
+      toast(error.message, 'error');
     } finally {
       setBusy(false);
     }
@@ -138,7 +151,7 @@ export default function Settings() {
     try {
       setTelegram((await api.get('/telegram-link')).data);
     } catch (error) {
-      app.toast(error.message, 'error');
+      toast(error.message, 'error');
     }
   }
   if (loading) return <Spinner label="Loading settings…" />;
@@ -169,7 +182,7 @@ export default function Settings() {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold ${tab === id ? 'bg-ink text-white dark:bg-lime dark:text-ink' : 'text-[#6f7b73] hover:bg-[#f0f3ef] dark:hover:bg-white/5'}`}
+              className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold ${tab === id ? 'bg-primary text-primary-text' : 'text-muted hover:bg-hover'}`}
             >
               <Icon size={17} />
               {label}
@@ -216,23 +229,8 @@ export default function Settings() {
             </Section>
           )}
           {tab === 'appearance' && (
-            <Section title="Appearance" description="Theme is also remembered on this device">
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[
-                  ['light', 'Light', Sun],
-                  ['dark', 'Dark', Moon],
-                  ['system', 'System', Palette],
-                ].map(([id, label, Icon]) => (
-                  <button
-                    key={id}
-                    onClick={() => setForm((value) => ({ ...value, theme: id }))}
-                    className={`rounded-xl border p-5 text-left ${form.theme === id ? 'border-accent bg-[#eff5f0] dark:bg-white/10' : 'border-[#dce1dc] dark:border-white/10'}`}
-                  >
-                    <Icon size={20} className="mb-4" />
-                    <p className="text-sm font-bold">{label}</p>
-                  </button>
-                ))}
-              </div>
+            <Section title="Appearance" description="Preview your workspace now, then save your changes">
+              <AppearancePicker appearance={normalizeAppearance(form.appearance, form.theme)} gender={user?.gender} onChange={(appearance) => setForm((value) => ({ ...value, appearance }))} />
             </Section>
           )}
           {tab === 'telegram' && (
@@ -270,7 +268,7 @@ export default function Settings() {
                   <p className="mt-3 break-all text-xs">
                     If the chat did not open, use{' '}
                     <a
-                      className="text-accent underline"
+                      className="text-primary underline"
                       href={link.url}
                       target="_blank"
                       rel="noreferrer"
@@ -313,12 +311,12 @@ export default function Settings() {
                   </label>
                 </div>
                 {(!form.telegram?.defaultExpenseAccount || !form.telegram?.defaultIncomeAccount) && (
-                  <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
                     {!form.telegram?.defaultExpenseAccount && 'Choose a default expense account for Telegram expenses and outgoing debt payments. '}
                     {!form.telegram?.defaultIncomeAccount && 'Choose a default income account for Telegram sales, income and incoming debt payments.'}
                   </p>
                 )}
-                <div className="mt-4 rounded-xl border border-[#dde2dd] p-4 text-xs dark:border-white/10">
+                <div className="mt-4 rounded-xl border border-border p-4 text-xs ">
                   <p className="font-bold">Quick syntax</p>
                   <p className="mt-2">t Task · din Incoming debt · dout Outgoing debt · s Sale · e Expense · i Income</p>
                   <p className="mt-2 font-mono">t Call supplier tomorrow<br />din Ahmed 5000<br />s 12500 Stand x3</p>
@@ -332,7 +330,7 @@ export default function Settings() {
                   ].map(([enabled, time, label]) => (
                     <div
                       key={enabled}
-                      className="rounded-xl border border-[#dde2dd] p-4 dark:border-white/10"
+                      className="rounded-xl border border-border p-4 "
                     >
                       <label className="flex items-center justify-between text-sm font-bold">
                         {label}
@@ -367,6 +365,7 @@ export default function Settings() {
               description="Your identity and current time-based plan"
             >
               <div className="space-y-3 text-sm">
+                <div className="max-w-xs pb-3"><label htmlFor="profile-gender" className="label">About you</label><select id="profile-gender" className="field" value={gender} onChange={(event) => setGender(event.target.value)}><option value="">Choose gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option></select><p className="mt-1 text-xs text-muted">Used only to order workspace style recommendations.</p><button type="button" className="btn-secondary mt-3" disabled={busy || !gender || gender === user?.gender} onClick={saveGender}>Save profile</button></div>
                 <p>
                   <b>Name:</b> {user?.fullName}
                 </p>
@@ -432,7 +431,7 @@ export default function Settings() {
           )}
           {tab === 'security' && (
             <Section title="Account security" description="Authenticated, private access">
-              <div className="space-y-3 text-sm leading-6 text-[#657168] dark:text-[#aeb8b1]">
+              <div className="space-y-3 text-sm leading-6 text-muted ">
                 <p>
                   Orbit uses a password-protected account and an HttpOnly session cookie. Your
                   workspace data is private to your account.

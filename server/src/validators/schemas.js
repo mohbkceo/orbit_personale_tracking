@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRANSACTION_TYPES } from '../models/Transaction.js';
+import { APPEARANCE_VALUES } from '../config/appearance.js';
 
 const id = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 const optionalDate = z.union([z.coerce.date(), z.literal(''), z.null()]).optional().transform((value) => value || null);
@@ -54,6 +55,7 @@ export const taskUpdate = taskInput.partial();
 export const settingsInput = z.object({
   name: z.string().max(100).optional(), timezone: timezone.optional(), defaultCurrency: z.string().length(3).optional(),
   dateFormat: z.string().max(40).optional(), weekStartsOn: z.coerce.number().int().min(0).max(6).optional(), theme: z.enum(['light', 'dark', 'system']).optional(),
+  appearance: z.object(Object.fromEntries(Object.entries(APPEARANCE_VALUES).map(([key, values]) => [key, z.enum(values).optional()]))).strict().optional(),
   expenseCategories: z.array(z.string().min(1)).optional(), incomeCategories: z.array(z.string().min(1)).optional(),
   telegram: z.object({
     defaultExpenseAccount: optionalId, defaultIncomeAccount: optionalId, dailySummaryEnabled: z.boolean().optional(),

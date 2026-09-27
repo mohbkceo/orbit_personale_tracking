@@ -70,7 +70,7 @@ export async function registerWithLink(key, input) {
       if (link.reservedByUser) throw new AppError('This Activation Link is already reserved.', 409, undefined, 'ACTIVATION_USED');
       const email = normalizeEmail(input.email);
       if (await User.exists({ email }).session(session)) throw new AppError('An Orbit account already exists. Sign in to activate this access.', 409, undefined, 'ACCOUNT_EXISTS');
-      [user] = await User.create([{ fullName: input.fullName, email, passwordHash: await hashPassword(input.password) }], { session });
+      [user] = await User.create([{ fullName: input.fullName, email, gender: input.gender, passwordHash: await hashPassword(input.password) }], { session });
       const claimed = await ActivationLink.updateOne({ _id: link._id, status: 'ACTIVE', reservedByUser: null }, { $set: { reservedByUser: user._id } }, { session });
       if (claimed.modifiedCount !== 1) throw new AppError('This Activation Link is already reserved.', 409, undefined, 'ACTIVATION_USED');
       await Setting.create([{ user: user._id, ...(input.preferences || {}) }], { session });

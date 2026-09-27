@@ -8,6 +8,7 @@ import { success } from '../utils/api.js';
 import { clearCookie, issueCookie, login, safeIdentity } from '../services/authService.js';
 import { checkAccess } from '../services/accessService.js';
 import { audit } from '../services/auditService.js';
+import { User } from '../models/User.js';
 
 const loginInput = z.object({ email: z.email(), password: z.string().min(1) });
 export const authRoutes = Router();
@@ -19,3 +20,7 @@ authRoutes.post('/login', rateLimit({ windowMs: 15 * 60_000, limit: process.env.
 }));
 authRoutes.post('/logout', (_req, res) => { clearCookie(res, 'user'); return success(res, { loggedOut: true }); });
 authRoutes.get('/me', userAuth, asyncHandler(async (req, res) => success(res, { user: safeIdentity(req.user), access: await checkAccess(req.user) })));
+authRoutes.patch('/me', userAuth, validate(z.object({ gender: z.enum(['MALE', 'FEMALE']) }).strict()), asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndUpdate(req.user._id, { $set: { gender: req.body.gender } }, { new: true, runValidators: true });
+  return success(res, { user: safeIdentity(user) });
+}));

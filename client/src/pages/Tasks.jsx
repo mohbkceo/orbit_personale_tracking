@@ -1,3 +1,4 @@
+import { useOrbitReducedMotion } from '../animations/useOrbitReducedMotion.js';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -17,7 +18,7 @@ import { useData } from '../hooks/useData.js';
 import { cn, formatDate, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 import { DailyFocusPanel } from '../components/DailyFocusPanel.jsx';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AnimatedList } from '../animations/AnimatedList.jsx';
 import { spring, timing, taskMotion, buttonMotion } from '../animations/motionPresets.js';
 
@@ -139,7 +140,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
           </label>
         </div>
         <div className="grid grid-cols-2 gap-3"><label><span className="label">Status</span><select className="field" value={form.status} onChange={set('status')}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label><label><span className="label">Repeat</span><select className="field" value={form.repeat} onChange={set('repeat')}><option value="never">Never</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label></div>
-        <div className="rounded-xl border border-[#dfe4de] p-3 dark:border-white/10">
+        <div className="rounded-xl border border-border p-3 ">
           <label>
             <span className="label">Reminders</span>
             <select className="field" value={form.reminderMode} onChange={set('reminderMode')}>
@@ -148,7 +149,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
               <option value="off">Off</option>
             </select>
           </label>
-          <p className="mt-2 text-xs text-[#7b867f]">
+          <p className="mt-2 text-xs text-muted">
             {form.reminderMode === 'automatic'
               ? `Smart reminders · ${task ? planned.length : form.dueDate ? form.dueTime && ['high', 'urgent'].includes(form.priority) ? 3 : 2 : 0}`
               : form.reminderMode === 'custom'
@@ -157,7 +158,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
           </p>
           {task && (
             <Link
-              className="mt-2 inline-block text-xs font-bold text-accent"
+              className="mt-2 inline-block text-xs font-bold text-primary"
               to={`/reminders?entityType=task&entityId=${task._id}`}
             >
               Edit reminder plan
@@ -174,7 +175,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
 
 export default function Tasks() {
   const { toast, reward } = useApp();
-  const reduce = useReducedMotion();
+  const reduce = useOrbitReducedMotion();
   const [view, setView] = useState('all');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null);
@@ -240,14 +241,14 @@ export default function Tasks() {
       />
       <DailyFocusPanel onTaskChanged={reload} />
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#dfe4de] bg-white p-1 dark:border-white/10 dark:bg-white/5">
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface p-1  ">
           {views.map((item) => (
             <button
               key={item}
               onClick={() => setView(item)}
               className={cn(
-                'whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold capitalize text-[#768179]',
-                view === item && 'bg-ink text-white shadow-sm dark:bg-lime dark:text-ink',
+                'whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold capitalize text-muted',
+                view === item && 'bg-primary text-primary-text shadow-sm  ',
               )}
             >
               {item}
@@ -255,7 +256,7 @@ export default function Tasks() {
           ))}
         </div>
         <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3.5 top-3 text-[#88928c]" size={17} />
+          <Search className="absolute left-3.5 top-3 text-muted" size={17} />
           <input
             className="field pl-10"
             value={query}
@@ -265,7 +266,7 @@ export default function Tasks() {
         </div>
       </div>
       <section className="panel overflow-hidden">
-        <div className="hidden grid-cols-[1fr_130px_130px_100px_50px] border-b border-[#e8ece7] bg-[#fafbf8] px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em] text-[#869089] dark:border-white/5 dark:bg-white/[.02] md:grid">
+        <div className="hidden grid-cols-[1fr_130px_130px_100px_50px] border-b border-border bg-surface-alt px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em] text-muted  dark:bg-surface/[.02] md:grid">
           <span>Task</span>
           <span>Due</span>
           <span>Priority</span>
@@ -308,7 +309,7 @@ export default function Tasks() {
               return (
                 <article
                   key={task._id}
-                  className="group grid gap-3 border-b border-[#edf0ec] px-4 py-4 last:border-0 hover:bg-[#fbfcfa] dark:border-white/5 dark:hover:bg-white/[.02] md:grid-cols-[1fr_130px_130px_100px_50px] md:items-center md:px-5"
+                  className="group grid gap-3 border-b border-border px-4 py-4 last:border-0 hover:bg-hover  dark:hover:bg-surface/[.02] md:grid-cols-[1fr_130px_130px_100px_50px] md:items-center md:px-5"
                 >
                   <div className="flex min-w-0 items-start gap-3">
                     <motion.button
@@ -318,36 +319,36 @@ export default function Tasks() {
                       className={cn(
                         'relative mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border',
                         complete
-                          ? 'border-accent bg-accent text-white'
-                          : 'border-[#b9c2bc] hover:border-accent',
+                          ? 'border-primary bg-primary text-primary-text'
+                          : 'border-border hover:border-primary',
                       )}
                       aria-label={complete ? 'Reopen task' : 'Complete task'}
                     >
                       <AnimatePresence>{complete && <motion.span key="check" initial={reduce ? { opacity: 0 } : taskMotion.checkInitial} animate={{ scale: 1, opacity: 1 }} exit={taskMotion.checkExit} transition={spring}><Check size={13} /></motion.span>}</AnimatePresence>
-                      <AnimatePresence initial={false}>{complete && !reduce && <motion.span key="ripple" className="pointer-events-none absolute inset-0 rounded-full border border-accent" initial={taskMotion.rippleInitial} animate={taskMotion.rippleFinal} exit={{ opacity: 0 }} transition={{ duration: timing.task }} />}</AnimatePresence>
+                      <AnimatePresence initial={false}>{complete && !reduce && <motion.span key="ripple" className="pointer-events-none absolute inset-0 rounded-full border border-primary" initial={taskMotion.rippleInitial} animate={taskMotion.rippleFinal} exit={{ opacity: 0 }} transition={{ duration: timing.task }} />}</AnimatePresence>
                       {!complete && <Circle size={10} className="opacity-0" />}
                     </motion.button>
                     <button onClick={() => openEdit(task)} className="min-w-0 text-left">
                       <p
                         className={cn(
                           'relative truncate text-sm font-semibold transition-colors',
-                          complete && 'text-[#8b948e]',
+                          complete && 'text-muted',
                         )}
                       >
                         <span className="relative">{task.title}{complete && <motion.span className="absolute inset-x-0 top-1/2 h-px bg-current" style={{ transformOrigin: 'left' }} initial={{ scaleX: reduce ? 1 : 0 }} animate={{ scaleX: 1 }} transition={{ duration: timing.task }} />}</span>
                       </p>
-                      <p className="mt-1 truncate text-[11px] text-[#89928c]">
+                      <p className="mt-1 truncate text-[11px] text-muted">
                         {task.category}
                         {task.description ? ` · ${task.description}` : ''}
                       </p>
-                      {task.nextAction && <p className="mt-1 truncate text-[11px] text-[#6c7b71]">Next: {task.nextAction}</p>}
+                      {task.nextAction && <p className="mt-1 truncate text-[11px] text-muted">Next: {task.nextAction}</p>}
                     </button>
-                    {!complete && task.status !== 'cancelled' && <div className="flex shrink-0 gap-2 text-[11px]"><motion.button whileTap={reduce ? undefined : buttonMotion.whileTap} transition={buttonMotion.transition} className="text-accent underline" onClick={() => execute(task, 'start')}>Start</motion.button><button className="text-[#7b867f] underline" onClick={() => execute(task, 'blocked')}>Blocked</button></div>}
+                    {!complete && task.status !== 'cancelled' && <div className="flex shrink-0 gap-2 text-[11px]"><motion.button whileTap={reduce ? undefined : buttonMotion.whileTap} transition={buttonMotion.transition} className="text-primary underline" onClick={() => execute(task, 'start')}>Start</motion.button><button className="text-muted underline" onClick={() => execute(task, 'blocked')}>Blocked</button></div>}
                   </div>
                   <div
                     className={cn(
                       'flex items-center gap-1.5 text-xs',
-                      overdue ? 'font-bold text-red-600' : 'text-[#707c74]',
+                      overdue ? 'font-bold text-danger' : 'text-muted',
                     )}
                   >
                     <Clock3 size={14} />

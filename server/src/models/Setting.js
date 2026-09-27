@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { APPEARANCE_VALUES } from '../config/appearance.js';
 
 const settingSchema = new mongoose.Schema(
   {
@@ -9,6 +10,14 @@ const settingSchema = new mongoose.Schema(
     dateFormat: { type: String, default: 'DD MMM YYYY' },
     weekStartsOn: { type: Number, default: 1 },
     theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
+    appearance: {
+      mode: { type: String, enum: APPEARANCE_VALUES.mode },
+      preset: { type: String, enum: APPEARANCE_VALUES.preset },
+      density: { type: String, enum: APPEARANCE_VALUES.density },
+      radius: { type: String, enum: APPEARANCE_VALUES.radius },
+      motion: { type: String, enum: APPEARANCE_VALUES.motion },
+      personality: { type: String, enum: APPEARANCE_VALUES.personality },
+    },
     expenseCategories: { type: [String], default: ['Food', 'Transport', 'Shopping', 'Bills', 'Subscriptions', 'Health', 'Education', 'Entertainment', 'Home', 'Technology', 'Travel', 'Gifts', 'Other'] },
     incomeCategories: { type: [String], default: ['Salary', 'Freelance', 'Business', 'Sale', 'Gift', 'Refund', 'Investment', 'Other'] },
     telegram: {

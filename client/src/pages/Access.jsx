@@ -15,7 +15,7 @@ export default function Access() {
   return (
     <main className="grid min-h-screen place-items-center bg-canvas px-4 dark:bg-[#0d1310]">
       <div className="panel w-full max-w-lg p-8">
-        <span className="text-xs font-bold uppercase tracking-widest text-accent">
+        <span className="text-xs font-bold uppercase tracking-widest text-primary">
           Orbit access
         </span>
         <h1 className="mt-3 font-display text-3xl font-bold">
@@ -58,7 +58,7 @@ export default function Access() {
         )}
         <div className="mt-7 flex items-center justify-between text-sm">
           <span>{user.fullName}</span>
-          <button onClick={logout} className="text-accent underline">
+          <button onClick={logout} className="text-primary underline">
             Log out
           </button>
         </div>

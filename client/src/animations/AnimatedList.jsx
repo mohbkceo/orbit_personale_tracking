@@ -1,10 +1,11 @@
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useOrbitReducedMotion } from './useOrbitReducedMotion.js';
+import { AnimatePresence, motion } from 'motion/react';
 import { listItem, reduced } from './motionPresets.js';
 
 const motionElements = { article: motion.article, div: motion.div, li: motion.li, section: motion.section };
 
 export function AnimatedList({ items, getKey = (item) => item._id, renderItem, className = '', as = 'div' }) {
-  const reduce = useReducedMotion();
+  const reduce = useOrbitReducedMotion();
   const Container = motionElements[as] || motion.div;
   const preset = reduce ? reduced(listItem) : listItem;
   return <Container layout={!reduce} className={className}><AnimatePresence initial={items.length < 16}>

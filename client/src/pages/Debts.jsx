@@ -57,8 +57,8 @@ function DebtForm({ open, onClose, onSaved }) {
             className={cn(
               'rounded-xl border p-3 text-left text-sm font-bold',
               form.type === 'receivable'
-                ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10'
-                : 'border-[#dce1dc] dark:border-white/10',
+                ? 'border-success bg-success/10 text-success'
+                : 'border-border ',
             )}
           >
             <ArrowDownLeft size={18} className="mb-2" />
@@ -70,8 +70,8 @@ function DebtForm({ open, onClose, onSaved }) {
             className={cn(
               'rounded-xl border p-3 text-left text-sm font-bold',
               form.type === 'payable'
-                ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-400/10'
-                : 'border-[#dce1dc] dark:border-white/10',
+                ? 'border-danger bg-danger/10 text-danger'
+                : 'border-border ',
             )}
           >
             <ArrowUpRight size={18} className="mb-2" />I owe them
@@ -236,29 +236,29 @@ export default function Debts() {
       />
       <div className="mb-5 grid gap-3 sm:grid-cols-2">
         <article className="panel-flat flex items-center gap-4 p-5">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-success/10 text-success ">
             <ArrowDownLeft />
           </span>
           <div>
-            <p className="text-xs text-[#748078]">Owed to you</p>
-            <p className="font-display text-2xl font-bold text-emerald-600">
+            <p className="text-xs text-muted">Owed to you</p>
+            <p className="font-display text-2xl font-bold text-success">
               {formatMoney(totals.receivable, currency)}
             </p>
           </div>
         </article>
         <article className="panel-flat flex items-center gap-4 p-5">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-red-50 text-red-600 dark:bg-red-400/10">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-danger/10 text-danger ">
             <ArrowUpRight />
           </span>
           <div>
-            <p className="text-xs text-[#748078]">You owe</p>
-            <p className="font-display text-2xl font-bold text-red-600">
+            <p className="text-xs text-muted">You owe</p>
+            <p className="font-display text-2xl font-bold text-danger">
               {formatMoney(totals.payable, currency)}
             </p>
           </div>
         </article>
       </div>
-      <div className="mb-4 flex gap-1 rounded-xl border border-[#dfe4de] bg-white p-1 dark:border-white/10 dark:bg-white/5 sm:w-fit">
+      <div className="mb-4 flex gap-1 rounded-xl border border-border bg-surface p-1   sm:w-fit">
         {[
           ['', 'All'],
           ['receivable', 'Owed to me'],
@@ -269,7 +269,7 @@ export default function Debts() {
             onClick={() => setType(id)}
             className={cn(
               'rounded-lg px-4 py-2 text-xs font-bold',
-              type === id ? 'bg-ink text-white dark:bg-lime dark:text-ink' : 'text-[#758078]',
+              type === id ? 'bg-primary text-primary-text  ' : 'text-muted',
             )}
           >
             {label}
@@ -295,12 +295,12 @@ export default function Debts() {
               <article key={debt._id} className="panel p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-full bg-[#edf1ec] dark:bg-white/10">
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-alt ">
                       <UserRound size={18} />
                     </span>
                     <div>
                       <h3 className="font-display font-bold">{debt.personName}</h3>
-                      <p className="mt-0.5 text-[11px] text-[#849087]">
+                      <p className="mt-0.5 text-[11px] text-muted">
                         {debt.description || (debt.type === 'receivable' ? 'Owes you' : 'You owe')}
                       </p>
                     </div>
@@ -318,24 +318,24 @@ export default function Debts() {
                   </StatusBadge>
                 </div>
                 <div className="mt-6">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#859087]">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
                     Remaining
                   </p>
                   <p className="mt-1 font-display text-2xl font-bold">
                     <AnimatedNumber value={debt.remainingAmount} format={(value) => formatMoney(value, debt.currency)} />
                   </p>
-                  <p className="mt-1 text-xs text-[#849087]">
+                  <p className="mt-1 text-xs text-muted">
                     of {formatMoney(debt.originalAmount, debt.currency)}
                   </p>
                 </div>
                 <AnimatedProgress value={progress} className="mt-4 h-2" />
                 <div className="mt-4 flex items-center justify-between">
-                  <p className="text-xs text-[#7d8881]">Due {formatDate(debt.dueDate)}</p>
+                  <p className="text-xs text-muted">Due {formatDate(debt.dueDate)}</p>
                   <button onClick={() => setPaying(debt)} className="btn-secondary h-9">
                     Add payment
                   </button>
                 </div>
-                <Link className="mt-3 inline-block text-xs font-semibold text-accent" to={`/reminders?entityType=debt&entityId=${debt._id}`}>
+                <Link className="mt-3 inline-block text-xs font-semibold text-primary" to={`/reminders?entityType=debt&entityId=${debt._id}`}>
                   🔔 {debt.reminderMode || 'automatic'} reminders
                 </Link>
               </article>

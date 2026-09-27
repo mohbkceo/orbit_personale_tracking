@@ -202,7 +202,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
                     onChange={set('dueDate')}
                   />
                 </label>
-                <label className="flex items-center gap-3 rounded-xl bg-[#f4f7f2] p-3 text-sm dark:bg-white/5">
+                <label className="flex items-center gap-3 rounded-xl bg-surface-alt p-3 text-sm ">
                   <input
                     type="checkbox"
                     checked={form.autoCreateExpense}
@@ -252,7 +252,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
             )}
           </>
         )}
-        <label><span className="label">Reminders</span><select className="field" value={form.reminderMode} onChange={set('reminderMode')}><option value="automatic">Automatic</option><option value="custom">Custom</option><option value="off">Off</option></select><span className="mt-1 block text-xs text-[#7b867f]">{form.reminderMode === 'automatic' ? 'Smart reminders are created after saving.' : form.reminderMode === 'custom' ? 'Add your own reminders after saving.' : 'No automatic reminders.'}</span></label>
+        <label><span className="label">Reminders</span><select className="field" value={form.reminderMode} onChange={set('reminderMode')}><option value="automatic">Automatic</option><option value="custom">Custom</option><option value="off">Off</option></select><span className="mt-1 block text-xs text-muted">{form.reminderMode === 'automatic' ? 'Smart reminders are created after saving.' : form.reminderMode === 'custom' ? 'Add your own reminders after saving.' : 'No automatic reminders.'}</span></label>
         <button disabled={busy} className="btn-primary w-full">
           {busy ? 'Saving…' : 'Save'}
         </button>
@@ -268,7 +268,7 @@ function GoalCard({ item, currency, onManage }) {
   return (
     <article className="panel p-5">
       <div className="flex items-start justify-between">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf4ee] text-accent dark:bg-emerald-400/10">
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-alt text-primary ">
           <Sparkles size={18} />
         </span>
         <StatusBadge tone={item.status === 'completed' ? 'success' : 'info'}>
@@ -276,19 +276,19 @@ function GoalCard({ item, currency, onManage }) {
         </StatusBadge>
       </div>
       <h3 className="mt-5 font-display text-lg font-bold">{item.title}</h3>
-      <Link className="mt-2 inline-block text-xs font-semibold text-accent" to={`/reminders?entityType=goal&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
-      <p className="mt-1 line-clamp-2 text-xs text-[#7c8780]">
+      <Link className="mt-2 inline-block text-xs font-semibold text-primary" to={`/reminders?entityType=goal&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
+      <p className="mt-1 line-clamp-2 text-xs text-muted">
         {item.description || `Target ${formatDate(item.targetDate)}`}
       </p>
       <div className="mt-6 flex items-end justify-between">
         <p className="font-display text-xl font-bold">
           <AnimatedNumber value={item.currentAmount} format={(value) => formatMoney(value, currency)} />
         </p>
-        <p className="text-xs text-[#7c8780]">of {formatMoney(item.targetAmount, currency)}</p>
+        <p className="text-xs text-muted">of {formatMoney(item.targetAmount, currency)}</p>
       </div>
       <AnimatedProgress value={progress} className="mt-3 h-2.5" />
       <div className="mt-3 flex items-center justify-between">
-        <p className="text-[11px] font-bold text-[#768179]"><AnimatedNumber value={progress} />%</p>
+        <p className="text-[11px] font-bold text-muted"><AnimatedNumber value={progress} />%</p>
         {item.type === 'financial' && (
           <button className="btn-secondary h-8 px-3 text-xs" onClick={onManage}>
             Manage savings
@@ -361,14 +361,14 @@ function SavingsForm({ goal, onClose, onSaved }) {
           <button
             type="button"
             onClick={() => setForm((v) => ({ ...v, action: 'contribute' }))}
-            className={`rounded-xl border p-3 text-sm font-bold ${contributing ? 'border-accent bg-[#eff5f0] dark:bg-white/10' : 'border-[#dce1dc] dark:border-white/10'}`}
+            className={`rounded-xl border p-3 text-sm font-bold ${contributing ? 'border-primary bg-surface-alt ' : 'border-border '}`}
           >
             Contribute
           </button>
           <button
             type="button"
             onClick={() => setForm((v) => ({ ...v, action: 'withdraw' }))}
-            className={`rounded-xl border p-3 text-sm font-bold ${!contributing ? 'border-accent bg-[#eff5f0] dark:bg-white/10' : 'border-[#dce1dc] dark:border-white/10'}`}
+            className={`rounded-xl border p-3 text-sm font-bold ${!contributing ? 'border-primary bg-surface-alt ' : 'border-border '}`}
           >
             Withdraw
           </button>
@@ -411,7 +411,7 @@ function SavingsForm({ goal, onClose, onSaved }) {
             ))}
           </select>
         </label>
-        <p className="text-xs leading-5 text-[#7b867f]">
+        <p className="text-xs leading-5 text-muted">
           This is recorded as a transfer between owned accounts, so it does not inflate income or
           expenses.
         </p>
@@ -468,13 +468,13 @@ export default function Planning({ kind }) {
       {kind === 'subscriptions' && (
         <div className="mb-5 grid gap-3 sm:grid-cols-2">
           <article className="panel-flat p-5">
-            <p className="text-xs text-[#748078]">Monthly equivalent</p>
+            <p className="text-xs text-muted">Monthly equivalent</p>
             <p className="mt-1 font-display text-2xl font-bold">
               {formatMoney(monthly, settings.defaultCurrency)}
             </p>
           </article>
           <article className="panel-flat p-5">
-            <p className="text-xs text-[#748078]">Annual run rate</p>
+            <p className="text-xs text-muted">Annual run rate</p>
             <p className="mt-1 font-display text-2xl font-bold">
               {formatMoney(monthly * 12, settings.defaultCurrency)}
             </p>
@@ -504,15 +504,15 @@ export default function Planning({ kind }) {
         <section className="panel overflow-hidden">
           <AnimatedList items={items} renderItem={(item) => (
             <article
-              className="flex flex-col gap-3 border-b border-[#edf0ec] p-4 last:border-0 dark:border-white/5 sm:flex-row sm:items-center sm:p-5"
+              className="flex flex-col gap-3 border-b border-border p-4 last:border-0  sm:flex-row sm:items-center sm:p-5"
             >
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f0f2ed] text-[#657168] dark:bg-white/10">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-alt text-muted ">
                 {kind === 'bills' ? <CreditCard size={18} /> : <Bell size={18} />}
               </span>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-bold">{item.name}</h3>
-                <Link className="text-xs font-semibold text-accent" to={`/reminders?entityType=${kind.slice(0, -1)}&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
-                <p className="mt-1 text-xs text-[#808a84]">
+                <Link className="text-xs font-semibold text-primary" to={`/reminders?entityType=${kind.slice(0, -1)}&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
+                <p className="mt-1 text-xs text-muted">
                   {kind === 'bills'
                     ? `Due ${formatDate(item.dueDate)}`
                     : `${item.billingCycle} · renews ${formatDate(item.nextBillingDate)}`}

@@ -2,6 +2,7 @@ import { Setting } from '../models/Setting.js';
 import { env } from '../config/env.js';
 import { ensureAccount } from './financeService.js';
 import { backfillUpcomingReminders } from './reminders/reminderBackfillService.js';
+import { resolveAppearance } from '../config/appearance.js';
 
 export async function getSettingsDocument(userId) {
   return Setting.findOneAndUpdate({ user: userId }, { $setOnInsert: { user: userId } }, { upsert: true, new: true, setDefaultsOnInsert: true });
@@ -9,6 +10,7 @@ export async function getSettingsDocument(userId) {
 
 export function publicSettings(settings) {
   const data = settings.toObject ? settings.toObject() : { ...settings };
+  data.appearance = resolveAppearance(data.appearance, data.theme);
   if (data.telegram) {
     const telegram = data.telegram;
     data.telegram = {
@@ -29,7 +31,13 @@ export async function updateSettings(userId, input) {
   const remindersPreviouslyEnabled = settings.reminders?.enabled && settings.reminders?.automaticEnabled;
   const telegramInput = input.telegram || {};
   for (const key of ['defaultExpenseAccount', 'defaultIncomeAccount']) if (telegramInput[key]) await ensureAccount(userId, telegramInput[key]);
-  Object.assign(settings, Object.fromEntries(Object.entries(input).filter(([key]) => !['telegram', 'reminders'].includes(key))));
+  Object.assign(settings, Object.fromEntries(Object.entries(input).filter(([key]) => !['telegram', 'reminders', 'appearance'].includes(key))));
+  if (input.appearance || input.theme) {
+    const next = { ...resolveAppearance(settings.appearance, settings.theme), ...input.appearance };
+    if (input.theme && !input.appearance?.mode) next.mode = input.theme;
+    settings.set('appearance', next);
+    settings.theme = next.mode; // Keep older clients and scripts compatible.
+  }
   Object.assign(settings.telegram, telegramInput);
   if (input.reminders) {
     for (const [key, value] of Object.entries(input.reminders)) {

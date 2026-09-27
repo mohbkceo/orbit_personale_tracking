@@ -10,6 +10,7 @@
     "migrate:legacy": "node src/scripts/migrateLegacy.js",
     "migrate:automation": "node src/scripts/migrateAutomation.js",
     "backfill:reminders": "node src/scripts/backfillReminders.js",
+    "backfill:appearance": "node src/scripts/backfillAppearance.js",
     "test": "vitest run"
   },
   "dependencies": {

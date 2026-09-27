@@ -246,7 +246,7 @@ export function AdminUsers() {
                 <tr key={row._id} className="border-b border-black/5 dark:border-white/5">
                   <td className="p-4">
                     <Link
-                      className="font-bold text-accent hover:underline"
+                      className="font-bold text-primary hover:underline"
                       to={`/admin/users/${row._id}`}
                     >
                       {row.fullName}
@@ -386,7 +386,7 @@ export function AdminUserDetail() {
               <p className="mt-4 break-all rounded-lg bg-[#f3f6f2] p-3 text-xs dark:bg-white/5">
                 {url}
                 <button
-                  className="ml-2 text-accent underline"
+                  className="ml-2 text-primary underline"
                   onClick={() => navigator.clipboard.writeText(url)}
                 >
                   Copy
@@ -505,7 +505,7 @@ export function AdminActivationLinks() {
         <p className="mb-5 break-all rounded-xl bg-emerald-50 p-4 text-sm dark:bg-emerald-400/10">
           {url}{' '}
           <button
-            className="ml-2 text-accent underline"
+            className="ml-2 text-primary underline"
             onClick={() => navigator.clipboard.writeText(url)}
           >
             Copy
@@ -552,13 +552,13 @@ export function AdminActivationLinks() {
                   <td className="p-3">{date(row.activatedAt)}</td>
                   <td className="p-3">{row.note || '—'}</td>
                   <td className="p-3">
-                    <button className="mr-3 text-accent underline" onClick={() => setSelected(row)}>
+                    <button className="mr-3 text-primary underline" onClick={() => setSelected(row)}>
                       View
                     </button>
                     {row.status === 'ACTIVE' && (
                       <>
                         <button
-                          className="mr-3 text-accent underline"
+                          className="mr-3 text-primary underline"
                           onClick={() => copy(row._id)}
                         >
                           Copy
@@ -579,7 +579,7 @@ export function AdminActivationLinks() {
         <section className="panel mt-5 space-y-2 p-5 text-sm">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Activation Link details</h2>
-            <button className="text-accent underline" onClick={() => setSelected(null)}>
+            <button className="text-primary underline" onClick={() => setSelected(null)}>
               Close
             </button>
           </div>
@@ -737,7 +737,7 @@ export function AdminAdmins() {
                 <option>SUPER_ADMIN</option>
               </select>
               <button
-                className="text-accent underline"
+                className="text-primary underline"
                 onClick={() =>
                   change(row._id, { status: row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE' })
                 }

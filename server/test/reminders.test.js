@@ -306,7 +306,7 @@ describe('scheduling and delivery', () => {
   });
 
   it('retains recurring reminders after delivery and advances the next occurrence', async () => {
-    const now = new Date('2026-09-19T10:00:00Z');
+    const now = new Date();
     const at = new Date(now.getTime() - 60000);
     const item = await custom({
       trigger: {

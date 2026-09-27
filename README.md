@@ -134,6 +134,14 @@ A Super Admin edits all automation rules at **Admin → Settings → Automation 
 
 Run `npm run migrate:automation` during deployment. It creates the production indexes and fills only missing execution states on existing tasks; reruns are safe. Then run `npm run backfill:reminders` to initialize cues for upcoming tasks. Run a smoke check with a connected Telegram account to verify local morning and evening timing before broad rollout.
 
+## Workspace appearance migration
+
+New activation registrations require `gender` (`MALE` or `FEMALE`). Existing users may leave this unset and can update it under **Settings → Account & access**. Gender only orders workspace style suggestions.
+
+Workspace settings now include `appearance.mode`, `preset`, `density`, `radius`, `motion`, and `personality`. Existing `theme` values are read as the color mode when `appearance.mode` is absent. The settings API keeps returning `theme` for older clients, and new mode saves keep it in sync. The authenticated UI uses server settings as the source of truth; a per-user browser cache only helps initial painting.
+
+After a backup, run `npm run backfill:appearance` to persist defaults and legacy modes on older Settings documents. This is optional for compatibility, safe to rerun, and does not infer gender or delete the old `theme` field.
+
 ## Production
 
 Build the client and run the server:

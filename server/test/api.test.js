@@ -13,6 +13,7 @@ import { env } from '../src/config/env.js';
 import { Reminder } from '../src/models/Reminder.js';
 import { Task } from '../src/models/Task.js';
 import { Setting } from '../src/models/Setting.js';
+import { backfillAppearance } from '../src/scripts/backfillAppearance.js';
 
 let mongo;
 let user;
@@ -27,6 +28,39 @@ beforeEach(async () => {
 });
 
 describe('REST API', () => {
+  it('keeps legacy users and legacy color modes usable', async () => {
+    const identity = await request(app).get('/api/auth/me').set('Cookie', cookie).expect(200);
+    expect(identity.body.data.user.gender).toBeNull();
+    await Setting.create({ user: user._id, theme: 'dark' });
+    const settings = await request(app).get('/api/settings').set('Cookie', cookie).expect(200);
+    expect(settings.body.data.appearance).toMatchObject({ mode: 'dark', preset: 'orbit', density: 'comfortable', radius: 'soft', motion: 'full', personality: 'balanced' });
+    await backfillAppearance();
+    expect((await Setting.collection.findOne({ user: user._id })).appearance.mode).toBe('dark');
+    expect((await Setting.findOne({ user: user._id })).theme).toBe('dark');
+    await request(app).get('/api/dashboard/summary').set('Cookie', cookie).expect(200);
+  });
+
+  it('validates and persists profile gender independently of workspace settings', async () => {
+    await request(app).patch('/api/auth/me').set('Cookie', cookie).send({ gender: 'OTHER' }).expect(422);
+    await request(app).patch('/api/auth/me').set('Cookie', cookie).send({ gender: 'MALE' }).expect(200);
+    expect((await User.findById(user._id)).gender).toBe('MALE');
+    const changed = await request(app).patch('/api/auth/me').set('Cookie', cookie).send({ gender: 'FEMALE' }).expect(200);
+    expect(changed.body.data.user.gender).toBe('FEMALE');
+  });
+
+  it('persists appearance, validates every field and keeps old theme clients working', async () => {
+    const appearance = { mode: 'light', preset: 'rose-quartz', density: 'compact', radius: 'rounded', motion: 'reduced', personality: 'focus' };
+    const saved = await request(app).patch('/api/settings').set('Cookie', cookie).send({ appearance }).expect(200);
+    expect(saved.body.data.appearance).toEqual(appearance);
+    expect((await Setting.findOne({ user: user._id })).theme).toBe('light');
+    expect((await request(app).get('/api/settings').set('Cookie', cookie).expect(200)).body.data.appearance).toEqual(appearance);
+    for (const [field, invalid] of Object.entries({ mode: 'nope', preset: 'unknown', density: 'tiny', radius: 'square', motion: 'wild', personality: 'chaotic' })) {
+      await request(app).patch('/api/settings').set('Cookie', cookie).send({ appearance: { [field]: invalid } }).expect(422);
+    }
+    await request(app).patch('/api/settings').set('Cookie', cookie).send({ appearance: { extra: 'bad' } }).expect(422);
+    const old = await request(app).patch('/api/settings').set('Cookie', cookie).send({ theme: 'system' }).expect(200);
+    expect(old.body.data.appearance).toMatchObject({ mode: 'system', preset: 'rose-quartz', personality: 'focus' });
+  });
   it('never returns a legacy Telegram webhook secret in public settings', async () => {
     const settings = await Setting.create({ user: user._id });
     await Setting.collection.updateOne({ _id: settings._id }, { $set: { 'telegram.webhookUrl': '/api/telegram/webhook/private-secret', 'telegram.encryptedBotToken': 'cipher', 'telegram.iv': 'iv', 'telegram.authTag': 'tag' } });

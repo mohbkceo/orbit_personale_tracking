@@ -4,6 +4,8 @@ const userSchema = new mongoose.Schema({
   fullName: { type: String, required: true, trim: true, maxlength: 120 },
   email: { type: String, required: true, lowercase: true, trim: true, unique: true, index: true },
   passwordHash: { type: String, required: true, select: false },
+  // Legacy accounts may have no gender. New registrations require it at the API boundary.
+  gender: { type: String, enum: ['MALE', 'FEMALE'] },
   status: { type: String, enum: ['ACTIVE', 'SUSPENDED'], default: 'ACTIVE', index: true },
   onboardingCompletedAt: Date,
   lastLoginAt: Date,

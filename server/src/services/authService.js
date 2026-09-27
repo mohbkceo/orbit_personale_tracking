@@ -9,7 +9,7 @@ const cookieOptions = { httpOnly: true, secure: env.NODE_ENV === 'production', s
 
 export const normalizeEmail = (email) => String(email).trim().toLowerCase();
 export const hashPassword = (password) => bcrypt.hash(password, 12);
-export const safeIdentity = (person) => ({ id: String(person._id), fullName: person.fullName, email: person.email, ...(person.role ? { role: person.role } : {}), status: person.status });
+export const safeIdentity = (person) => ({ id: String(person._id), fullName: person.fullName, email: person.email, ...(!person.role ? { gender: person.gender || null } : { role: person.role }), status: person.status });
 
 export function issueCookie(res, person, type) {
   const isAdmin = type === 'admin';

@@ -1,10 +1,11 @@
+import { useOrbitReducedMotion } from './useOrbitReducedMotion.js';
 import { useEffect, useState } from 'react';
-import { useMotionValueEvent, useReducedMotion, useSpring } from 'motion/react';
+import { useMotionValueEvent, useSpring } from 'motion/react';
 import { progressSpring } from './motionPresets.js';
 
 export function AnimatedNumber({ value, format = (number) => Math.round(number) }) {
   const target = Number(value) || 0;
-  const reduce = useReducedMotion();
+  const reduce = useOrbitReducedMotion();
   const number = useSpring(target, progressSpring);
   const [display, setDisplay] = useState(target);
   useMotionValueEvent(number, 'change', (latest) => setDisplay(latest));

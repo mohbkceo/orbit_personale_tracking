@@ -13,6 +13,7 @@
     "migrate:legacy": "npm run migrate:legacy -w server",
     "migrate:automation": "npm run migrate:automation -w server",
     "backfill:reminders": "npm run backfill:reminders -w server",
+    "backfill:appearance": "npm run backfill:appearance -w server",
     "test": "npm run test -w server",
     "lint": "eslint .",
     "format": "prettier --write ."
