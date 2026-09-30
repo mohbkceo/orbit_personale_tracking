@@ -81,6 +81,11 @@ export function parseReminderCommand(
       when = 'today';
       if (!explicit) time = '15:00';
     }
+    const daypart = when.match(/^(today|tomorrow|(?:next\s+)?(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday))\s+(morning|afternoon|evening)$/);
+    if (daypart) {
+      when = daypart[1];
+      if (!explicit) time = { morning: '09:00', afternoon: '15:00', evening: '19:00' }[daypart[2]];
+    }
     let day;
     if (when === 'today') day = local;
     else if (when === 'tomorrow') day = local.add(1, 'day');
@@ -88,11 +93,17 @@ export function parseReminderCommand(
       const weekly = when.match(
         /^every\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/,
       );
+      const simpleRecurrence = when.match(/^every\s+(day|week|month|year)$/);
       const weekday = when.match(
         /^(next\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/,
       );
       const month = when.match(/^([a-z]+)\s+(\d{1,2})(?:,?\s+(\d{4}))?$/);
-      if (weekly) {
+      const iso = when.match(/^(\d{4}-\d{2}-\d{2})$/);
+      if (simpleRecurrence) {
+        const unit = simpleRecurrence[1];
+        day = local.add(1, unit);
+        recurrence = { frequency: `${unit}ly`.replace('dayly', 'daily'), interval: 1 };
+      } else if (weekly) {
         day = futureWeekday(local, weekdays.indexOf(weekly[1]));
         recurrence = {
           frequency: 'weekly',
@@ -100,6 +111,11 @@ export function parseReminderCommand(
           daysOfWeek: [weekdays.indexOf(weekly[1])],
         };
       } else if (weekday) day = futureWeekday(local, weekdays.indexOf(weekday[2]));
+      else if (iso) {
+        const parsed = dayjs.tz(`${iso[1]} ${time}`, 'YYYY-MM-DD HH:mm', zone);
+        if (parsed.format('YYYY-MM-DD HH:mm') !== `${iso[1]} ${time}`) return { intent: 'CLARIFY_REMINDER', confidence: 0.3, data: {} };
+        day = parsed;
+      }
       else if (month && months.includes(month[1])) {
         const monthNumber = months.indexOf(month[1]) + 1;
         const year = Number(month[3] || local.year());
@@ -113,6 +129,7 @@ export function parseReminderCommand(
     }
     if (!day) return { intent: 'CLARIFY_REMINDER', confidence: 0.3, data: {} };
     target = dayjs.tz(`${day.format('YYYY-MM-DD')} ${time}`, 'YYYY-MM-DD HH:mm', zone);
+    if (target.format('YYYY-MM-DD HH:mm') !== `${day.format('YYYY-MM-DD')} ${time}`) return { intent: 'CLARIFY_REMINDER', confidence: 0.3, data: {} };
   }
   if (!target.isValid() || !target.isAfter(local))
     return { intent: 'CLARIFY_REMINDER', confidence: 0.3, data: {} };

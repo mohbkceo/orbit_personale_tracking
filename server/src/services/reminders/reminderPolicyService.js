@@ -25,52 +25,6 @@ export function buildReminderPlan(entityType, entity, settings) {
   const isToday = (date) =>
     dayjs.utc(date).format('YYYY-MM-DD') === dayjs().tz(zone).format('YYYY-MM-DD');
   if (
-    entityType === 'task' &&
-    entity.dueDate &&
-    !['completed', 'cancelled'].includes(entity.status)
-  ) {
-    const time = entity.dueTime || '09:00';
-    if (entity.dueTime && ['high', 'urgent'].includes(entity.priority))
-      plan.push(
-        entry(
-          'prepare',
-          'prepare',
-          at(entity.dueDate, time, zone, entity.priority === 'urgent' ? -120 : -60),
-          `Prepare for ${title}.`,
-          entity.priority,
-        ),
-      );
-    plan.push(
-      entry(
-        'act',
-        'act',
-        at(entity.dueDate, time, zone),
-        `${title} is ready to handle.`,
-        entity.priority,
-      ),
-    );
-    if (
-      settings.reminders?.incompleteFollowUpsEnabled !== false &&
-      (settings.reminders?.maxAutomaticFollowUps ?? 2) > 0
-    )
-      plan.push(
-        entry(
-          'follow-up',
-          'follow_up',
-          at(entity.dueDate, entity.dueTime || '17:00', zone, entity.dueTime ? 180 : 0),
-          `Still need to handle ${title}?`,
-          entity.priority,
-        ),
-      );
-    if (isToday(entity.dueDate) && plan.find((item) => item.key === 'act').when < new Date()) {
-      const action = plan.find((item) => item.key === 'act');
-      action.when = dayjs().add(5, 'minute').toDate();
-      const followUp = plan.find((item) => item.key === 'follow-up');
-      if (followUp && followUp.when <= action.when)
-        followUp.when = dayjs(action.when).add(3, 'hour').toDate();
-    }
-  }
-  if (
     entityType === 'debt' &&
     entity.dueDate &&
     entity.remainingAmount > 0 &&

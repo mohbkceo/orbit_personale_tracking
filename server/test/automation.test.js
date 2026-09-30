@@ -19,11 +19,12 @@ import { AccessSubscription } from '../src/models/AccessSubscription.js';
 import { automationDefaults, getAutomationSettings, updateAutomationSettings } from '../src/services/automationSettings.service.js';
 import { automationSettingsInput } from '../src/validators/automationSettings.js';
 import { addFocusTask, finishFocusPlanning, getDailyFocus, removeFocusTask, reviewFocusTask } from '../src/services/dailyFocus.service.js';
-import { evaluateTaskAutomation, scheduleSmartTaskCue } from '../src/services/smartTaskAutomation.service.js';
 import { executeTask } from '../src/services/taskExecution.service.js';
 import { createTask } from '../src/services/taskService.js';
 import { runAutomationForUser } from '../src/jobs/automationWorker.js';
 import { coordinateReminder } from '../src/services/reminders/reminderCoordinatorService.js';
+import { createReminder, snoozeReminder } from '../src/services/reminders/reminderService.js';
+import { suppressLegacyTaskReminders } from '../src/services/migrateTaskReminders.service.js';
 import { handleFocusCallback } from '../src/telegram/callbacks/focusCallbacks.js';
 import { migrateAutomation } from '../src/scripts/migrateAutomation.js';
 
@@ -76,31 +77,10 @@ describe('Daily Focus and task automation', () => {
     expect(await TaskExecutionEvent.countDocuments({ user: user._id, type: 'evening_review_decision' })).toBe(1);
   });
 
-  it('evaluates deadline bands, escalation, and blocked policy from settings', () => {
-    const rules = structuredClone(automationDefaults);
-    const task = { title: 'Launch', dueDate: new Date(), status: 'todo', priority: 'medium', reminderMode: 'automatic', executionState: 'idle' };
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 40 }, rules).band).toBe('far');
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 9 }, rules).band).toBe('medium');
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 3 }, rules).band).toBe('near');
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 1 }, rules).band).toBe('urgent');
-    expect(evaluateTaskAutomation(task, { daysUntilDue: -1 }, rules).band).toBe('overdue');
-    task.priority = 'high';
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 9 }, rules).band).toBe('near');
-    task.priority = 'medium';
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 40 }, rules).needsAction).toBe(true);
-    task.postponeCount = rules.escalation.forceDecisionThreshold;
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 8 }, rules).escalationLevel).toBe(2);
-    task.postponeCount = 0; task.ignoreCount = rules.escalation.ignoreThreshold;
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 8 }, rules).escalationLevel).toBe(1);
-    task.executionState = 'blocked';
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 8 }, rules).action).toBe('none');
-    rules.reminderBehavior.blockedTaskPolicy = 'review';
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 8 }, rules).action).toBe('schedule');
-    task.executionState = 'started';
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 8 }, rules).action).toBe('none');
-    task.executionState = 'idle';
-    rules.thresholds.mediumDays = 10;
-    expect(evaluateTaskAutomation(task, { daysUntilDue: 12 }, rules).band).toBe('far');
+  it('does not generate per-task cues during automation', async () => {
+    const task = await createTask(user._id, { title: 'Launch', dueDate: new Date(Date.now() + 86400000) });
+    await runAutomationForUser(user._id, new Date());
+    expect(await Reminder.countDocuments({ entityType: 'task', entityId: task._id })).toBe(0);
   });
 
   it('tracks start, continue, completion, and postponement', async () => {
@@ -111,7 +91,7 @@ describe('Daily Focus and task automation', () => {
     expect(stored.status).toBe('in_progress');
     expect(stored.startCount).toBe(1);
     expect(stored.lastProgressAt).toBeTruthy();
-    expect(await Reminder.exists({ user: user._id, policyKey: `task:${task._id}:checkin` })).toBeTruthy();
+    expect(await Reminder.exists({ user: user._id, policyKey: `task:${task._id}:checkin` })).toBeNull();
     await executeTask(user._id, task._id, 'later', { reason: 'no_time' });
     stored = await Task.findById(task._id);
     expect(stored.postponeCount).toBe(1);
@@ -134,39 +114,36 @@ describe('Daily Focus and task automation', () => {
     expect(String(evening.metadata.focusId)).toBe(String(focus._id));
   });
 
-  it('gives focus tasks without deadlines a deduplicated start cue', async () => {
+  it('keeps focus tasks without generating individual task cues', async () => {
     const day = new Date().toISOString().slice(0, 10);
     const focus = await addFocusTask(user._id, { title: 'No deadline yet' });
     await finishFocusPlanning(user._id);
     const now = new Date(`${day}T11:00:00.000Z`);
     await Promise.all([runAutomationForUser(user._id, now), runAutomationForUser(user._id, now)]);
     const key = `focus:${focus.date}:task:${focus.items[0].task._id}`;
-    const cue = await Reminder.findOne({ user: user._id, policyKey: key });
-    expect(cue).toBeTruthy();
-    expect(cue.priority).toBe('high');
-    expect(await Reminder.countDocuments({ user: user._id, policyKey: key })).toBe(1);
-    cue.status = 'active'; cue.deliveredAt = now; cue.triggerCount = 1; await cue.save();
-    await runAutomationForUser(user._id, new Date(`${day}T14:30:00.000Z`));
-    expect((await Reminder.findById(cue._id)).status).toBe('scheduled');
-    expect((await Task.findById(focus.items[0].task._id)).ignoreCount).toBe(1);
+    expect(await Reminder.countDocuments({ user: user._id, policyKey: key })).toBe(0);
+    expect((await getDailyFocus(user._id)).items).toHaveLength(1);
   });
 
-  it('defers automation in quiet hours and preserves a user snooze', async () => {
+  it('defers a manual task reminder in quiet hours and preserves a user snooze', async () => {
     const task = await createTask(user._id, { title: 'Quiet', dueDate: new Date('2026-09-24T00:00:00.000Z') });
-    const cue = await Reminder.findOne({ user: user._id, entityId: task._id });
+    const cue = await createReminder(user._id, { title: 'Quiet', entityType: 'task', entityId: task._id, trigger: { type: 'datetime', at: new Date(Date.now() + 86400000) } });
     expect((await coordinateReminder(cue, new Date('2026-09-23T23:00:00.000Z'))).action).toBe('defer');
-    cue.status = 'snoozed'; cue.nextTriggerAt = new Date('2026-09-24T11:00:00.000Z'); await cue.save();
-    await scheduleSmartTaskCue(user._id, task, { now: new Date('2026-09-23T10:00:00.000Z') });
-    expect((await Reminder.findById(cue._id)).nextTriggerAt.toISOString()).toBe('2026-09-24T11:00:00.000Z');
+    const until = new Date(Date.now() + 172800000);
+    await snoozeReminder(user._id, cue._id, until);
+    await runAutomationForUser(user._id, new Date());
+    expect((await Reminder.findById(cue._id)).nextTriggerAt.toISOString()).toBe(until.toISOString());
   });
 
-  it('records an ignored delivery once across overlapping automation runs', async () => {
+  it('suppresses legacy automatic task cues idempotently without touching manual reminders', async () => {
     const task = await createTask(user._id, { title: 'Unanswered', dueDate: new Date(Date.now() + 86400000) });
-    const cue = await Reminder.findOne({ user: user._id, entityId: task._id });
-    cue.status = 'active'; cue.deliveredAt = new Date(Date.now() - 3 * 3600000); cue.triggerCount = 1; await cue.save();
-    await Promise.all([scheduleSmartTaskCue(user._id, await Task.findById(task._id)), scheduleSmartTaskCue(user._id, await Task.findById(task._id))]);
-    expect((await Task.findById(task._id)).ignoreCount).toBe(1);
-    expect(await ReminderEvent.countDocuments({ user: user._id, reminderId: cue._id, eventType: 'ignored' })).toBe(1);
+    const at = new Date(Date.now() + 86400000);
+    const cue = await Reminder.create({ user: user._id, title: task.title, entityType: 'task', entityId: task._id, policyKey: `task:${task._id}:smart`, autoGenerated: true, source: 'automatic', mode: 'automatic', trigger: { type: 'datetime', at, timezone: 'UTC' }, nextTriggerAt: at, status: 'scheduled' });
+    const manual = await createReminder(user._id, { title: 'Custom', entityType: 'task', entityId: task._id, trigger: { type: 'datetime', at } });
+    expect(await suppressLegacyTaskReminders()).toBe(1);
+    expect(await suppressLegacyTaskReminders()).toBe(0);
+    expect((await Reminder.findById(cue._id)).status).toBe('cancelled');
+    expect((await Reminder.findById(manual._id)).status).toBe('scheduled');
   });
 
   it('validates settings and rejects a focus callback for another owner', async () => {

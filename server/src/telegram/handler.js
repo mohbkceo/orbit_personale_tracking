@@ -20,6 +20,8 @@ import { executeCommand, executeIntent, helpText, lastAction, paymentReply, quic
 import { handleCallbackAction } from './callbackHandlers.js';
 import { handleReminderCallback } from './callbacks/reminderCallbacks.js';
 import { handleFocusCallback } from './callbacks/focusCallbacks.js';
+import { handleTaskReminderDigestCallback } from './callbacks/taskReminderDigestCallbacks.js';
+import { handleGuidedAddAction, handleGuidedAddText, isGuidedAdd, stampGuidedReply } from './guidedAdd.service.js';
 import { addFocusTask, finishFocusPlanning, getDailyFocus, reviewFocusTask } from '../services/dailyFocus.service.js';
 import { getAutomationSettings } from '../services/automationSettings.service.js';
 import { executeTask } from '../services/taskExecution.service.js';
@@ -119,7 +121,11 @@ async function dispatchMessage(text, userId, settings, identity) {
     return { text: focus.planningCompleted ? `✓ ${focus.items.length}/${max} — focus plan saved.` : `${focus.items.length}/${max} — ${h(content)}. What's next? Type done if that's enough.` };
   }
   if (['/cancel', 'cancel'].includes(text.toLowerCase())) { await clearPending(identity.userId, identity.chatId); return { text: 'Cancelled.' }; }
-  if (['/quick', '/add'].includes(command)) { await clearPending(identity.userId, identity.chatId); return quickMenu(); }
+  if (['/quick', '/add', 'add'].includes(command)) { await clearPending(identity.userId, identity.chatId); return quickMenu(); }
+  if (command.startsWith('/')) {
+    const active = await getPending(identity.userId, identity.chatId);
+    if (isGuidedAdd(active)) await clearPending(identity.userId, identity.chatId);
+  }
   if (['/start', '/menu', '/help'].includes(command)) return { text: helpText() };
   if (command === '/last') return lastAction(userId, settings);
   if (command === '/undo' || command === 'undo') return lastAction(userId, settings, true);
@@ -139,6 +145,17 @@ async function dispatchMessage(text, userId, settings, identity) {
   if (existing) return existing;
   const pending = await getPending(identity.userId, identity.chatId);
   const direct = parseTelegramMessage(text, { timezone: settings.timezone });
+  if (isGuidedAdd(pending)) {
+    if (direct.intent !== 'UNKNOWN') {
+      await clearPending(identity.userId, identity.chatId);
+      const reply = await executeIntent(userId, direct, settings, identity);
+      if (reply.pending) await setPending(identity.userId, identity.chatId, reply.pending.action, reply.pending.payload);
+      return reply;
+    }
+    const guidedReply = await handleGuidedAddText(text, pending, userId, settings, identity);
+    const next = await getPending(identity.userId, identity.chatId);
+    return stampGuidedReply(guidedReply, next?.payload?.flowId);
+  }
   if (!pending && direct.intent === 'UNKNOWN' && !text.startsWith('/')) {
     const focus = await getDailyFocus(userId);
     if (focus.planningStartedAt && !focus.planningCompleted) {
@@ -196,6 +213,20 @@ export async function handleTelegramUpdate(update) {
   const settings = await getSettingsDocument(user._id);
   const identity = { userId: from.id, chatId };
   if (callback) {
+    if (String(callback.data).startsWith('taskdigest:')) {
+      try { return await handleTaskReminderDigestCallback(callback, user._id, token); }
+      catch (error) { console.error('Task digest callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }
+    }
+    if (String(callback.data).startsWith('add:')) {
+      try {
+        const result = await handleGuidedAddAction(callback, user._id, settings);
+        const next = await getPending(identity.userId, identity.chatId);
+        const reply = stampGuidedReply(result, next?.payload?.flowId);
+        await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: reply.stale ? 'Action expired' : 'OK' });
+        if (!reply.stale) await telegramRequest(token, 'editMessageText', { chat_id: chatId, message_id: callback.message.message_id, text: reply.text, parse_mode: 'HTML', reply_markup: reply.markup || { inline_keyboard: [] } });
+        return;
+      } catch (error) { console.error('Guided add callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }
+    }
     if (String(callback.data).startsWith('f:')) {
       try { return await handleFocusCallback(callback, user._id, token); }
       catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }

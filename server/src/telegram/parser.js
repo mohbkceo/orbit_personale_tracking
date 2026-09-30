@@ -87,7 +87,8 @@ export function parseTelegramMessage(text, options = {}) {
   if (/^show\s+reminders$/i.test(value)) return result('SHOW_REMINDERS');
   let match = value.match(/^remind\s+me\s+(.+)$/i);
   if (match) {
-    const reminder = parseReminderCommand(match[1], options);
+    const trailing = match[1].match(/^to\s+(.+?)\s+((?:next\s+)?(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)(?:\s+(?:morning|afternoon|evening))?|today|tomorrow(?:\s+(?:morning|afternoon|evening))?)$/i);
+    const reminder = parseReminderCommand(trailing ? `${trailing[2]} to ${trailing[1]}` : match[1], options);
     if (reminder.intent !== 'CLARIFY_REMINDER') return reminder;
     return parseNaturalDate(match[1]) ? result('CREATE_TASK', taskData(match[1].replace(/^to\s+/i, ''), options)) : reminder;
   }

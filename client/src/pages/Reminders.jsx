@@ -543,6 +543,7 @@ function EntityReminderControls({ entityType, entityId, count, onChanged }) {
           <p className="mt-1 text-xs text-muted">
             {count} open reminder{count === 1 ? '' : 's'}
           </p>
+          {entityType === 'task' && <p className="mt-1 text-xs text-muted">Task Digest delivery is managed in Tasks. You can add a manual reminder here.</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
@@ -552,11 +553,11 @@ function EntityReminderControls({ entityType, entityId, count, onChanged }) {
             value={entity.mode}
             onChange={(event) => changeMode(event.target.value)}
           >
-            <option value="automatic">Automatic</option>
-            <option value="custom">Custom</option>
+            <option value="automatic">{entityType === 'task' ? 'Task Digest' : 'Automatic'}</option>
+            <option value="custom">{entityType === 'task' ? 'Manual only' : 'Custom'}</option>
             <option value="off">Off</option>
           </select>
-          {entity.mode === 'automatic' && (
+          {entity.mode === 'automatic' && entityType !== 'task' && (
             <button className="btn-secondary h-10" disabled={busy} onClick={restore}>
               Restore defaults
             </button>

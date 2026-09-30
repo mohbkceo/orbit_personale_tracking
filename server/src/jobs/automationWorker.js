@@ -1,15 +1,12 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import { Task } from '../models/Task.js';
 import { Reminder } from '../models/Reminder.js';
 import { DailyFocus } from '../models/DailyFocus.js';
 import { getSettingsDocument } from '../services/settingsService.js';
 import { getAutomationSettings, automationTimezone } from '../services/automationSettings.service.js';
-import { scheduleSmartTaskCue } from '../services/smartTaskAutomation.service.js';
 import { getDailyFocus, focusDate, focusProgress } from '../services/dailyFocus.service.js';
 import { event } from '../services/reminders/reminderService.js';
-import { scheduleFocusTaskCues } from '../services/dailyFocusAutomation.service.js';
 
 dayjs.extend(utc); dayjs.extend(timezone);
 
@@ -31,9 +28,6 @@ export async function runAutomationForUser(userId, now = new Date(), rules) {
   const settings = await getSettingsDocument(userId);
   const zone = automationTimezone(settings, rules);
   if (!settings.reminders?.enabled || !settings.reminders?.automaticEnabled) return;
-  for await (const task of Task.find({ user: userId, archived: false, reminderMode: 'automatic', dueDate: { $ne: null }, status: { $nin: ['completed', 'cancelled'] } }).cursor()) {
-    await scheduleSmartTaskCue(userId, task, { now, rules });
-  }
   if (!rules.dailyFocus.enabled) return;
   const date = focusDate(now, zone);
   const clock = dayjs(now).tz(zone).format('HH:mm');
@@ -59,5 +53,4 @@ export async function runAutomationForUser(userId, now = new Date(), rules) {
     const lines = focus.items.map((item) => `${item.task?.status === 'completed' ? '✓' : '□'} ${item.task?.title || 'Removed task'}`);
     await createFocusReminder(userId, focus, 'evening', 0, now, settings, `Today: ${progress.completed}/${progress.total}\n${lines.join('\n')}\nChoose what to do with unfinished tasks.`);
   }
-  await scheduleFocusTaskCues(userId, focus, settings, rules, now);
 }

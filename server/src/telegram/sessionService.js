@@ -13,6 +13,9 @@ export async function getPending(userId, chatId) {
 export async function clearPending(userId, chatId) {
   return TelegramSession.deleteOne(key(userId, chatId));
 }
+export async function claimPending(userId, chatId, actions, flowId) {
+  return TelegramSession.findOneAndUpdate({ ...key(userId, chatId), action: { $in: actions }, 'payload.flowId': flowId, expiresAt: { $gt: new Date() } }, { $set: { action: 'ADD_PROCESSING' } }, { new: true });
+}
 export async function pendingExpired(userId, chatId) {
   const session = await TelegramSession.findOne(key(userId, chatId));
   if (!session || session.expiresAt > new Date()) return false;

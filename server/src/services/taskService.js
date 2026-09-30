@@ -8,6 +8,7 @@ import { escapeRegex, pagination } from '../utils/query.js';
 import { recordActivity } from './activityService.js';
 import { cancelEntityReminders, regenerateAutomaticReminderPlan, resolveEntityReminders } from './reminders/reminderService.js';
 import { getSettingsDocument } from './settingsService.js';
+import { getAutomationSettings } from './automationSettings.service.js';
 import { localDateTime, nextOccurrence } from './reminders/reminderTime.js';
 
 dayjs.extend(utc); dayjs.extend(timezone);
@@ -28,7 +29,7 @@ export async function materializeNextTaskOccurrence(userId, task) {
   let following;
   try {
     const projectId = task.projectId && await Project.exists({ _id: task.projectId, user: userId }) ? task.projectId : null;
-    following = await createTask(userId, { title: task.title, description: task.description, nextAction: task.nextAction, estimatedMinutes: task.estimatedMinutes, status: 'todo', priority: task.priority, dueDate: new Date(`${day}T00:00:00.000Z`), dueTime: task.dueTime, category: task.category, projectId, recurring: true, recurringRule: task.recurringRule.toObject(), tags: task.tags, reminderMode: task.reminderMode, seriesId, occurrenceKey: day, createdVia: 'system' });
+    following = await createTask(userId, { title: task.title, description: task.description, nextAction: task.nextAction, estimatedMinutes: task.estimatedMinutes, status: 'todo', priority: task.priority, dueDate: new Date(`${day}T00:00:00.000Z`), dueTime: task.dueTime, category: task.category, projectId, recurring: true, recurringRule: task.recurringRule.toObject(), tags: task.tags, reminderMode: task.reminderMode, taskReminderState: task.taskReminderState, seriesId, occurrenceKey: day, createdVia: 'system' });
   } catch (error) {
     if (error.code !== 11000) throw error;
     following = await Task.findOne({ user: userId, seriesId, occurrenceKey: day });
@@ -41,7 +42,10 @@ export async function materializeNextTaskOccurrence(userId, task) {
 export async function createTask(userId, input) {
   if (input.projectId && !(await Project.exists({ _id: input.projectId, user: userId }))) throw new AppError('Project not found', 404);
   const settings = await getSettingsDocument(userId);
-  const task = await Task.create({ ...input, user: userId, reminderMode: input.reminderMode || settings.reminders?.defaultEntityModes?.task || 'automatic' });
+  const mode = input.reminderMode || settings.reminders?.defaultEntityModes?.task || 'automatic';
+  const automation = await getAutomationSettings();
+  const enabled = mode === 'automatic' && settings.reminders?.enabled !== false && settings.reminders?.automaticEnabled !== false && automation.general.enabled && automation.taskReminderDigest.enabled;
+  const task = await Task.create({ ...input, user: userId, reminderMode: mode, taskReminderState: input.taskReminderState || (enabled ? 'enabled' : 'muted') });
   await recordActivity(userId, { action: 'created', entityType: 'Task', entityId: task._id, description: task.title, newData: task.toObject(), source: input.createdVia });
   await regenerateAutomaticReminderPlan(userId, 'task', task._id);
   return task;

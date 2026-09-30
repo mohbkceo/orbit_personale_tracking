@@ -9,6 +9,7 @@
     "bootstrap:admin": "node src/scripts/bootstrapAdmin.js",
     "migrate:legacy": "node src/scripts/migrateLegacy.js",
     "migrate:automation": "node src/scripts/migrateAutomation.js",
+    "migrate:task-digest": "node src/scripts/migrateTaskDigest.js",
     "backfill:reminders": "node src/scripts/backfillReminders.js",
     "backfill:appearance": "node src/scripts/backfillAppearance.js",
     "test": "vitest run"

@@ -22,6 +22,7 @@ const taskSchema = new mongoose.Schema(
     dueDate: { type: Date, default: null, index: true },
     dueTime: { type: String, default: '' },
     reminderMode: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
+    taskReminderState: { type: String, enum: ['enabled', 'muted'], default: 'enabled' },
     category: { type: String, default: 'Personal' },
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
     recurring: { type: Boolean, default: false },
@@ -54,5 +55,6 @@ const taskSchema = new mongoose.Schema(
 taskSchema.index({ title: 'text', description: 'text', tags: 'text' });
 taskSchema.index({ user: 1, archived: 1, dueDate: 1 });
 taskSchema.index({ user: 1, archived: 1, status: 1, reminderMode: 1, dueDate: 1 });
+taskSchema.index({ user: 1, archived: 1, status: 1, taskReminderState: 1, priority: 1 });
 taskSchema.index({ user: 1, seriesId: 1, occurrenceKey: 1 }, { unique: true, partialFilterExpression: { seriesId: { $type: 'objectId' }, occurrenceKey: { $type: 'string' } } });
 export const Task = mongoose.model('Task', taskSchema);

@@ -87,66 +87,13 @@ const mobileItems = [
 function Logo() {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-[13px] border border-sidebar-hover bg-sidebar shadow-sm">
-        {/* Soft highlight */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-white/10" />
-
-        <svg
-          viewBox="0 0 32 32"
-          className="relative h-[25px] w-[25px]"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <defs>
-            {/* ToOutdo-style orange gradient */}
-            <linearGradient
-              id="orbit-logo-gradient"
-              x1="5"
-              y1="27"
-              x2="26"
-              y2="4"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop offset="0%" stopColor="#FF4D00" />
-              <stop offset="48%" stopColor="#FF7900" />
-              <stop offset="100%" stopColor="#FFB000" />
-            </linearGradient>
-
-            {/* Removes the eyes + smile from the orange shape */}
-            <mask id="orbit-logo-face-mask">
-              <rect width="32" height="32" fill="black" />
-
-              {/* Main icon */}
-              <g stroke="white" strokeWidth="5.2" strokeLinecap="round">
-                <path d="M16 16V4.6" />
-                <path d="M16 16L24.2 7.8" />
-                <path d="M16 16H27.4" />
-                <path d="M16 16L24.2 24.2" />
-                <path d="M16 16V27.4" />
-                <path d="M16 16L7.8 24.2" />
-                <path d="M16 16H4.6" />
-                <path d="M16 16L7.8 7.8" />
-              </g>
-
-              {/* Face cutouts */}
-              <rect x="12" y="13" width="1.8" height="3.3" rx="0.9" fill="black" />
-
-              <rect x="18.2" y="13" width="1.8" height="3.3" rx="0.9" fill="black" />
-
-              <path
-                d="M13.4 18.2C14.1 19.15 14.95 19.6 16 19.6C17.05 19.6 17.9 19.15 18.6 18.2"
-                fill="none"
-                stroke="black"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-              />
-            </mask>
-          </defs>
-
-          <g mask="url(#orbit-logo-face-mask)">
-            <rect width="32" height="32" fill="url(#orbit-logo-gradient)" />
-          </g>
-        </svg>
+      <div className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-[13px] border border-sidebar-hover bg-white shadow-sm">
+        <img
+          src="/logo-orbit.png"
+          alt="Orbit"
+          className="h-[34px] w-[34px] object-contain"
+          draggable={false}
+        />
       </div>
 
       <div className="min-w-0">
@@ -161,7 +108,6 @@ function Logo() {
     </div>
   );
 }
-
 function SidebarItem({ label, path, Icon, close }) {
   return (
     <NavLink

@@ -9,6 +9,7 @@ import { createTransaction, ensureAccount } from '../services/financeService.js'
 import { payBill } from '../services/billService.js';
 import { getSettingsDocument } from '../services/settingsService.js';
 import { cancelEntityReminders, regenerateAutomaticReminderPlan, resolveEntityReminders } from '../services/reminders/reminderService.js';
+import { createGoal } from '../services/goalService.js';
 
 const id = z.string().regex(/^[a-f\d]{24}$/i);
 const reminderMode = z.enum(['automatic', 'custom', 'off']).optional();
@@ -19,7 +20,7 @@ const goalInput = z.object({ title: z.string().min(1), description: z.string().o
 function crudRoutes(Model, schema, sort, entityType) {
   const router = Router();
   router.get('/', asyncHandler(async (req, res) => success(res, await Model.find({ user: req.user._id }).populate({ path: 'accountId', match: { user: req.user._id } }).sort(sort))));
-  router.post('/', validate(schema), asyncHandler(async (req, res) => { if (req.body.accountId) await ensureAccount(req.user._id, req.body.accountId); const settings = await getSettingsDocument(req.user._id); const item = await Model.create({ ...req.body, user: req.user._id, reminderMode: req.body.reminderMode || settings.reminders?.defaultEntityModes?.[entityType] || 'automatic' }); await regenerateAutomaticReminderPlan(req.user._id, entityType, item._id); return success(res, item, 201); }));
+  router.post('/', validate(schema), asyncHandler(async (req, res) => { if (req.body.accountId) await ensureAccount(req.user._id, req.body.accountId); if (entityType === 'goal') return success(res, await createGoal(req.user._id, req.body), 201); const settings = await getSettingsDocument(req.user._id); const item = await Model.create({ ...req.body, user: req.user._id, reminderMode: req.body.reminderMode || settings.reminders?.defaultEntityModes?.[entityType] || 'automatic' }); await regenerateAutomaticReminderPlan(req.user._id, entityType, item._id); return success(res, item, 201); }));
   router.patch('/:id', validate(schema.partial()), asyncHandler(async (req, res) => { if (req.body.accountId) await ensureAccount(req.user._id, req.body.accountId); const item = await Model.findOneAndUpdate({ _id: req.params.id, user: req.user._id }, req.body, { new: true, runValidators: true }); if (!item) throw new AppError('Record not found', 404); if (['dueDate', 'nextBillingDate', 'targetDate', 'status', 'reminderMode'].some((key) => key in req.body)) await regenerateAutomaticReminderPlan(req.user._id, entityType, item._id); return success(res, item); }));
   router.delete('/:id', asyncHandler(async (req, res) => { const item = await Model.findOneAndDelete({ _id: req.params.id, user: req.user._id }); if (!item) throw new AppError('Record not found', 404); await cancelEntityReminders(req.user._id, entityType, item._id); return success(res, { deleted: true }); }));
   return router;

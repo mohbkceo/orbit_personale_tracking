@@ -7,9 +7,14 @@ import { sendSummaries } from './summaryWorker.js';
 import { updateOverdueStatuses } from './stateWorker.js';
 import { runAutomationForUser } from './automationWorker.js';
 import { getAutomationSettings } from '../services/automationSettings.service.js';
+import { runTaskReminderDigestForUser } from './taskReminderDigestWorker.js';
+import { backfillTaskReminderState, suppressLegacyTaskReminders } from '../services/migrateTaskReminders.service.js';
 
 export async function runJobsOnce() {
+  const now = new Date();
   const automation = await getAutomationSettings();
+  await backfillTaskReminderState();
+  await suppressLegacyTaskReminders();
   await processDueReminders();
   const users = await User.find({ status: 'ACTIVE' }).select('_id status');
   const connections = await TelegramConnection.find({ user: { $in: users.map((user) => user._id) } });
@@ -17,7 +22,8 @@ export async function runJobsOnce() {
   for (const user of users) {
     await updateOverdueStatuses(user._id);
     if ((await checkAccess(user)).eligible) {
-      await runAutomationForUser(user._id, new Date(), automation);
+      await runAutomationForUser(user._id, now, automation);
+      if (connected.has(String(user._id))) await runTaskReminderDigestForUser(user._id, now, automation);
       if (connected.has(String(user._id))) await sendSummaries(user._id);
     }
   }

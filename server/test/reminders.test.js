@@ -119,7 +119,7 @@ describe('reminder lifecycle', () => {
     expect(await ReminderEvent.countDocuments({ reminderId: item._id })).toBe(5);
   });
 
-  it('creates a review cue for goals and keeps edited policy reminders on task changes', async () => {
+  it('creates a review cue for goals and keeps manual task reminders on task changes', async () => {
     const settings = await Setting.findOneAndUpdate(
       { user: user._id },
       { $setOnInsert: { user: user._id } },
@@ -132,11 +132,11 @@ describe('reminder lifecycle', () => {
     });
     expect(buildReminderPlan('goal', goal, settings)[0].purpose).toBe('review');
     const task = await createTask(user._id, { title: 'Call supplier', dueDate: tomorrow() });
-    const plan = await Reminder.find({ entityType: 'task', entityId: task._id });
-    expect(plan).toHaveLength(1);
-    await updateReminder(user._id, plan[0]._id, { title: 'My preferred copy' });
+    expect(await Reminder.countDocuments({ entityType: 'task', entityId: task._id })).toBe(0);
+    const manual = await custom({ entityType: 'task', entityId: task._id });
+    await updateReminder(user._id, manual._id, { title: 'My preferred copy' });
     await updateTask(user._id, task._id, { dueDate: new Date(Date.now() + 2 * 86400000) });
-    expect((await Reminder.findById(plan[0]._id)).title).toBe('My preferred copy');
+    expect((await Reminder.findById(manual._id)).title).toBe('My preferred copy');
     await updateTask(user._id, task._id, { status: 'completed' });
     expect(
       await Reminder.countDocuments({
@@ -147,15 +147,16 @@ describe('reminder lifecycle', () => {
     ).toBe(0);
   });
 
-  it('does not generate when off and can restore automatic defaults', async () => {
+  it('uses digest state without generating automatic task reminders', async () => {
     const task = await createTask(user._id, {
       title: 'No cues',
       dueDate: tomorrow(),
       reminderMode: 'off',
     });
     expect(await Reminder.countDocuments({ entityId: task._id })).toBe(0);
-    await updateTask(user._id, task._id, { reminderMode: 'automatic' });
-    expect((await regenerateAutomaticReminderPlan(user._id, 'task', task._id)).length).toBe(1);
+    await updateTask(user._id, task._id, { reminderMode: 'automatic', taskReminderState: 'enabled' });
+    expect((await regenerateAutomaticReminderPlan(user._id, 'task', task._id)).length).toBe(0);
+    expect((await Task.findById(task._id)).taskReminderState).toBe('enabled');
   });
 
   it('completes a linked task through its service', async () => {
@@ -175,11 +176,11 @@ describe('reminder lifecycle', () => {
     });
     await backfillUpcomingReminders(user._id);
     await backfillUpcomingReminders(user._id);
-    expect(await Reminder.countDocuments({ entityId: upcoming._id })).toBe(1);
+    expect(await Reminder.countDocuments({ entityId: upcoming._id })).toBe(0);
     expect(await Reminder.countDocuments({ entityId: historical._id })).toBe(0);
   });
 
-  it('creates a separate reminder lifecycle for the next recurring task occurrence', async () => {
+  it('carries digest settings into the next recurring task occurrence', async () => {
     const first = await createTask(user._id, {
       title: 'Review budget',
       dueDate: tomorrow(),
@@ -190,8 +191,9 @@ describe('reminder lifecycle', () => {
     const following = await Task.findOne({ user: user._id, seriesId: first._id });
     expect(following).toBeTruthy();
     expect(following.status).toBe('todo');
-    expect(await Reminder.countDocuments({ entityId: first._id, status: 'completed' })).toBe(1);
-    expect(await Reminder.countDocuments({ entityId: following._id, status: 'scheduled' })).toBe(1);
+    expect(await Reminder.countDocuments({ entityId: first._id })).toBe(0);
+    expect(await Reminder.countDocuments({ entityId: following._id })).toBe(0);
+    expect(following.taskReminderState).toBe('enabled');
     await updateTask(user._id, first._id, { status: 'completed' });
     expect(await Task.countDocuments({ user: user._id, seriesId: first._id })).toBe(1);
   });

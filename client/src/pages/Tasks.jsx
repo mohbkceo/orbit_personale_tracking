@@ -1,5 +1,5 @@
 import { useOrbitReducedMotion } from '../animations/useOrbitReducedMotion.js';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   CalendarCheck2,
@@ -29,7 +29,6 @@ function TaskForm({ open, onClose, onSaved, task }) {
   const { toast, reward } = useApp();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
-  const [planned, setPlanned] = useState([]);
   const [form, setForm] = useState(() => ({
     title: task?.title || '',
     description: task?.description || '',
@@ -40,22 +39,10 @@ function TaskForm({ open, onClose, onSaved, task }) {
     category: task?.category || 'Personal',
     repeat: task?.recurringRule?.frequency || 'never',
     reminderMode: task?.reminderMode || 'automatic',
+    taskReminderState: task?.reminderMode && task.reminderMode !== 'automatic' ? 'muted' : task?.taskReminderState || 'enabled',
     nextAction: task?.nextAction || '',
     estimatedMinutes: task?.estimatedMinutes || '',
   }));
-  useEffect(() => {
-    if (task?._id)
-      endpoints
-        .list('reminders', { entityType: 'task', entityId: task._id, limit: 100 })
-        .then((response) =>
-          setPlanned(
-            response.data.filter((item) =>
-              ['scheduled', 'active', 'snoozed', 'waiting'].includes(item.status),
-            ),
-          ),
-        )
-        .catch((error) => toast(error.message, 'error'));
-  }, [task?._id, toast]);
   const set = (key) => (e) => setForm((v) => ({ ...v, [key]: e.target.value }));
   async function submit(e) {
     e.preventDefault();
@@ -69,8 +56,8 @@ function TaskForm({ open, onClose, onSaved, task }) {
       toast(
         task
           ? 'Task updated'
-          : form.reminderMode === 'automatic'
-            ? 'Task added · Smart reminders enabled'
+          : result.data.taskReminderState === 'enabled' && result.data.reminderMode === 'automatic'
+            ? 'Task added · Task reminders enabled'
             : 'Task added',
       );
       if (!task) reward('TASK_CREATED');
@@ -142,26 +129,27 @@ function TaskForm({ open, onClose, onSaved, task }) {
         <div className="grid grid-cols-2 gap-3"><label><span className="label">Status</span><select className="field" value={form.status} onChange={set('status')}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label><label><span className="label">Repeat</span><select className="field" value={form.repeat} onChange={set('repeat')}><option value="never">Never</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label></div>
         <div className="rounded-xl border border-border p-3 ">
           <label>
-            <span className="label">Reminders</span>
-            <select className="field" value={form.reminderMode} onChange={set('reminderMode')}>
-              <option value="automatic">Automatic</option>
-              <option value="custom">Custom</option>
+            <span className="label">Reminder mode</span>
+            <select className="field" value={form.reminderMode} onChange={(event) => setForm((current) => ({ ...current, reminderMode: event.target.value, taskReminderState: event.target.value === 'automatic' ? 'enabled' : 'muted' }))}>
+              <option value="automatic">Task Digest</option>
+              <option value="custom">Manual reminders only</option>
               <option value="off">Off</option>
             </select>
           </label>
+          <label className="mt-3 block"><span className="label">Task reminders</span><select className="field" value={form.taskReminderState} disabled={form.reminderMode !== 'automatic'} onChange={set('taskReminderState')}><option value="enabled">Enabled</option><option value="muted">Muted</option></select></label>
           <p className="mt-2 text-xs text-muted">
             {form.reminderMode === 'automatic'
-              ? `Smart reminders · ${task ? planned.length : form.dueDate ? form.dueTime && ['high', 'urgent'].includes(form.priority) ? 3 : 2 : 0}`
+              ? form.taskReminderState === 'enabled' ? 'Included in scheduled Task Digests.' : 'Excluded from Task Digests.'
               : form.reminderMode === 'custom'
-                ? 'Add your own cues after saving.'
-                : 'No automatic reminders.'}
+                ? 'Add your own reminder after saving.'
+                : 'No automatic task reminders.'}
           </p>
           {task && (
             <Link
               className="mt-2 inline-block text-xs font-bold text-primary"
               to={`/reminders?entityType=task&entityId=${task._id}`}
             >
-              Edit reminder plan
+              Add or edit a manual reminder
             </Link>
           )}
         </div>
@@ -205,6 +193,14 @@ export default function Tasks() {
   async function execute(task, action) {
     try { await endpoints.create(`tasks/${task._id}/execute`, { action }); toast(action === 'start' ? 'Task started' : 'Task marked blocked'); reload(); }
     catch (err) { toast(err.message, 'error'); }
+  }
+  async function toggleTaskReminders(task) {
+    try {
+      const enabled = task.reminderMode === 'automatic' && task.taskReminderState !== 'muted';
+      await endpoints.update('tasks', task._id, { taskReminderState: enabled ? 'muted' : 'enabled', ...(!enabled ? { reminderMode: 'automatic' } : {}) });
+      toast(enabled ? 'Task reminders muted' : 'Task reminders enabled');
+      reload();
+    } catch (err) { toast(err.message, 'error'); }
   }
   async function remove(task) {
     if (!window.confirm(`Archive “${task.title}”?`)) return;
@@ -343,6 +339,7 @@ export default function Tasks() {
                       </p>
                       {task.nextAction && <p className="mt-1 truncate text-[11px] text-muted">Next: {task.nextAction}</p>}
                     </button>
+                    {!complete && task.status !== 'cancelled' && <button className="shrink-0 text-[11px] text-muted underline" onClick={() => toggleTaskReminders(task)}>Task reminders: {task.reminderMode === 'automatic' && task.taskReminderState !== 'muted' ? 'Enabled' : 'Muted'}</button>}
                     {!complete && task.status !== 'cancelled' && <div className="flex shrink-0 gap-2 text-[11px]"><motion.button whileTap={reduce ? undefined : buttonMotion.whileTap} transition={buttonMotion.transition} className="text-primary underline" onClick={() => execute(task, 'start')}>Start</motion.button><button className="text-muted underline" onClick={() => execute(task, 'blocked')}>Blocked</button></div>}
                   </div>
                   <div

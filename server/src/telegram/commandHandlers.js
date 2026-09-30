@@ -21,7 +21,7 @@ const debtButtons = (id) => rows([['Payment', `debt:pay:${id}`], ['Paid', `debt:
 const txButtons = (id) => rows([['Edit', `tx:edit:${id}`], ['Undo', `tx:undo:${id}`]]);
 
 export function quickMenu() {
-  return { text: '<b>Quick Add</b>', markup: rows([['Task', 'quick:task'], ['Sale', 'quick:sale']], [['Debt In', 'quick:din'], ['Debt Out', 'quick:dout']], [['Expense', 'quick:expense'], ['Income', 'quick:income']]) };
+  return { text: 'What would you like to add?', markup: rows([['✅ Task', 'add:task'], ['🔔 Reminder', 'add:reminder']], [['🎯 Goal', 'add:goal']], [['Sale', 'quick:sale'], ['Expense', 'quick:expense']], [['Debt In', 'quick:din'], ['Debt Out', 'quick:dout']], [['Income', 'quick:income']]) };
 }
 export function helpText() {
   return '<b>QUICK ENTRY</b>\n' +

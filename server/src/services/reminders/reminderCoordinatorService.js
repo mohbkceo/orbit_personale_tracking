@@ -44,9 +44,6 @@ export async function coordinateReminder(reminder, now = new Date()) {
     );
     if (isEntityResolved(reminder.entityType, entity))
       return { action: 'resolve', reason: 'Linked entity resolved' };
-    if (reminder.metadata?.automation === 'smart' && entity?.executionState === 'blocked' && automation?.reminderBehavior.blockedTaskPolicy === 'pause') return { action: 'defer', at: new Date(now.getTime() + 86400000), reason: 'Task blocked' };
-    if (reminder.metadata?.automation === 'focus-task' && entity?.executionState === 'started' && automation?.taskExecution.startFollowUpEnabled) return { action: 'resolve', reason: 'Start check-in handles task' };
-    if (reminder.metadata?.automation === 'focus-task' && entity?.executionState === 'blocked' && automation?.reminderBehavior.blockedTaskPolicy === 'pause') return { action: 'defer', at: new Date(now.getTime() + automation.escalation.cooldownMinutes * 60000), reason: 'Task blocked' };
   }
   if (reminder.metadata?.automation === 'focus-morning') {
     const focus = await DailyFocus.findOne({ _id: reminder.metadata.focusId, user: reminder.user });
