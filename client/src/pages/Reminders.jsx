@@ -668,7 +668,7 @@ export default function Reminders() {
         {filters.map((name) => (
           <button
             key={name}
-            className={`rounded-lg px-3 py-2 text-xs font-bold ${filter === name ? 'bg-primary text-primary-text  ' : 'text-muted'}`}
+            className={`rounded-lg px-3 py-2 text-xs font-bold ${filter === name ? 'bg-selected text-primary' : 'text-muted hover:bg-hover'}`}
             onClick={() => setFilter(name)}
           >
             {name}

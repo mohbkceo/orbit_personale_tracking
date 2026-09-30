@@ -32,12 +32,8 @@ export async function runTaskReminderDigestForUser(userId, now, rules) {
     if (error.code !== 11000) throw error;
     return false;
   }
-  try {
-    await sendMessage(env.ORBIT_TELEGRAM_BOT_TOKEN, connection.chatId, digest.text, digest.markup);
-    await TaskDigestDelivery.updateOne({ _id: claim._id }, { $set: { sentAt: new Date() } });
-    return true;
-  } catch (error) {
-    // Keep the slot claim: Telegram may have accepted the message before an API error.
-    throw error;
-  }
+  // Keep the slot claim if Telegram accepts the message before an API error.
+  await sendMessage(env.ORBIT_TELEGRAM_BOT_TOKEN, connection.chatId, digest.text, digest.markup);
+  await TaskDigestDelivery.updateOne({ _id: claim._id }, { $set: { sentAt: new Date() } });
+  return true;
 }

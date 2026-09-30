@@ -361,14 +361,14 @@ function SavingsForm({ goal, onClose, onSaved }) {
           <button
             type="button"
             onClick={() => setForm((v) => ({ ...v, action: 'contribute' }))}
-            className={`rounded-xl border p-3 text-sm font-bold ${contributing ? 'border-primary bg-surface-alt ' : 'border-border '}`}
+            className={`rounded-xl border p-3 text-sm font-semibold ${contributing ? 'border-primary bg-selected text-primary' : 'border-border bg-surface hover:bg-hover'}`}
           >
             Contribute
           </button>
           <button
             type="button"
             onClick={() => setForm((v) => ({ ...v, action: 'withdraw' }))}
-            className={`rounded-xl border p-3 text-sm font-bold ${!contributing ? 'border-primary bg-surface-alt ' : 'border-border '}`}
+            className={`rounded-xl border p-3 text-sm font-semibold ${!contributing ? 'border-primary bg-selected text-primary' : 'border-border bg-surface hover:bg-hover'}`}
           >
             Withdraw
           </button>

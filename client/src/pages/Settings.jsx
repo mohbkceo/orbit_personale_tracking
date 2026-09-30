@@ -182,7 +182,7 @@ export default function Settings() {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold ${tab === id ? 'bg-primary text-primary-text' : 'text-muted hover:bg-hover'}`}
+              className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold ${tab === id ? 'bg-selected text-primary' : 'text-muted hover:bg-hover'}`}
             >
               <Icon size={17} />
               {label}

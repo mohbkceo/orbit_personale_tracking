@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { Modal } from './ui.jsx';
 
-const destinations = { task: '/tasks', transaction: '/money/transactions', debt: '/money/debts', contact: '/personal/contacts', note: '/personal/notes', project: '/planning/projects', subscription: '/planning/subscriptions', goal: '/planning/goals' };
+const destinations = { task: '/tasks', transaction: '/money/transactions', debt: '/money/debts', contact: '/personal/contacts', note: '/personal/notes', project: '/personal/projects', subscription: '/planning/subscriptions', goal: '/planning/goals' };
 
 export function SearchPalette({ open, onClose }) {
   const [query, setQuery] = useState(''); const [results, setResults] = useState([]); const navigate = useNavigate();

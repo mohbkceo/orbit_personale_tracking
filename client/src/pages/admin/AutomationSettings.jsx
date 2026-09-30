@@ -28,7 +28,7 @@ export default function AdminAutomationSettings() {
   return <><PageHeader eyebrow="Admin · Settings" title="Automation Settings" description="Set the timing and limits for Daily Focus and reminders." />
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     {!value ? <Spinner /> : <form onSubmit={submit} className="space-y-5">
-      {groups.map(([section, title, fields]) => <section className="panel p-5" key={section}><h2 className="font-display text-lg font-bold">{title}</h2><p className="mt-1 text-xs text-[#7b867f]">{descriptions[section]}</p><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {groups.map(([section, title, fields]) => <section className="panel p-5" key={section}><h2 className="font-display text-lg font-bold">{title}</h2><p className="mt-1 text-xs text-muted">{descriptions[section]}</p><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map((key) => { const current = value[section]?.[key]; const type = typeof current;
           return <label key={key} className="text-sm"><span className="label">{label(key)}</span>
             {type === 'boolean' ? <input type="checkbox" className="h-5 w-5 accent-emerald-700" checked={current} onChange={(event) => change(section, key, event.target.checked)} />

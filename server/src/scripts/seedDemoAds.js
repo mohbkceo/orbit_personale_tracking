@@ -6,7 +6,6 @@ import { hashPassword } from '../services/authService.js';
 import { User } from '../models/User.js';
 import { Admin } from '../models/Admin.js';
 import { Plan } from '../models/Plan.js';
-import { Feature } from '../models/Feature.js';
 import { ActivationLink } from '../models/ActivationLink.js';
 import { AccessSubscription } from '../models/AccessSubscription.js';
 

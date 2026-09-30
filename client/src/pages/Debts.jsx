@@ -269,7 +269,7 @@ export default function Debts() {
             onClick={() => setType(id)}
             className={cn(
               'rounded-lg px-4 py-2 text-xs font-bold',
-              type === id ? 'bg-primary text-primary-text  ' : 'text-muted',
+              type === id ? 'bg-selected text-primary' : 'text-muted hover:bg-hover',
             )}
           >
             {label}

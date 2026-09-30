@@ -13,7 +13,7 @@ export default function Access() {
   const expired = access?.reason === 'EXPIRED';
   const subscription = access?.subscription;
   return (
-    <main className="grid min-h-screen place-items-center bg-canvas px-4 dark:bg-[#0d1310]">
+    <main className="grid min-h-screen place-items-center bg-canvas px-4">
       <div className="panel w-full max-w-lg p-8">
         <span className="text-xs font-bold uppercase tracking-widest text-primary">
           Orbit access
@@ -25,22 +25,22 @@ export default function Access() {
               ? 'Your Orbit access has expired'
               : 'Activate your Orbit access'}
         </h1>
-        <p className="mt-3 text-sm text-[#6f7b73]">
+        <p className="mt-3 text-sm text-muted">
           {suspended
             ? 'Contact an Orbit administrator for help. Suspension does not pause your access period.'
             : 'Your data is safe. Redeem a new Activation Link to continue using your workspace.'}
         </p>
         {subscription && (
-          <div className="mt-6 rounded-xl bg-[#f3f6f2] p-4 text-sm dark:bg-white/5">
+          <div className="mt-6 rounded-xl border border-border bg-surface-alt p-4 text-sm">
             <p className="font-bold">{subscription.planSnapshot?.name || 'Access plan'}</p>
-            <p className="mt-1 text-[#6f7b73]">
+            <p className="mt-1 text-muted">
               {expired ? 'Expired' : 'Expires'} {new Date(subscription.expiresAt).toLocaleString()}
             </p>
           </div>
         )}
         {!suspended && (
           <form
-            className="mt-6 flex gap-2"
+            className="mt-6 flex flex-col gap-2 sm:flex-row"
             onSubmit={(event) => {
               event.preventDefault();
               const value = key.trim().split('/').pop();
@@ -48,7 +48,7 @@ export default function Access() {
             }}
           >
             <input
-              className="field"
+              className="field min-w-0"
               placeholder="Paste Activation Link or key"
               value={key}
               onChange={(e) => setKey(e.target.value)}

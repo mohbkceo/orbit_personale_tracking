@@ -1,33 +1,11 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation, useOutlet } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import {
-  Bell,
-  BookOpenText,
-  CalendarCheck2,
-  CircleDollarSign,
-  Command,
-  ContactRound,
-  CreditCard,
-  FolderKanban,
-  Gauge,
-  Goal,
-  Landmark,
-  LayoutList,
-  LogOut,
-  Menu,
-  Moon,
-  Plus,
-  ReceiptText,
-  Search,
-  Settings,
-  Sparkles,
-  Sun,
-  WalletCards,
-  X,
+  Bell, BookOpenText, CalendarCheck2, CircleDollarSign, Command, ContactRound,
+  CreditCard, FolderKanban, Gauge, Goal, Landmark, LayoutList, LogOut, Menu,
+  Moon, Plus, ReceiptText, Search, Settings, Sparkles, Sun, WalletCards, X,
 } from 'lucide-react';
-
 import { AnimatePresence } from 'motion/react';
-
 import { useApp } from '../context/useApp.js';
 import { useAuth } from '../context/useAuth.js';
 import { cn } from '../utils/format.js';
@@ -36,464 +14,146 @@ import { SearchPalette } from './SearchPalette.jsx';
 import { AnimatedPage } from '../animations/AnimatedPage.jsx';
 import { api } from '../api/client.js';
 
-const sections = [
-  {
-    label: null,
-    items: [
-      ['Dashboard', '/', Gauge],
-      ['Tasks', '/tasks', CalendarCheck2],
-      ['Reminders', '/reminders', Bell],
-    ],
-  },
-  {
-    label: 'Money',
-    items: [
-      ['Accounts', '/money/accounts', WalletCards],
-      ['Transactions', '/money/transactions', LayoutList],
-      ['Expenses', '/money/expenses', ReceiptText],
-      ['Income', '/money/income', CircleDollarSign],
-      ['Debts', '/money/debts', Landmark],
-      ['Bills', '/planning/bills', CreditCard],
-      ['Subscriptions', '/planning/subscriptions', Bell],
-    ],
-  },
-  {
-    label: 'Planning',
-    items: [
-      ['Goals & savings', '/planning/goals', Goal],
-      ['Projects', '/personal/projects', FolderKanban],
-      ['Habits', '/personal/habits', Sparkles],
-      ['Wishlist', '/personal/wishlist', BookOpenText],
-    ],
-  },
-  {
-    label: 'Personal',
-    items: [
-      ['Contacts', '/personal/contacts', ContactRound],
-      ['Notes', '/personal/notes', BookOpenText],
-      ['Settings', '/settings', Settings],
-    ],
-  },
+const primaryLinks = [
+  ['Dashboard', '/', Gauge], ['Tasks', '/tasks', CalendarCheck2],
+  ['Goals', '/planning/goals', Goal], ['Expenses', '/money/expenses', ReceiptText],
+  ['Debts', '/money/debts', Landmark], ['Reminders', '/reminders', Bell],
+];
+const secondaryLinks = [
+  ['Accounts', '/money/accounts', WalletCards], ['Transactions', '/money/transactions', LayoutList],
+  ['Income', '/money/income', CircleDollarSign], ['Bills', '/planning/bills', CreditCard],
+  ['Subscriptions', '/planning/subscriptions', Bell], ['Projects', '/personal/projects', FolderKanban],
+  ['Habits', '/personal/habits', Sparkles], ['Wishlist', '/personal/wishlist', BookOpenText],
+  ['Contacts', '/personal/contacts', ContactRound], ['Notes', '/personal/notes', BookOpenText],
 ];
 
-const mobileItems = [
-  ['Home', '/', Gauge],
-  ['Tasks', '/tasks', CalendarCheck2],
-  ['', '#add', Plus],
-  ['Money', '/money/transactions', WalletCards],
-  ['More', '/settings', Menu],
-];
-
-function Logo() {
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <div className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-[13px] border border-sidebar-hover bg-white shadow-sm">
-        <img
-          src="/logo-orbit.png"
-          alt="Orbit"
-          className="h-[34px] w-[34px] object-contain"
-          draggable={false}
-        />
-      </div>
-
-      <div className="min-w-0">
-        <div className="font-display text-[19px] font-black leading-none tracking-[-0.04em]">
-          Orbit
-        </div>
-
-        <div className="mt-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-sidebar-muted">
-          by toOutdo
-        </div>
-      </div>
-    </div>
-  );
+function Brand() {
+  return <NavLink to="/" className="flex items-center gap-2.5 text-sidebar-text" aria-label="Orbit home">
+    <img src="/logo-orbit.png" alt="" className="h-9 w-9 object-contain" draggable={false} />
+    <span className="font-display text-xl font-bold tracking-tight">Orbit</span>
+  </NavLink>;
 }
-function SidebarItem({ label, path, Icon, close }) {
-  return (
-    <NavLink
-      end={path === '/'}
-      to={path}
-      onClick={close}
-      className={({ isActive }) =>
-        cn(
-          'group relative mb-1 flex min-h-[42px] items-center gap-3 rounded-xl border px-3',
-          'text-[13px] font-semibold transition-all duration-200',
-          isActive
-            ? 'border-sidebar-hover bg-sidebar-selected text-sidebar-text shadow-sm'
-            : 'border-transparent text-sidebar-muted hover:border-sidebar-hover hover:bg-sidebar-hover hover:text-sidebar-text',
-        )
-      }
-    >
-      {({ isActive }) => (
-        <>
-          <div
-            className={cn(
-              'grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors',
-              isActive
-                ? 'bg-accent/10 text-accent'
-                : 'text-sidebar-muted group-hover:text-sidebar-text',
-            )}
-          >
-            <Icon size={16} strokeWidth={2} />
-          </div>
 
-          <span className="min-w-0 flex-1 truncate">{label}</span>
-
-          {isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
-        </>
-      )}
-    </NavLink>
-  );
+function SidebarLink({ label, path, Icon, close }) {
+  return <NavLink end={path === '/'} to={path} onClick={close} className={({ isActive }) => cn(
+    'flex min-h-10 items-center gap-3 rounded-[var(--orbit-control-radius)] px-3 text-[13px] font-medium transition-colors',
+    isActive ? 'bg-sidebar-selected font-semibold text-primary' : 'text-sidebar-text hover:bg-sidebar-hover',
+  )}>
+    {({ isActive }) => <><Icon size={18} strokeWidth={1.8} className={isActive ? 'text-primary' : 'text-sidebar-muted'} /><span>{label}</span></>}
+  </NavLink>;
 }
 
 function Sidebar({ open, close }) {
   const { user, logout } = useAuth();
-
-  const initials =
-    user?.fullName
-      ?.trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase() || 'ME';
-
-  return (
-    <aside
-      className={cn(
-        'fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col',
-        'border-r border-sidebar-hover bg-sidebar text-sidebar-text',
-        'transition-transform duration-300 ease-out',
-        'lg:translate-x-0',
-        open ? 'translate-x-0' : '-translate-x-full',
-      )}
-    >
-      {/* Brand */}
-      <div className="flex h-20 shrink-0 items-center justify-between px-5">
-        <Logo />
-
-        <button
-          type="button"
-          aria-label="Close menu"
-          onClick={close}
-          className="grid h-9 w-9 place-items-center rounded-xl border border-sidebar-hover text-sidebar-muted transition hover:bg-sidebar-hover hover:text-sidebar-text lg:hidden"
-        >
-          <X size={18} />
-        </button>
+  const initials = user?.fullName?.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'ME';
+  return <aside className={cn(
+    'fixed inset-y-0 left-0 z-50 flex w-[236px] flex-col border-r border-border bg-sidebar text-sidebar-text transition-transform duration-200 lg:translate-x-0',
+    open ? 'translate-x-0' : '-translate-x-full',
+  )}>
+    <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-border px-5">
+      <Brand />
+      <button type="button" className="icon-btn lg:hidden" aria-label="Close menu" onClick={close}><X size={19} /></button>
+    </div>
+    <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      {primaryLinks.map(([label, path, Icon]) => <SidebarLink key={path} label={label} path={path} Icon={Icon} close={close} />)}
+      <div className="mx-3 my-4 border-t border-border" />
+      <p className="px-3 pb-2 text-xs font-semibold text-sidebar-muted">Workspace</p>
+      {secondaryLinks.map(([label, path, Icon]) => <SidebarLink key={path} label={label} path={path} Icon={Icon} close={close} />)}
+    </nav>
+    <div className="shrink-0 border-t border-border p-3">
+      <SidebarLink label="Settings" path="/settings" Icon={Settings} close={close} />
+      <div className="mt-2 flex items-center gap-2 border-t border-border px-2 pt-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text">{initials}</span>
+        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{user?.fullName || 'Orbit user'}</span><span className="block truncate text-[11px] text-sidebar-muted">{user?.email}</span></span>
+        <button type="button" className="icon-btn shrink-0" onClick={logout} aria-label="Log out" title="Log out"><LogOut size={16} /></button>
       </div>
-
-      {/* subtle separator */}
-      <div className="mx-4 border-t border-sidebar-hover" />
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 pb-5 pt-5">
-        {sections.map((section, index) => (
-          <div
-            key={section.label || `section-${index}`}
-            className={cn(index !== sections.length - 1 && 'mb-6')}
-          >
-            {section.label && (
-              <div className="mb-2.5 flex items-center gap-3 px-3">
-                <p className="shrink-0 text-[9px] font-black uppercase tracking-[0.18em] text-sidebar-muted">
-                  {section.label}
-                </p>
-
-                <div className="h-px flex-1 bg-sidebar-hover" />
-              </div>
-            )}
-
-            {section.items.map(([label, path, Icon]) => (
-              <SidebarItem key={path} label={label} path={path} Icon={Icon} close={close} />
-            ))}
-          </div>
-        ))}
-      </nav>
-
-      {/* User */}
-      <div className="shrink-0 p-3 pt-0">
-        <div className="rounded-[18px] border border-sidebar-hover bg-sidebar-hover p-3">
-          <div className="flex items-center gap-3">
-            <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent text-[11px] font-black text-sidebar shadow-sm">
-              {initials}
-
-              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-sidebar bg-success" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-sidebar-text">
-                {user?.fullName || 'Orbit user'}
-              </p>
-
-              <p className="mt-0.5 truncate text-[10px] text-sidebar-muted">{user?.email}</p>
-            </div>
-
-            <button
-              type="button"
-              title="Log out"
-              aria-label="Log out"
-              onClick={logout}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-sidebar-muted transition hover:border-sidebar-hover hover:bg-sidebar hover:text-sidebar-text"
-            >
-              <LogOut size={15} />
-            </button>
-          </div>
-        </div>
-      </div>
-    </aside>
-  );
+    </div>
+  </aside>;
 }
 
-function HeaderAction({ children, ...props }) {
-  return (
-    <button
-      type="button"
-      {...props}
-      className={cn(
-        'relative grid h-10 w-10 place-items-center rounded-xl',
-        'border border-border bg-surface/80 text-muted shadow-sm',
-        'transition-all duration-200',
-        'hover:-translate-y-px hover:border-primary/30 hover:text-primary hover:shadow-md',
-        props.className,
-      )}
-    >
-      {children}
-    </button>
-  );
+function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const initials = user?.fullName?.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'ME';
+  useEffect(() => { setProfileOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    if (!profileOpen) return undefined;
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setProfileOpen(false); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [profileOpen]);
+  return <header className="sticky top-0 z-30 border-b border-border bg-surface">
+    <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-8">
+      <button type="button" className="icon-btn lg:hidden" aria-label="Open menu" onClick={openMenu}><Menu size={20} /></button>
+      <button type="button" onClick={openSearch} className="flex h-11 min-w-0 max-w-[480px] flex-1 items-center gap-3 rounded-[var(--orbit-control-radius)] border border-border bg-surface px-3 text-left text-sm text-muted hover:border-primary/40">
+        <Search size={18} className="shrink-0" /><span className="truncate">Search anything...</span>
+        <span className="ml-auto hidden shrink-0 items-center gap-1 rounded-md border border-border bg-surface-alt px-1.5 py-1 text-[11px] sm:flex"><Command size={11} /> K</span>
+      </button>
+      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <button type="button" className="icon-btn hidden sm:inline-flex" aria-label="Quick add" title="Quick add (N)" onClick={openQuickAdd}><Plus size={19} /></button>
+        <button type="button" className="icon-btn" aria-label="Reminders and notifications" title="Reminders and notifications" onClick={() => navigate('/reminders')}><Bell size={19} /></button>
+        <div className="relative">
+          <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text" aria-label="Open account menu" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>{initials}</button>
+          {profileOpen && <div role="menu" className="absolute right-0 top-11 z-50 w-52 rounded-[var(--orbit-radius)] border border-border bg-surface p-1.5 shadow-lift">
+            <p className="truncate border-b border-border px-2 py-2 text-xs font-semibold">{user?.fullName || user?.email}</p>
+            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-hover" onClick={() => { navigate('/settings'); setProfileOpen(false); }}><Settings size={16} /> Settings</button>
+            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-hover" onClick={() => { toggleTheme(); setProfileOpen(false); }}>{darkMode ? <Sun size={16} /> : <Moon size={16} />} {darkMode ? 'Light mode' : 'Dark mode'}</button>
+          </div>}
+        </div>
+      </div>
+    </div>
+  </header>;
+}
+
+function MobileNav({ openMenu, openQuickAdd }) {
+  const location = useLocation();
+  const items = [['Home', '/', Gauge], ['Tasks', '/tasks', CalendarCheck2], ['Money', '/money/transactions', WalletCards]];
+  const moreActive = location.pathname !== '/' && location.pathname !== '/tasks' && !location.pathname.startsWith('/money/');
+  return <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid h-[68px] grid-cols-5 border-t border-border bg-surface px-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
+    {items.slice(0, 2).map(([label, path, Icon]) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', isActive ? 'text-primary' : 'text-muted')}><Icon size={20} />{label}</NavLink>)}
+    <button type="button" className="flex flex-col items-center justify-center gap-1 text-[11px] font-medium text-primary" onClick={openQuickAdd} aria-label="Quick add"><span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-text"><Plus size={22} /></span>Add</button>
+    {items.slice(2).map(([label, path, Icon]) => <NavLink key={path} to={path} className={({ isActive }) => cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', isActive || location.pathname.startsWith('/money/') ? 'text-primary' : 'text-muted')}><Icon size={20} />{label}</NavLink>)}
+    <button type="button" className={cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', moreActive ? 'text-primary' : 'text-muted')} onClick={openMenu}><Menu size={20} />More</button>
+  </nav>;
 }
 
 export function Layout() {
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
-
   const { setQuickAddOpen, darkMode, setSettings } = useApp();
-
   const location = useLocation();
   const outlet = useOutlet();
 
-  useEffect(() => {
-    setMenu(false);
-  }, [location.pathname]);
-
+  useEffect(() => { setMenu(false); }, [location.pathname]);
   useEffect(() => {
     const handler = (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setSearch(true);
-      }
-
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setSearch(true); }
       const activeTag = document.activeElement?.tagName;
-
-      if (
-        !event.ctrlKey &&
-        !event.metaKey &&
-        event.key.toLowerCase() === 'n' &&
-        !['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)
-      ) {
-        event.preventDefault();
-        setQuickAddOpen(true);
-      }
+      if (!event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'n' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) { event.preventDefault(); setQuickAddOpen(true); }
     };
-
     window.addEventListener('keydown', handler);
-
-    return () => {
-      window.removeEventListener('keydown', handler);
-    };
+    return () => window.removeEventListener('keydown', handler);
   }, [setQuickAddOpen]);
 
   const toggleTheme = async () => {
     const mode = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-
-    try {
-      const response = await api.patch('/settings', {
-        appearance: { mode },
-      });
-
-      setSettings(response.data);
-    } catch {
-      /* Settings remains authoritative if this shortcut cannot be saved. */
-    }
+    try { const response = await api.patch('/settings', { appearance: { mode } }); setSettings(response.data); }
+    catch { /* The persisted setting remains authoritative if the shortcut cannot be saved. */ }
   };
 
-  return (
-    <div className="relative min-h-screen bg-canvas">
-      {/* Desktop / mobile sidebar */}
-      <Sidebar open={menu} close={() => setMenu(false)} />
-
-      {/* Mobile sidebar overlay */}
-      {menu && (
-        <button
-          type="button"
-          aria-label="Close menu"
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] lg:hidden"
-          onClick={() => setMenu(false)}
-        />
-      )}
-
-      <div className="lg:pl-[264px]">
-        {/* HEADER */}
-        <header className="sticky top-0 z-30 border-b border-border bg-canvas/85 backdrop-blur-2xl">
-          <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-3 px-4 sm:px-6 lg:h-20 lg:px-8">
-            <button
-              type="button"
-              aria-label="Open menu"
-              onClick={() => setMenu(true)}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-surface text-muted shadow-sm transition hover:text-primary lg:hidden"
-            >
-              <Menu size={20} />
-            </button>
-
-            {/* Search */}
-            <button
-              type="button"
-              onClick={() => setSearch(true)}
-              className={cn(
-                'group hidden h-11 w-[320px] items-center gap-3 rounded-[14px]',
-                'border border-border bg-surface/70 px-2.5 pr-3 text-left shadow-sm',
-                'transition-all duration-200',
-                'hover:border-primary/30 hover:bg-surface hover:shadow-md',
-                'md:flex',
-              )}
-            >
-              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-canvas text-muted transition group-hover:text-primary">
-                <Search size={15} />
-              </div>
-
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-muted">
-                Search anything…
-              </span>
-
-              <span className="flex shrink-0 items-center gap-1 rounded-md border border-border bg-canvas px-1.5 py-1 text-[9px] font-bold text-muted">
-                <Command size={9} />K
-              </span>
-            </button>
-
-            {/* Mobile search shortcut */}
-            <button
-              type="button"
-              aria-label="Search"
-              onClick={() => setSearch(true)}
-              className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-surface text-muted shadow-sm md:hidden"
-            >
-              <Search size={17} />
-            </button>
-
-            <div className="ml-auto flex items-center gap-2">
-              <HeaderAction onClick={toggleTheme} aria-label="Toggle theme">
-                {darkMode ? <Sun size={17} /> : <Moon size={17} />}
-              </HeaderAction>
-
-              <HeaderAction aria-label="Notifications">
-                <Bell size={17} />
-
-                <span className="absolute right-[9px] top-[8px] h-1.5 w-1.5 rounded-full bg-danger ring-2 ring-surface" />
-              </HeaderAction>
-
-              <button
-                type="button"
-                onClick={() => setQuickAddOpen(true)}
-                className={cn(
-                  'ml-1 hidden h-10 items-center gap-2 rounded-xl px-4 sm:inline-flex',
-                  'bg-primary text-[12px] font-black text-primary-text shadow-sm',
-                  'transition-all duration-200',
-                  'hover:-translate-y-px hover:brightness-105 hover:shadow-md',
-                  'active:translate-y-0 active:scale-[0.98]',
-                )}
-              >
-                <Plus size={16} strokeWidth={2.5} />
-                Quick add
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* PAGE */}
-        <main className="relative">
-          {/* restrained ambient accent */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-52 overflow-hidden"
-          >
-            <div className="absolute left-1/4 top-[-130px] h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
-          </div>
-
-          <div className="relative mx-auto max-w-[1500px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
-            <AnimatePresence mode="wait" initial={false}>
-              <AnimatedPage key={location.pathname}>{outlet}</AnimatedPage>
-            </AnimatePresence>
-          </div>
-        </main>
-      </div>
-
-      {/* MOBILE NAV */}
-      <nav
-        className={cn(
-          'fixed bottom-3 left-3 right-3 z-40 grid h-[66px] grid-cols-5',
-          'rounded-[22px] border border-border bg-surface/95 px-2',
-          'shadow-lift backdrop-blur-2xl',
-          'lg:hidden',
-        )}
-      >
-        {mobileItems.map(([label, path, Icon]) => {
-          if (path === '#add') {
-            return (
-              <div key={path} className="relative flex items-center justify-center">
-                <button
-                  type="button"
-                  aria-label="Quick add"
-                  onClick={() => setQuickAddOpen(true)}
-                  className={cn(
-                    'absolute -top-4 grid h-[56px] w-[56px] place-items-center',
-                    'rounded-[18px] border-4 border-canvas bg-primary text-primary-text',
-                    'shadow-lift transition-all duration-200',
-                    'active:scale-95',
-                  )}
-                >
-                  <Plus size={23} strokeWidth={2.5} />
-                </button>
-              </div>
-            );
-          }
-
-          return (
-            <NavLink
-              end={path === '/'}
-              key={path}
-              to={path}
-              className={({ isActive }) =>
-                cn(
-                  'group relative flex flex-col items-center justify-center gap-1',
-                  'rounded-xl text-[9px] font-bold transition-colors',
-                  isActive ? 'text-primary' : 'text-muted hover:text-primary',
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div
-                    className={cn(
-                      'grid h-7 w-8 place-items-center rounded-lg transition-colors',
-                      isActive && 'bg-primary/10',
-                    )}
-                  >
-                    <Icon size={18} />
-                  </div>
-
-                  <span>{label}</span>
-
-                  {isActive && (
-                    <span className="absolute bottom-1 h-0.5 w-3 rounded-full bg-primary" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      <QuickAdd />
-
-      <SearchPalette open={search} onClose={() => setSearch(false)} />
+  return <div className="min-h-screen bg-canvas">
+    <Sidebar open={menu} close={() => setMenu(false)} />
+    {menu && <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-text/40 lg:hidden" onClick={() => setMenu(false)} />}
+    <div className="min-w-0 lg:pl-[236px]">
+      <Header openMenu={() => setMenu(true)} openSearch={() => setSearch(true)} openQuickAdd={() => setQuickAddOpen(true)} toggleTheme={toggleTheme} darkMode={darkMode} />
+      <main className="mx-auto max-w-[1480px] px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
+        <AnimatePresence mode="wait" initial={false}><AnimatedPage key={location.pathname}>{outlet}</AnimatedPage></AnimatePresence>
+      </main>
     </div>
-  );
+    <MobileNav openMenu={() => setMenu(true)} openQuickAdd={() => setQuickAddOpen(true)} />
+    <QuickAdd />
+    <SearchPalette open={search} onClose={() => setSearch(false)} />
+  </div>;
 }

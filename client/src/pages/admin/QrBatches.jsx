@@ -99,7 +99,7 @@ function BatchActions({ batch, onError, onRevoked }) {
       </button>
       <button
         disabled={Boolean(busy) || !batch.stats?.active}
-        className="text-red-600 underline disabled:opacity-40"
+        className="text-danger underline disabled:opacity-40"
         onClick={() => run('revoke')}
       >
         Revoke unused
@@ -290,7 +290,7 @@ export function AdminQrBatches() {
                 >
                   <td className="p-3">
                     <b>{batch.name}</b>
-                    <div className="mt-1 font-mono text-xs text-[#7a857e]">{batch.code}</div>
+                    <div className="mt-1 font-mono text-xs text-muted">{batch.code}</div>
                   </td>
                   <td className="p-3">{batch.plan?.name || 'Unavailable'}</td>
                   <td className="p-3">{batch.quantity}</td>
@@ -311,7 +311,7 @@ export function AdminQrBatches() {
             </tbody>
           </table>
           {!batches.data?.length && (
-            <p className="p-8 text-center text-sm text-[#7a857e]">No QR batches found.</p>
+            <p className="p-8 text-center text-sm text-muted">No QR batches found.</p>
           )}
         </div>
       )}
@@ -361,7 +361,7 @@ export function AdminQrBatchDetail() {
           ['Revoked', stats.revoked],
         ].map(([label, value]) => (
           <div key={label} className="panel p-5">
-            <p className="text-xs uppercase tracking-wide text-[#7a857e]">{label}</p>
+            <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
             <p className="mt-2 font-display text-3xl font-bold">{value}</p>
           </div>
         ))}
@@ -410,7 +410,7 @@ export function AdminQrBatchDetail() {
           </tbody>
         </table>
         {!links.length && (
-          <p className="p-8 text-center text-sm text-[#7a857e]">
+          <p className="p-8 text-center text-sm text-muted">
             No activation codes match this search.
           </p>
         )}

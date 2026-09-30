@@ -60,11 +60,11 @@ export function AdminLayout() {
   const location = useLocation();
   const outlet = useOutlet();
   return (
-    <div className="min-h-screen bg-canvas dark:bg-[#0d1310]">
-      <header className="border-b border-[#e1e5df] bg-ink px-4 text-white dark:border-white/10">
+    <div className="min-h-screen bg-canvas">
+      <header className="border-b border-border bg-surface px-4 text-text">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 py-4">
           <Link to="/admin" className="font-display text-xl font-bold">
-            Orbit <span className="text-lime">Admin</span>
+            Orbit <span className="text-primary">Admin</span>
           </Link>
           <nav className="flex flex-1 flex-wrap gap-1 text-xs">
             {[
@@ -82,14 +82,14 @@ export function AdminLayout() {
                 end={to === '/admin'}
                 to={to}
                 className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 ${isActive ? 'bg-white/15' : 'text-white/60 hover:text-white'}`
+                  `rounded-lg px-3 py-2 ${isActive ? 'bg-selected text-primary' : 'text-muted hover:bg-hover hover:text-text'}`
                 }
               >
                 {label}
               </NavLink>
             ))}
           </nav>
-          <span className="text-xs text-white/60">{admin?.fullName}</span>
+          <span className="text-xs text-muted">{admin?.fullName}</span>
           <button onClick={logout} className="text-xs underline">
             Log out
           </button>
@@ -118,7 +118,7 @@ export function AdminDashboard() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {Object.entries(data.metrics).map(([key, value]) => (
               <div key={key} className="panel p-5">
-                <p className="text-xs uppercase tracking-wide text-[#7a857e]">
+                <p className="text-xs uppercase tracking-wide text-muted">
                   {key.replace(/([A-Z])/g, ' $1')}
                 </p>
                 <p className="mt-3 font-display text-3xl font-bold">{value}</p>
@@ -161,7 +161,7 @@ function ListPanel({ title, rows = [], render }) {
             </div>
           ))
         ) : (
-          <p className="text-[#7a857e]">Nothing here yet.</p>
+          <p className="text-muted">Nothing here yet.</p>
         )}
       </div>
     </section>
@@ -251,7 +251,7 @@ export function AdminUsers() {
                     >
                       {row.fullName}
                     </Link>
-                    <div className="text-xs text-[#7a857e]">{row.email}</div>
+                    <div className="text-xs text-muted">{row.email}</div>
                   </td>
                   <td className="p-4">
                     <StatusBadge tone={row.accessStatus === 'ACTIVE' ? 'success' : 'warning'}>
@@ -265,7 +265,7 @@ export function AdminUsers() {
               ))}
             </tbody>
           </table>
-          {!result?.data?.length && <p className="p-6 text-sm text-[#7a857e]">No users found.</p>}
+          {!result?.data?.length && <p className="p-6 text-sm text-muted">No users found.</p>}
         </div>
       )}
       <div className="mt-4 flex items-center gap-3 text-sm">
@@ -383,7 +383,7 @@ export function AdminUserDetail() {
               Generate link
             </button>
             {url && (
-              <p className="mt-4 break-all rounded-lg bg-[#f3f6f2] p-3 text-xs dark:bg-white/5">
+              <p className="mt-4 break-all rounded-lg bg-surface-alt p-3 text-xs">
                 {url}
                 <button
                   className="ml-2 text-primary underline"
@@ -404,7 +404,7 @@ export function AdminUserDetail() {
                 >
                   <b>{row.planSnapshot?.name}</b> · {row.planSnapshot?.durationValue}{' '}
                   {row.planSnapshot?.durationUnit}
-                  <div className="text-xs text-[#7a857e]">
+                  <div className="text-xs text-muted">
                     Activated {date(row.activatedAt)} · expires {date(row.expiresAt)} · link{' '}
                     {row.activationLink}
                   </div>
@@ -563,7 +563,7 @@ export function AdminActivationLinks() {
                         >
                           Copy
                         </button>
-                        <button className="text-red-600 underline" onClick={() => revoke(row._id)}>
+                        <button className="text-danger underline" onClick={() => revoke(row._id)}>
                           Revoke
                         </button>
                       </>
@@ -636,11 +636,11 @@ export function AdminActivity() {
             <div key={row._id} className="flex justify-between gap-3 p-4 text-sm">
               <div>
                 <b>{row.event}</b>
-                <p className="text-xs text-[#7a857e]">
+                <p className="text-xs text-muted">
                   {row.actorType} · {row.targetType || 'Platform'}
                 </p>
               </div>
-              <span className="text-xs text-[#7a857e]">{date(row.createdAt)}</span>
+              <span className="text-xs text-muted">{date(row.createdAt)}</span>
             </div>
           ))}
         </div>
@@ -723,7 +723,7 @@ export function AdminAdmins() {
             <div key={row._id} className="panel flex flex-wrap items-center gap-3 p-4 text-sm">
               <div className="flex-1">
                 <b>{row.fullName}</b>
-                <p className="text-xs text-[#7a857e]">{row.email}</p>
+                <p className="text-xs text-muted">{row.email}</p>
               </div>
               <StatusBadge tone={row.status === 'ACTIVE' ? 'success' : 'danger'}>
                 {row.status}
@@ -794,7 +794,7 @@ export function AdminSettings() {
               Remove webhook
             </button>
           </div>
-          <p className="text-xs text-[#7a857e]">Secrets are never returned to this page.</p>
+          <p className="text-xs text-muted">Secrets are never returned to this page.</p>
         </div>
       )}
     </>

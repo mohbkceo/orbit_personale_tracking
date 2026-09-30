@@ -16,7 +16,7 @@ import { TaskExecutionEvent } from '../src/models/TaskExecutionEvent.js';
 import { AutomationSettings } from '../src/models/AutomationSettings.js';
 import { Setting } from '../src/models/Setting.js';
 import { AccessSubscription } from '../src/models/AccessSubscription.js';
-import { automationDefaults, getAutomationSettings, updateAutomationSettings } from '../src/services/automationSettings.service.js';
+import { getAutomationSettings, updateAutomationSettings } from '../src/services/automationSettings.service.js';
 import { automationSettingsInput } from '../src/validators/automationSettings.js';
 import { addFocusTask, finishFocusPlanning, getDailyFocus, removeFocusTask, reviewFocusTask } from '../src/services/dailyFocus.service.js';
 import { executeTask } from '../src/services/taskExecution.service.js';

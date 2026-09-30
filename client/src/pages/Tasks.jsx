@@ -244,7 +244,7 @@ export default function Tasks() {
               onClick={() => setView(item)}
               className={cn(
                 'whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold capitalize text-muted',
-                view === item && 'bg-primary text-primary-text shadow-sm  ',
+                view === item && 'bg-selected text-primary',
               )}
             >
               {item}
