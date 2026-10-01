@@ -1,0 +1,6 @@
+import { EVENTS, WEB_EVENT_NAMES } from '../../../shared/analyticsEvents.js';
+export { EVENTS };
+
+export const WEB_EVENTS = new Set(WEB_EVENT_NAMES);
+export const CONVERSIONS = new Set([EVENTS.REGISTRATION_COMPLETED, EVENTS.ACCESS_ACTIVATED]);
+export const FUNNEL = [EVENTS.PAGE_VIEWED, EVENTS.REGISTRATION_COMPLETED, EVENTS.ACCESS_ACTIVATED];

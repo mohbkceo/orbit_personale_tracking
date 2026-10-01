@@ -1,9 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Spinner } from './components/ui.jsx';
 import { AuthProvider, AdminAuthProvider } from './context/AuthContext.jsx';
 import { useAuth, useAdminAuth } from './context/useAuth.js';
 import { MarketingLayout } from './marketing/MarketingLayout.jsx';
+import { analytics } from './analytics/client.js';
+import { AnalyticsConsent } from './analytics/AnalyticsConsent.jsx';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
@@ -43,6 +45,7 @@ const AdminQrBatchDetail = lazy(() =>
   import('./pages/admin/QrBatches.jsx').then((module) => ({ default: module.AdminQrBatchDetail })),
 );
 const AdminAutomationSettings = lazy(() => import('./pages/admin/AutomationSettings.jsx'));
+const AdminAnalytics = lazy(() => import('./pages/admin/analytics/Analytics.jsx'));
 
 function ProtectedRoute({ children }) {
   const { loading, user, access } = useAuth();
@@ -68,6 +71,8 @@ function AdminProtectedRoute({ children, superOnly = false }) {
 }
 
 export default function App() {
+  const location = useLocation();
+  useEffect(() => { if (!location.pathname.startsWith('/admin')) { void analytics.start(); analytics.page(); } }, [location.pathname]);
   return (
     <Suspense fallback={<Spinner label="Opening Orbit…" />}>
       <Routes>
@@ -136,6 +141,7 @@ export default function App() {
             <Route path="qr-batches" element={<AdminQrBatches />} />
             <Route path="qr-batches/:id" element={<AdminQrBatchDetail />} />
             <Route path="activity" element={<AdminActivity />} />
+            <Route path="analytics/*" element={<AdminAnalytics />} />
             <Route
               path="admins"
               element={
@@ -170,6 +176,7 @@ export default function App() {
         <Route path="personal/*" element={<LegacyPanelRedirect />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <AnalyticsConsent />
     </Suspense>
   );
 }

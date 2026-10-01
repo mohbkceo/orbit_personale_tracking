@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { AuthContext, AdminAuthContext } from './AuthContextBase.js';
+import { analytics } from '../analytics/client.js';
 
 export function AuthProvider({ children }) {
   const [state, setState] = useState({ loading: true, user: null, access: null });
@@ -9,9 +10,9 @@ export function AuthProvider({ children }) {
     catch { setState({ loading: false, user: null, access: null }); return null; }
   }, []);
   useEffect(() => { refresh(); const onChange = () => refresh(); window.addEventListener('orbit:auth-changed', onChange); window.addEventListener('orbit:access-changed', onChange); return () => { window.removeEventListener('orbit:auth-changed', onChange); window.removeEventListener('orbit:access-changed', onChange); }; }, [refresh]);
-  const login = async (email, password) => { const response = await api.post('/auth/login', { email, password }); setState({ loading: false, user: response.data.user, access: response.data.access }); return response.data; };
-  const register = async (key, input) => { const response = await api.post(`/activation/${key}/register`, input); await refresh(); return response.data; };
-  const logout = async () => { await api.post('/auth/logout'); setState({ loading: false, user: null, access: null }); };
+  const login = async (email, password) => { const response = await api.post('/auth/login', { email, password }); setState({ loading: false, user: response.data.user, access: response.data.access }); void analytics.identify(); return response.data; };
+  const register = async (key, input) => { const response = await api.post(`/activation/${key}/register`, input); await refresh(); void analytics.identify(); return response.data; };
+  const logout = async () => { await api.post('/auth/logout'); setState({ loading: false, user: null, access: null }); void analytics.identify(); };
   const value = { ...state, refresh, login, register, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

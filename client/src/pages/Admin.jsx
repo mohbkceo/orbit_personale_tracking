@@ -26,6 +26,7 @@ const nav = [
   ['Activation Links', '/admin/activation-links'],
   ['QR Batches', '/admin/qr-batches'],
   ['Activity', '/admin/activity'],
+  ['Analytics', '/admin/analytics'],
 ];
 function ErrorText({ error }) {
   return error ? (

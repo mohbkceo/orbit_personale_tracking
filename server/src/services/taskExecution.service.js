@@ -7,10 +7,10 @@ import { getAutomationSettings } from './automationSettings.service.js';
 import { event, markReminderBlocked, snoozeReminder } from './reminders/reminderService.js';
 
 async function record(userId, task, type, channel, metadata = {}) {
-  await TaskExecutionEvent.create({ user: userId, task: task._id, type, channel, metadata });
+  return TaskExecutionEvent.create({ user: userId, task: task._id, type, channel, metadata });
 }
 
-export async function executeTask(userId, taskId, action, { channel = 'web', reminderId, reason, dueDate, until } = {}) {
+export async function executeTask(userId, taskId, action, { channel = 'web', reminderId, reason, dueDate, until, onCompleted } = {}) {
   let task = await Task.findOne({ _id: taskId, user: userId, archived: false });
   if (!task) throw new AppError('Task not found', 404);
   const terminal = ['completed', 'cancelled'].includes(task.status);
@@ -34,7 +34,8 @@ export async function executeTask(userId, taskId, action, { channel = 'web', rem
     if (task.status !== 'completed') {
       task = await updateTask(userId, taskId, { status: 'completed' });
       task.lastReminderInteractionAt = now; await task.save();
-      await record(userId, task, 'completed', channel);
+      const completion = await record(userId, task, 'completed', channel);
+      if (onCompleted) void Promise.resolve().then(() => onCompleted(task, completion)).catch(() => {});
     }
   } else if (action === 'blocked') {
     if (reminderId) await markReminderBlocked(userId, reminderId, reason || 'other', '', channel);

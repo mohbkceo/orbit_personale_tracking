@@ -14,7 +14,7 @@
     "migrate:automation": "npm run migrate:automation -w server",
     "backfill:reminders": "npm run backfill:reminders -w server",
     "backfill:appearance": "npm run backfill:appearance -w server",
-    "test": "npm run test -w server",
+    "test": "npm run test -w server && npm run test -w client",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

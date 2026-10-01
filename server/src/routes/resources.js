@@ -5,6 +5,8 @@ import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/api.js';
 import { AppError } from '../utils/AppError.js';
+import { recordProductEvent } from '../analytics/analyticsService.js';
+import { EVENTS } from '../analytics/events.js';
 
 const optionalDate = z.union([z.coerce.date(), z.literal(''), z.null()]).optional().transform((value) => value || null);
 
@@ -19,7 +21,7 @@ const inputs = {
 export const resourceRoutes = Router();
 for (const [path, [Model, schema]] of Object.entries(inputs)) {
   resourceRoutes.get(`/${path}`, asyncHandler(async (req, res) => success(res, await Model.find({ user: req.user._id }).sort({ pinned: -1, createdAt: -1 }).limit(100))));
-  resourceRoutes.post(`/${path}`, validate(schema), asyncHandler(async (req, res) => success(res, await Model.create({ ...req.body, user: req.user._id }), 201)));
+  resourceRoutes.post(`/${path}`, validate(schema), asyncHandler(async (req, res) => { const item = await Model.create({ ...req.body, user: req.user._id }); if (path === 'projects') void recordProductEvent(EVENTS.PROJECT_CREATED, `project:${item._id}`, req.user._id, req).catch(() => {}); return success(res, item, 201); }));
   resourceRoutes.patch(`/${path}/:id`, validate(schema.partial()), asyncHandler(async (req, res) => { const item = await Model.findOneAndUpdate({ _id: req.params.id, user: req.user._id }, req.body, { new: true, runValidators: true }); if (!item) throw new AppError('Record not found', 404); return success(res, item); }));
   resourceRoutes.delete(`/${path}/:id`, asyncHandler(async (req, res) => { const item = await Model.findOneAndDelete({ _id: req.params.id, user: req.user._id }); if (!item) throw new AppError('Record not found', 404); return success(res, { deleted: true }); }));
 }

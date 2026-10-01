@@ -32,6 +32,8 @@ import { reminderRoutes } from './routes/reminders.js';
 import { dailyFocusRoutes } from './routes/dailyFocus.js';
 import { adminAutomationSettingsRoutes } from './routes/adminAutomationSettings.js';
 import { publicConfigRoutes } from './routes/publicConfig.js';
+import { analyticsRoutes } from './routes/analytics.js';
+import { adminAnalyticsRoutes } from './routes/adminAnalytics.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -53,6 +55,8 @@ app.use('/api/admin/plans', adminPlanRoutes);
 app.use('/api/admin/features', adminFeatureRoutes);
 app.use('/api/public/plans', publicPlanRoutes);
 app.use('/api/public/config', publicConfigRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
 app.use('/api/admin/activation-links', adminActivationLinkRoutes);
 app.use('/api/admin/qr-batches', adminQrBatchRoutes);
 app.use('/api/admin/users', adminUserRoutes);

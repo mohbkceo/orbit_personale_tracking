@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight, CreditCard, MessageCircle, X } from 'lucide-react';
 import { api } from '../api/client.js';
 import { whatsappUrl } from './whatsapp.js';
+import { analytics } from '../analytics/client.js';
 
 export function GetStartedModal({ open, onClose }) {
   const [sales, setSales] = useState(null);
@@ -38,7 +39,12 @@ export function GetStartedModal({ open, onClose }) {
   const available = Boolean(url);
   const contact = () => {
     if (!available) return;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    const popup = window.open('about:blank', '_blank');
+    void analytics.createLead().then((lead) => {
+      const destination = whatsappUrl(sales, lead?.leadCode) || url;
+      if (popup) { popup.opener = null; popup.location.replace(destination); }
+      else window.location.assign(destination);
+    });
   };
   return (
     <div

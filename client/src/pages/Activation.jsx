@@ -5,6 +5,8 @@ import { useAuth } from '../context/useAuth.js';
 import { Spinner } from '../components/ui.jsx';
 import { AppearancePicker } from '../appearance/AppearancePicker.jsx';
 import { defaults, recommendedThemes } from '../appearance/themes.js';
+import { analytics } from '../analytics/client.js';
+import { EVENTS } from '../analytics/events.js';
 
 const steps = ['Account', 'About you', 'Workspace', 'Personalize Orbit', 'Telegram', 'Final activation'];
 
@@ -23,7 +25,7 @@ export default function Activation() {
   useEffect(() => { if (user) setStage(4); }, [user]);
   useEffect(() => { if (user) api.get('/telegram-link').then((response) => setTelegram(response.data)).catch(() => {}); }, [user]);
   const update = (name) => (event) => setForm((value) => ({ ...value, [name]: event.target.value, ...(name === 'gender' ? { appearance: { ...value.appearance, preset: recommendedThemes(event.target.value)[0] } } : {}) }));
-  const next = (event) => { event.preventDefault(); setStage((current) => Math.min(current + 1, 3)); };
+  const next = (event) => { event.preventDefault(); if (stage === 0) analytics.track(EVENTS.SIGNUP_STARTED); setStage((current) => Math.min(current + 1, 3)); };
 
   async function createAccount(event) {
     event.preventDefault(); setBusy(true); setError('');

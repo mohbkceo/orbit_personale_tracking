@@ -12,6 +12,7 @@ const schema = z.object({
   AUTH_JWT_SECRET: z.string().min(32).default('development-auth-secret-change-this-before-production'),
   ORBIT_TELEGRAM_BOT_TOKEN: z.string().default(''),
   ORBIT_TELEGRAM_BOT_USERNAME: z.string().default(''),
+  ANALYTICS_REQUIRE_CONSENT: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
 });
 
 export const env = schema.parse(process.env);

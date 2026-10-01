@@ -165,6 +165,8 @@ The owner gets one historical “Legacy Owner Access” grant for `ORBIT_OWNER_A
 
 ## Data safety
 
+The first-party acquisition, session, event, lead, conversion, and consent architecture is documented in [ANALYTICS.md](./ANALYTICS.md).
+
 - Critical transactions are soft-deleted and account deletion is blocked when financial history exists.
 - Account balances are derived from the ledger, reducing cache drift.
 - Activation Link tokens are hashed for lookup and encrypted for authorized admin re-copy; password hashes use bcrypt.
