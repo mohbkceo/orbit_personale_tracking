@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { Spinner } from '../components/ui.jsx';
+import { loginDestination } from '../utils/navigation.js';
 
 export default function Login() {
   const { loading, user, access, login } = useAuth();
@@ -12,10 +13,10 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   if (loading) return <Spinner label="Opening Orbit…" />;
-  if (user) return <Navigate to={params.get('next') || (access?.eligible ? '/' : '/access')} replace />;
+  if (user) return <Navigate to={loginDestination(params.get('next'), access?.eligible)} replace />;
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError('');
-    try { const result = await login(email, password); navigate(params.get('next') || (result.access?.eligible ? '/' : '/access'), { replace: true }); }
+    try { const result = await login(email, password); navigate(loginDestination(params.get('next'), result.access?.eligible), { replace: true }); }
     catch (failure) { setError(failure.message); }
     finally { setBusy(false); }
   }

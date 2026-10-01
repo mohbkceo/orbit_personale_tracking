@@ -41,7 +41,7 @@ export default function Activation() {
   }
   async function activate() {
     setBusy(true); setError('');
-    try { await api.post(`/activation/${key}/activate`); await refresh(); navigate('/', { replace: true }); }
+    try { await api.post(`/activation/${key}/activate`); await refresh(); navigate('/panel', { replace: true }); }
     catch (failure) { setError(failure.message); }
     finally { setBusy(false); }
   }

@@ -10,6 +10,9 @@ import { success } from '../utils/api.js';
 import { env } from '../config/env.js';
 import { telegramRequest } from '../telegram/botClient.js';
 import { telegramStatus } from '../telegram/statusService.js';
+import { z } from 'zod';
+import { validate } from '../middleware/validate.js';
+import { getSalesConfig, normalizeWhatsAppNumber, updateSalesConfig } from '../services/siteConfigService.js';
 
 export const adminOperationRoutes = Router();
 adminOperationRoutes.use(adminAuth);
@@ -38,7 +41,12 @@ adminOperationRoutes.get('/activity', asyncHandler(async (req, res) => {
   const [rows, total] = await Promise.all([AuditLog.find().sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit), AuditLog.countDocuments()]);
   return success(res, rows, 200, { pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 }));
-adminOperationRoutes.get('/settings', adminRoleGuard('SUPER_ADMIN'), (_req, res) => success(res, { telegramConfigured: Boolean(env.ORBIT_TELEGRAM_BOT_TOKEN), botUsername: env.ORBIT_TELEGRAM_BOT_USERNAME || null, webhookConfigured: Boolean(env.TELEGRAM_WEBHOOK_SECRET) }));
+adminOperationRoutes.get('/settings', adminRoleGuard('SUPER_ADMIN'), asyncHandler(async (_req, res) => success(res, { telegramConfigured: Boolean(env.ORBIT_TELEGRAM_BOT_TOKEN), botUsername: env.ORBIT_TELEGRAM_BOT_USERNAME || null, webhookConfigured: Boolean(env.TELEGRAM_WEBHOOK_SECRET), sales: await getSalesConfig() })));
+const salesInput = z.strictObject({
+  whatsappNumber: z.string().max(40).refine((value) => { try { normalizeWhatsAppNumber(value); return true; } catch { return false; } }, 'Enter 8 to 15 international digits, or leave blank.'),
+  whatsappMessage: z.string().trim().max(1000),
+});
+adminOperationRoutes.put('/settings/sales', adminRoleGuard('SUPER_ADMIN'), validate(salesInput), asyncHandler(async (req, res) => success(res, await updateSalesConfig(req.body))));
 adminOperationRoutes.post('/settings/telegram/webhook/register', adminRoleGuard('SUPER_ADMIN'), asyncHandler(async (_req, res) => {
   const url = `${env.APP_BASE_URL.replace(/\/$/, '')}/api/telegram/webhook/${env.TELEGRAM_WEBHOOK_SECRET}`;
   await telegramRequest(env.ORBIT_TELEGRAM_BOT_TOKEN, 'setWebhook', { url, secret_token: env.TELEGRAM_WEBHOOK_SECRET, allowed_updates: ['message', 'callback_query'] });

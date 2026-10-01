@@ -8,7 +8,7 @@ export default function Access() {
   const [key, setKey] = useState('');
   if (loading) return <Spinner label="Checking access…" />;
   if (!user) return <Navigate to="/login" replace />;
-  if (access?.eligible) return <Navigate to="/" replace />;
+  if (access?.eligible) return <Navigate to="/panel" replace />;
   const suspended = access?.reason === 'SUSPENDED';
   const expired = access?.reason === 'EXPIRED';
   const subscription = access?.subscription;

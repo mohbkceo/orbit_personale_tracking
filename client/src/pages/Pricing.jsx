@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { Link } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { Spinner } from '../components/ui.jsx';
 
@@ -75,7 +75,7 @@ function durationText(plan) {
   return `${plan.durationValue} ${plural} access`;
 }
 
-function PricingCard({ plan, index }) {
+function PricingCard({ plan, onGetStarted }) {
   const accent = plan.appearance?.color || '#c8ff00';
   const accentText = plan.appearance?.textColor || '#081000';
   const highlighted = Boolean(plan.appearance?.highlighted);
@@ -269,8 +269,9 @@ function PricingCard({ plan, index }) {
         </div>
 
         {/* CTA */}
-        <Link
-          to="/login"
+        <button
+          type="button"
+          onClick={onGetStarted}
           className="mt-4 flex min-h-[48px] w-full items-center justify-center rounded-xl border px-4 text-center text-sm font-black transition duration-200 hover:brightness-110 active:scale-[0.99]"
           style={{
             background: highlighted
@@ -282,7 +283,7 @@ function PricingCard({ plan, index }) {
           }}
         >
           {ctaText}
-        </Link>
+        </button>
 
         {/* LOWER FEATURES */}
         <div className="mt-5 flex-1 rounded-[18px] border border-white/[0.08] bg-[#111412]/80 p-3.5">
@@ -355,6 +356,7 @@ function PricingCard({ plan, index }) {
 }
 
 export default function Pricing() {
+  const { openGetStarted } = useOutletContext();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -394,7 +396,6 @@ export default function Pricing() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0d100f] text-white">
-      {/* global background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-[-350px] h-[700px] w-[1000px] -translate-x-1/2 rounded-full bg-white/[0.035] blur-[120px]" />
 
@@ -417,33 +418,6 @@ export default function Pricing() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-[1280px] px-4 pb-16 pt-5 sm:px-6 lg:px-8">
-        {/* NAVBAR */}
-        <header className="flex h-14 items-center justify-between border-b border-white/[0.06]">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.10] bg-white/[0.06]">
-              <Icon icon="solar:planet-3-bold-duotone" width="19" />
-            </div>
-
-            <span className="font-display text-[19px] font-black tracking-[-0.04em]">Orbit</span>
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to="/login"
-              className="hidden rounded-lg px-3 py-2 text-xs font-bold text-white/55 transition hover:text-white sm:block"
-            >
-              Log in
-            </Link>
-
-            <Link
-              to="/login"
-              className="rounded-lg border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-xs font-bold text-white transition hover:bg-white/[0.10]"
-            >
-              Get started
-            </Link>
-          </div>
-        </header>
-
         {/* HERO */}
         <section className="pt-14 sm:pt-16">
           <div className="max-w-3xl">
@@ -521,7 +495,7 @@ export default function Pricing() {
               ].join(' ')}
             >
               {plans.map((plan, index) => (
-                <PricingCard key={plan.id || plan._id || index} plan={plan} index={index} />
+                <PricingCard key={plan.id || plan._id || index} plan={plan} onGetStarted={openGetStarted} />
               ))}
             </div>
           ) : (

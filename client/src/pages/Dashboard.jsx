@@ -93,37 +93,37 @@ export default function Dashboard() {
     </section>
 
     <div className="mt-4 grid gap-4 lg:grid-cols-2">
-      <Widget title="Tasks" to="/tasks">
-        {data.taskItems.length ? <AnimatedList items={data.taskItems} renderItem={(task) => <Link to="/tasks" className="flex min-w-0 items-center gap-3 border-b border-border py-2.5 last:border-0"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-border text-primary"><CheckCircle2 size={13} /></span><span className="min-w-0 flex-1 truncate text-sm font-medium">{task.title}</span><span className="shrink-0 text-xs text-muted">{task.dueDate ? dayjs(task.dueDate).isSame(dayjs(), 'day') ? 'Today' : formatDate(task.dueDate) : 'Anytime'}</span></Link>} /> : <p className="py-6 text-sm text-muted">No open tasks. Add one to get started.</p>}
+      <Widget title="Tasks" to="/panel/tasks">
+        {data.taskItems.length ? <AnimatedList items={data.taskItems} renderItem={(task) => <Link to="/panel/tasks" className="flex min-w-0 items-center gap-3 border-b border-border py-2.5 last:border-0"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-border text-primary"><CheckCircle2 size={13} /></span><span className="min-w-0 flex-1 truncate text-sm font-medium">{task.title}</span><span className="shrink-0 text-xs text-muted">{task.dueDate ? dayjs(task.dueDate).isSame(dayjs(), 'day') ? 'Today' : formatDate(task.dueDate) : 'Anytime'}</span></Link>} /> : <p className="py-6 text-sm text-muted">No open tasks. Add one to get started.</p>}
       </Widget>
-      <Widget title="Goals" to="/planning/goals">
+      <Widget title="Goals" to="/panel/planning/goals">
         {data.goals.length ? <AnimatedList items={data.goals.slice(0, 4)} renderItem={(goal) => <GoalRow goal={goal} />} /> : <p className="py-6 text-sm text-muted">No active goals yet.</p>}
       </Widget>
-      <Widget title="Expenses" to="/money/expenses">
+      <Widget title="Expenses" to="/panel/money/expenses">
         {data.charts.categories.length ? <div className="space-y-3">{data.charts.categories.slice(0, 4).map((item) => <div key={item.name} className="flex min-w-0 items-center gap-3 text-sm"><ReceiptText size={17} className="shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate">{item.name}</span><span className="shrink-0 text-xs font-semibold">{formatMoney(item.value, currency, true)}</span><span className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-surface-alt sm:block"><span className="block h-full rounded-full bg-primary" style={{ width: `${item.value / maxCategory * 100}%` }} /></span></div>)}</div> : <p className="py-6 text-sm text-muted">No expenses recorded this month.</p>}
       </Widget>
-      <Widget title="Reminders" to="/reminders">
-        {data.reminderItems.length ? <AnimatedList items={data.reminderItems} renderItem={(item) => <Link to="/reminders" className="flex min-w-0 items-center gap-3 border-b border-border py-2.5 last:border-0"><Bell size={17} className="shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span><span className="shrink-0 text-xs text-muted">{formatDate(item.nextTriggerAt)}</span></Link>} /> : <p className="py-6 text-sm text-muted">No upcoming reminders.</p>}
+      <Widget title="Reminders" to="/panel/reminders">
+        {data.reminderItems.length ? <AnimatedList items={data.reminderItems} renderItem={(item) => <Link to="/panel/reminders" className="flex min-w-0 items-center gap-3 border-b border-border py-2.5 last:border-0"><Bell size={17} className="shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span><span className="shrink-0 text-xs text-muted">{formatDate(item.nextTriggerAt)}</span></Link>} /> : <p className="py-6 text-sm text-muted">No upcoming reminders.</p>}
       </Widget>
 
-      <Widget title="Cash flow" to="/money/transactions">
+      <Widget title="Cash flow" to="/panel/money/transactions">
         <p className="mb-3 text-xs text-muted">Income vs expenses · last 6 months</p>
         <div className="h-52"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data.charts.cashflow}><CartesianGrid vertical={false} /><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: chartColors[5] }} /><YAxis hide /><Tooltip content={<ChartTooltip currency={currency} />} /><Area type="monotone" dataKey="income" stroke={chartColors[1]} strokeWidth={2} fill={chartColors[1]} fillOpacity={.09} /><Area type="monotone" dataKey="expenses" stroke={chartColors[0]} strokeWidth={2} fill={chartColors[0]} fillOpacity={.07} /></AreaChart></ResponsiveContainer></div>
         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted"><span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-success" />Income {formatMoney(m.income, currency, true)}</span><span><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary" />Expenses {formatMoney(m.expenses, currency, true)}</span><span>Net {formatMoney(m.net, currency, true)}</span></div>
       </Widget>
-      <Widget title="Spending" to="/money/expenses">
+      <Widget title="Spending" to="/panel/money/expenses">
         {data.charts.categories.length ? <><div className="h-44"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data.charts.categories} dataKey="value" nameKey="name" innerRadius={53} outerRadius={76} paddingAngle={2}>{data.charts.categories.map((_, index) => <Cell key={index} fill={chartColors[index % chartColors.length]} />)}</Pie><Tooltip content={<ChartTooltip currency={currency} />} /></PieChart></ResponsiveContainer></div><div className="grid grid-cols-2 gap-2">{data.charts.categories.slice(0, 6).map((item, index) => <div key={item.name} className="flex min-w-0 items-center gap-2 text-xs"><span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chartColors[index % chartColors.length] }} /><span className="min-w-0 flex-1 truncate text-muted">{item.name}</span><span className="font-semibold">{formatMoney(item.value, currency, true)}</span></div>)}</div></> : <EmptyState icon={ReceiptText} title="No spending yet" description="Category totals will appear here." />}
       </Widget>
-      <Widget title="Recent transactions" to="/money/transactions">
+      <Widget title="Recent transactions" to="/panel/money/transactions">
         {data.recentTransactions.length ? <AnimatedList items={data.recentTransactions.slice(0, 5)} renderItem={(item) => { const positive = ['income', 'debt_payment_in'].includes(item.type); return <div className="flex min-w-0 items-center gap-3 border-b border-border py-2.5 last:border-0"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${positive ? 'bg-success/10 text-success' : 'bg-selected text-primary'}`}>{positive ? <ArrowUpRight size={17} /> : <ArrowDownRight size={17} />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.description}</p><p className="text-xs text-muted">{item.category} · {item.accountId?.name || 'Account'}</p></div><div className="text-right"><Money value={positive ? item.amount : -item.amount} currency={currency} signed className="text-sm font-semibold" /><p className="text-xs text-muted">{formatDate(item.date)}</p></div></div>; }} /> : <p className="py-6 text-sm text-muted">No transactions yet.</p>}
       </Widget>
-      <Widget title="Debts" to="/money/debts">
+      <Widget title="Debts" to="/panel/money/debts">
         <div className="space-y-4 py-2"><div className="flex items-center justify-between border-b border-border pb-4"><span className="flex items-center gap-2 text-sm text-muted"><Landmark size={17} className="text-primary" /> You owe</span><Money value={data.debts.payable} currency={currency} className="font-semibold" /></div><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm text-muted"><ArrowDownRight size={17} className="text-success" /> Owed to you</span><Money value={data.debts.receivable} currency={currency} className="font-semibold" /></div></div>
       </Widget>
-      <Widget title="Upcoming" to="/planning/bills">
+      <Widget title="Upcoming" to="/panel/planning/bills">
         {data.upcoming.length ? <AnimatedList items={data.upcoming.slice(0, 5)} getKey={(item) => `${item.kind}-${item._id}`} renderItem={(item) => <div className="flex min-w-0 items-center gap-3 border-b border-border py-2.5 last:border-0"><CalendarDays size={17} className="shrink-0 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{item.name}</span><StatusBadge tone={item.kind === 'bill' ? 'warning' : 'info'}>{item.kind}</StatusBadge><span className="shrink-0 text-xs text-muted">{formatDate(item.date)}</span></div>} /> : <p className="py-6 text-sm text-muted">Nothing due in the next 30 days.</p>}
       </Widget>
-      <Widget title="Accounts" to="/money/accounts">
+      <Widget title="Accounts" to="/panel/money/accounts">
         {data.accounts.length ? <AnimatedList items={data.accounts.slice(0, 5)} renderItem={(account) => <div className="flex items-center gap-3 border-b border-border py-2.5 last:border-0"><WalletCards size={17} className="text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{account.name}</span><Money value={account.currentBalance} currency={currency} className="text-sm font-semibold" /></div>} /> : <p className="py-6 text-sm text-muted">No accounts yet.</p>}
       </Widget>
     </div>

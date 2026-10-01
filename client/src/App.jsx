@@ -1,12 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useParams } from 'react-router-dom';
-import { Layout } from './components/Layout.jsx';
+import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Spinner } from './components/ui.jsx';
-import { AppProvider } from './context/AppContext.jsx';
+import { AuthProvider, AdminAuthProvider } from './context/AuthContext.jsx';
 import { useAuth, useAdminAuth } from './context/useAuth.js';
-import { AdminLayout, AdminDashboard, AdminUsers, AdminUserDetail, AdminActivationLinks, AdminActivity, AdminAdmins, AdminSettings } from './pages/Admin.jsx';
-import { AdminQrBatches, AdminQrBatchDetail } from './pages/admin/QrBatches.jsx';
-import AdminAutomationSettings from './pages/admin/AutomationSettings.jsx';
+import { MarketingLayout } from './marketing/MarketingLayout.jsx';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
@@ -25,11 +22,39 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin.jsx'));
 const AdminPlans = lazy(() => import('./pages/AdminPlans.jsx'));
 const AdminFeatures = lazy(() => import('./pages/AdminFeatures.jsx'));
 const Pricing = lazy(() => import('./pages/Pricing.jsx'));
+const Landing = lazy(() => import('./marketing/Landing.jsx'));
+const Features = lazy(() => import('./marketing/Features.jsx'));
+const About = lazy(() => import('./marketing/About.jsx'));
+const PanelShell = lazy(() => import('./components/PanelShell.jsx'));
+const adminPage = (name) =>
+  lazy(() => import('./pages/Admin.jsx').then((module) => ({ default: module[name] })));
+const AdminLayout = adminPage('AdminLayout');
+const AdminDashboard = adminPage('AdminDashboard');
+const AdminUsers = adminPage('AdminUsers');
+const AdminUserDetail = adminPage('AdminUserDetail');
+const AdminActivationLinks = adminPage('AdminActivationLinks');
+const AdminActivity = adminPage('AdminActivity');
+const AdminAdmins = adminPage('AdminAdmins');
+const AdminSettings = adminPage('AdminSettings');
+const AdminQrBatches = lazy(() =>
+  import('./pages/admin/QrBatches.jsx').then((module) => ({ default: module.AdminQrBatches })),
+);
+const AdminQrBatchDetail = lazy(() =>
+  import('./pages/admin/QrBatches.jsx').then((module) => ({ default: module.AdminQrBatchDetail })),
+);
+const AdminAutomationSettings = lazy(() => import('./pages/admin/AutomationSettings.jsx'));
 
 function ProtectedRoute({ children }) {
   const { loading, user, access } = useAuth();
+  const location = useLocation();
   if (loading) return <Spinner label="Checking access…" />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user)
+    return (
+      <Navigate
+        to={`/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`}
+        replace
+      />
+    );
   if (!access?.eligible) return <Navigate to="/access" replace />;
   return children;
 }
@@ -43,18 +68,122 @@ function AdminProtectedRoute({ children, superOnly = false }) {
 }
 
 export default function App() {
-  return <Suspense fallback={<Spinner label="Opening Orbit…" />}><Routes>
-    <Route path="login" element={<Login/>}/><Route path="activate/:key" element={<Activation/>}/><Route path="access" element={<Access/>}/><Route path="pricing" element={<Pricing/>}/>
-    <Route path="admin/login" element={<AdminLogin/>}/>
-    <Route path="admin" element={<AdminProtectedRoute><AdminLayout/></AdminProtectedRoute>}>
-      <Route index element={<AdminDashboard/>}/><Route path="users" element={<AdminUsers/>}/><Route path="users/:id" element={<AdminUserDetail/>}/><Route path="plans" element={<AdminPlans/>}/><Route path="features" element={<AdminFeatures/>}/><Route path="activation-links" element={<AdminActivationLinks/>}/><Route path="qr-batches" element={<AdminQrBatches/>}/><Route path="qr-batches/:id" element={<AdminQrBatchDetail/>}/><Route path="activity" element={<AdminActivity/>}/>
-      <Route path="admins" element={<AdminProtectedRoute superOnly><AdminAdmins/></AdminProtectedRoute>}/><Route path="settings" element={<AdminProtectedRoute superOnly><AdminSettings/></AdminProtectedRoute>}/><Route path="settings/automation" element={<AdminProtectedRoute superOnly><AdminAutomationSettings/></AdminProtectedRoute>}/>
-    </Route>
-    <Route element={<ProtectedRoute><AppProvider><Layout/></AppProvider></ProtectedRoute>}><Route index element={<Dashboard/>}/><Route path="tasks" element={<Tasks/>}/><Route path="reminders" element={<Reminders/>}/><Route path="money/accounts" element={<Accounts/>}/><Route path="money/transactions" element={<Transactions/>}/><Route path="money/expenses" element={<Transactions mode="expense"/>}/><Route path="money/income" element={<Transactions mode="income"/>}/><Route path="money/debts" element={<Debts/>}/><Route path="planning/bills" element={<Planning kind="bills"/>}/><Route path="planning/subscriptions" element={<Planning kind="subscriptions"/>}/><Route path="planning/goals" element={<Planning kind="goals"/>}/><Route path="personal/:kind" element={<PersonalRoute/>}/><Route path="settings" element={<Settings/>}/><Route path="*" element={<NotFound/>}/></Route>
-  </Routes></Suspense>;
+  return (
+    <Suspense fallback={<Spinner label="Opening Orbit…" />}>
+      <Routes>
+        <Route element={<MarketingLayout />}>
+          <Route index element={<Landing />} />
+          <Route path="features" element={<Features />} />
+          <Route path="about" element={<About />} />
+          <Route path="pricing" element={<Pricing />} />
+        </Route>
+        <Route
+          element={
+            <AuthProvider>
+              <Outlet />
+            </AuthProvider>
+          }
+        >
+          <Route path="login" element={<Login />} />
+          <Route path="activate/:key" element={<Activation />} />
+          <Route path="access" element={<Access />} />
+          <Route
+            path="panel"
+            element={
+              <ProtectedRoute>
+                <PanelShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="reminders" element={<Reminders />} />
+            <Route path="money/accounts" element={<Accounts />} />
+            <Route path="money/transactions" element={<Transactions />} />
+            <Route path="money/expenses" element={<Transactions mode="expense" />} />
+            <Route path="money/income" element={<Transactions mode="income" />} />
+            <Route path="money/debts" element={<Debts />} />
+            <Route path="planning/bills" element={<Planning kind="bills" />} />
+            <Route path="planning/subscriptions" element={<Planning kind="subscriptions" />} />
+            <Route path="planning/goals" element={<Planning kind="goals" />} />
+            <Route path="personal/:kind" element={<PersonalRoute />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Route>
+        <Route
+          element={
+            <AdminAuthProvider>
+              <Outlet />
+            </AdminAuthProvider>
+          }
+        >
+          <Route path="admin/login" element={<AdminLogin />} />
+          <Route
+            path="admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="users/:id" element={<AdminUserDetail />} />
+            <Route path="plans" element={<AdminPlans />} />
+            <Route path="features" element={<AdminFeatures />} />
+            <Route path="activation-links" element={<AdminActivationLinks />} />
+            <Route path="qr-batches" element={<AdminQrBatches />} />
+            <Route path="qr-batches/:id" element={<AdminQrBatchDetail />} />
+            <Route path="activity" element={<AdminActivity />} />
+            <Route
+              path="admins"
+              element={
+                <AdminProtectedRoute superOnly>
+                  <AdminAdmins />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <AdminProtectedRoute superOnly>
+                  <AdminSettings />
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="settings/automation"
+              element={
+                <AdminProtectedRoute superOnly>
+                  <AdminAutomationSettings />
+                </AdminProtectedRoute>
+              }
+            />
+          </Route>
+        </Route>
+        <Route path="tasks" element={<LegacyPanelRedirect />} />
+        <Route path="reminders" element={<LegacyPanelRedirect />} />
+        <Route path="settings" element={<LegacyPanelRedirect />} />
+        <Route path="money/*" element={<LegacyPanelRedirect />} />
+        <Route path="planning/*" element={<LegacyPanelRedirect />} />
+        <Route path="personal/*" element={<LegacyPanelRedirect />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
+function LegacyPanelRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/panel${location.pathname}${location.search}${location.hash}`} replace />;
 }
 
 function PersonalRoute() {
   const { kind } = useParams();
-  return ['projects', 'habits', 'wishlist', 'contacts', 'notes'].includes(kind) ? <Personal kind={kind}/> : <NotFound/>;
+  return ['projects', 'habits', 'wishlist', 'contacts', 'notes'].includes(kind) ? (
+    <Personal kind={kind} />
+  ) : (
+    <NotFound />
+  );
 }

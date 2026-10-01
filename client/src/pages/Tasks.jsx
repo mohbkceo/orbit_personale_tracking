@@ -64,7 +64,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
       onSaved();
       onClose();
       if (form.reminderMode === 'custom' && !task)
-        navigate(`/reminders?entityType=task&entityId=${result.data._id}`);
+        navigate(`/panel/reminders?entityType=task&entityId=${result.data._id}`);
     } catch (error) {
       toast(error.message, 'error');
     } finally {
@@ -147,7 +147,7 @@ function TaskForm({ open, onClose, onSaved, task }) {
           {task && (
             <Link
               className="mt-2 inline-block text-xs font-bold text-primary"
-              to={`/reminders?entityType=task&entityId=${task._id}`}
+              to={`/panel/reminders?entityType=task&entityId=${task._id}`}
             >
               Add or edit a manual reminder
             </Link>

@@ -309,6 +309,10 @@ describe('scheduling and delivery', () => {
 
   it('retains recurring reminders after delivery and advances the next occurrence', async () => {
     const now = new Date();
+    await Setting.create({
+      user: user._id,
+      reminders: { activeHours: { start: '00:00', end: '23:59' }, quietHours: { enabled: false } },
+    });
     const at = new Date(now.getTime() - 60000);
     const item = await custom({
       trigger: {

@@ -755,6 +755,16 @@ export function AdminAdmins() {
 export function AdminSettings() {
   const { data, error, loading, refresh } = useResource('/admin/settings');
   const [actionError, setActionError] = useState('');
+  const [sales, setSales] = useState({ whatsappNumber: '', whatsappMessage: '' });
+  const [salesSaved, setSalesSaved] = useState(false);
+  const [salesSaving, setSalesSaving] = useState(false);
+  useEffect(() => { if (data?.sales) setSales(data.sales); }, [data]);
+  async function saveSales(event) {
+    event.preventDefault(); setSalesSaving(true); setActionError(''); setSalesSaved(false);
+    try { const response = await api.put('/admin/settings/sales', sales); setSales(response.data); setSalesSaved(true); refresh(); }
+    catch (failure) { setActionError(failure.message); }
+    finally { setSalesSaving(false); }
+  }
   async function webhook(action) {
     try {
       await api.post(`/admin/settings/telegram/webhook/${action}`);
@@ -769,14 +779,23 @@ export function AdminSettings() {
       <PageHeader
         eyebrow="Super Admin"
         title="Platform settings"
-        description="Telegram infrastructure is configured through server environment variables."
+        description="Manage platform contact settings and Telegram infrastructure."
       />
       <Link to="/admin/settings/automation" className="btn-secondary mb-5 inline-flex">Automation Settings</Link>
       <ErrorText error={error || actionError} />
       {loading ? (
         <Spinner />
       ) : (
+        <div className="space-y-5">
+        <form onSubmit={saveSales} className="panel max-w-xl space-y-4 p-5 text-sm">
+          <h2 className="font-display text-lg font-bold">Sales / Contact Settings</h2>
+          <label className="block"><span className="label">WhatsApp phone number</span><input className="field" type="tel" autoComplete="tel" placeholder="+213…" value={sales.whatsappNumber} onChange={(event) => { setSales((value) => ({ ...value, whatsappNumber: event.target.value })); setSalesSaved(false); }}/></label>
+          <label className="block"><span className="label">Default WhatsApp message</span><textarea className="field h-28 py-3" maxLength={1000} value={sales.whatsappMessage} onChange={(event) => { setSales((value) => ({ ...value, whatsappMessage: event.target.value })); setSalesSaved(false); }}/></label>
+          <p className="text-xs text-muted">Use an international number. Leave the number blank to make contact unavailable on the public site.</p>
+          <div className="flex items-center gap-3"><button type="submit" className="btn-primary" disabled={salesSaving}>{salesSaving ? 'Saving…' : 'Save contact settings'}</button>{salesSaved && <span role="status" className="text-xs text-success">Saved</span>}</div>
+        </form>
         <div className="panel max-w-xl space-y-4 p-5 text-sm">
+          <h2 className="font-display text-lg font-bold">Telegram infrastructure</h2>
           <p>
             Bot token: <b>{data?.telegramConfigured ? 'Configured' : 'Not configured'}</b>
           </p>
@@ -795,6 +814,7 @@ export function AdminSettings() {
             </button>
           </div>
           <p className="text-xs text-muted">Secrets are never returned to this page.</p>
+        </div>
         </div>
       )}
     </>

@@ -91,7 +91,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
       if (kind === 'goals') reward('GOAL_CREATED');
       onSaved();
       onClose();
-      if (form.reminderMode === 'custom') navigate(`/reminders?entityType=${kind.slice(0, -1)}&entityId=${result.data._id}`);
+      if (form.reminderMode === 'custom') navigate(`/panel/reminders?entityType=${kind.slice(0, -1)}&entityId=${result.data._id}`);
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -276,7 +276,7 @@ function GoalCard({ item, currency, onManage }) {
         </StatusBadge>
       </div>
       <h3 className="mt-5 font-display text-lg font-bold">{item.title}</h3>
-      <Link className="mt-2 inline-block text-xs font-semibold text-primary" to={`/reminders?entityType=goal&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
+      <Link className="mt-2 inline-block text-xs font-semibold text-primary" to={`/panel/reminders?entityType=goal&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
       <p className="mt-1 line-clamp-2 text-xs text-muted">
         {item.description || `Target ${formatDate(item.targetDate)}`}
       </p>
@@ -511,7 +511,7 @@ export default function Planning({ kind }) {
               </span>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-bold">{item.name}</h3>
-                <Link className="text-xs font-semibold text-primary" to={`/reminders?entityType=${kind.slice(0, -1)}&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
+                <Link className="text-xs font-semibold text-primary" to={`/panel/reminders?entityType=${kind.slice(0, -1)}&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
                 <p className="mt-1 text-xs text-muted">
                   {kind === 'bills'
                     ? `Due ${formatDate(item.dueDate)}`

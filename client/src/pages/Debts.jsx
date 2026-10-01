@@ -35,7 +35,7 @@ function DebtForm({ open, onClose, onSaved }) {
       onSaved();
       onClose();
       if (form.reminderMode === 'custom')
-        navigate(`/reminders?entityType=debt&entityId=${result.data._id}`);
+        navigate(`/panel/reminders?entityType=debt&entityId=${result.data._id}`);
     } catch (error) {
       toast(error.message, 'error');
     } finally {
@@ -335,7 +335,7 @@ export default function Debts() {
                     Add payment
                   </button>
                 </div>
-                <Link className="mt-3 inline-block text-xs font-semibold text-primary" to={`/reminders?entityType=debt&entityId=${debt._id}`}>
+                <Link className="mt-3 inline-block text-xs font-semibold text-primary" to={`/panel/reminders?entityType=debt&entityId=${debt._id}`}>
                   🔔 {debt.reminderMode || 'automatic'} reminders
                 </Link>
               </article>

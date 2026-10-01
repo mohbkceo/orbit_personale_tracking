@@ -15,11 +15,11 @@ dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 const filters = ['All', 'Active', 'Upcoming', 'Snoozed', 'Waiting', 'Recurring', 'Completed'];
 const links = {
-  task: '/tasks',
-  debt: '/money/debts',
-  bill: '/planning/bills',
-  subscription: '/planning/subscriptions',
-  goal: '/planning/goals',
+  task: '/panel/tasks',
+  debt: '/panel/money/debts',
+  bill: '/panel/planning/bills',
+  subscription: '/panel/planning/subscriptions',
+  goal: '/panel/planning/goals',
 };
 const resources = {
   task: 'tasks',
