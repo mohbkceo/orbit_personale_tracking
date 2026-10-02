@@ -43,7 +43,7 @@ beforeEach(async () => {
 describe('public sales configuration', () => {
   it('exposes only safe fields and handles missing configuration', async () => {
     const empty = await request(app).get('/api/public/config').expect(200);
-    expect(empty.body.data).toEqual({ sales: { whatsappNumber: '', whatsappMessage: '' } });
+    expect(empty.body.data).toEqual({ sales: { whatsappNumber: '', whatsappMessage: '', salesEmail: '', supportEmail: '', phoneNumber: '', whatsappEnabled: true, contactVisible: false } });
     await SiteConfig.collection.insertOne({
       key: 'site',
       sales: { whatsappNumber: '213555123456', whatsappMessage: 'Hello', token: 'private' },
@@ -51,7 +51,7 @@ describe('public sales configuration', () => {
     });
     const response = await request(app).get('/api/public/config').expect(200);
     expect(response.body.data).toEqual({
-      sales: { whatsappNumber: '213555123456', whatsappMessage: 'Hello' },
+      sales: { whatsappNumber: '213555123456', whatsappMessage: 'Hello', salesEmail: '', supportEmail: '', phoneNumber: '', whatsappEnabled: true, contactVisible: false },
     });
     expect(JSON.stringify(response.body)).not.toContain('private');
     await request(app).put('/api/public/config').send({ sales: {} }).expect(401);
@@ -76,6 +76,7 @@ describe('public sales configuration', () => {
     expect(saved.body.data).toEqual({
       whatsappNumber: '213555123456',
       whatsappMessage: body.whatsappMessage,
+      salesEmail: '', supportEmail: '', phoneNumber: '', whatsappEnabled: true, contactVisible: false,
     });
     expect(
       (await request(app).get('/api/admin/settings').set('Cookie', superCookie).expect(200)).body
@@ -85,5 +86,22 @@ describe('public sales configuration', () => {
       saved.body.data,
     );
     expect((await SiteConfig.findOne({ key: 'site' })).sales.whatsappNumber).toBe('213555123456');
+  });
+
+  it('saves contact fields, hides them until enabled, and preserves them for legacy updates', async () => {
+    const path = '/api/admin/settings/sales';
+    const full = { whatsappNumber: '+213 555 123 456', whatsappMessage: 'Hello', salesEmail: 'SALES@example.com', supportEmail: 'help@example.com', phoneNumber: '+213 555 777 888', whatsappEnabled: false, contactVisible: false };
+    await request(app).put(path).set('Cookie', superCookie).send({ ...full, salesEmail: 'invalid' }).expect(422);
+    const saved = (await request(app).put(path).set('Cookie', superCookie).send(full).expect(200)).body.data;
+    expect(saved).toMatchObject({ salesEmail: 'sales@example.com', supportEmail: 'help@example.com', whatsappEnabled: false, contactVisible: false });
+    const hidden = (await request(app).get('/api/public/config').expect(200)).body.data.sales;
+    expect(hidden).toMatchObject({ salesEmail: '', supportEmail: '', phoneNumber: '', whatsappEnabled: false });
+    await request(app).put(path).set('Cookie', superCookie).send({ whatsappNumber: full.whatsappNumber, whatsappMessage: full.whatsappMessage }).expect(200);
+    const retained = (await request(app).get('/api/admin/settings').set('Cookie', superCookie).expect(200)).body.data.sales;
+    expect(retained.salesEmail).toBe('sales@example.com');
+    expect(retained.whatsappEnabled).toBe(false);
+    await request(app).put(path).set('Cookie', superCookie).send({ ...full, contactVisible: true }).expect(200);
+    const visible = (await request(app).get('/api/public/config').expect(200)).body.data.sales;
+    expect(visible).toMatchObject({ salesEmail: 'sales@example.com', supportEmail: 'help@example.com', phoneNumber: full.phoneNumber, contactVisible: true });
   });
 });

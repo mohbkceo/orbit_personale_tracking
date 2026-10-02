@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, useLocation, useOutlet, useParams } from 'react-router-dom';
-import { AnimatePresence } from 'motion/react';
-import { AnimatedPage } from '../animations/AnimatedPage.jsx';
+import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { useAdminAuth } from '../context/useAuth.js';
 import { PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 
 const date = (value) => (value ? new Date(value).toLocaleString() : '—');
@@ -18,16 +15,6 @@ const remainingTime = (value) => {
   const hours = Math.ceil(milliseconds / 3600000);
   return `${hours} hour${hours === 1 ? '' : 's'}`;
 };
-const nav = [
-  ['Dashboard', '/admin'],
-  ['Users', '/admin/users'],
-  ['Plans', '/admin/plans'],
-  ['Features', '/admin/features'],
-  ['Activation Links', '/admin/activation-links'],
-  ['QR Batches', '/admin/qr-batches'],
-  ['Activity', '/admin/activity'],
-  ['Analytics', '/admin/analytics'],
-];
 function ErrorText({ error }) {
   return error ? (
     <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
@@ -54,53 +41,6 @@ function useResource(path) {
     refresh();
   }, [refresh]);
   return { data, error, loading, refresh };
-}
-
-export function AdminLayout() {
-  const { admin, logout } = useAdminAuth();
-  const location = useLocation();
-  const outlet = useOutlet();
-  return (
-    <div className="min-h-screen bg-canvas">
-      <header className="border-b border-border bg-surface px-4 text-text">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 py-4">
-          <Link to="/admin" className="font-display text-xl font-bold">
-            Orbit <span className="text-primary">Admin</span>
-          </Link>
-          <nav className="flex flex-1 flex-wrap gap-1 text-xs">
-            {[
-              ...nav,
-              ...(admin?.role === 'SUPER_ADMIN'
-                ? [
-                    ['Admins', '/admin/admins'],
-                    ['Settings', '/admin/settings'],
-                    ['Automation Settings', '/admin/settings/automation'],
-                  ]
-                : []),
-            ].map(([label, to]) => (
-              <NavLink
-                key={to}
-                end={to === '/admin'}
-                to={to}
-                className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 ${isActive ? 'bg-selected text-primary' : 'text-muted hover:bg-hover hover:text-text'}`
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-          <span className="text-xs text-muted">{admin?.fullName}</span>
-          <button onClick={logout} className="text-xs underline">
-            Log out
-          </button>
-        </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-4 py-8">
-        <AnimatePresence mode="wait" initial={false}><AnimatedPage key={location.pathname}>{outlet}</AnimatedPage></AnimatePresence>
-      </main>
-    </div>
-  );
 }
 
 export function AdminDashboard() {
@@ -207,6 +147,7 @@ export function AdminUsers() {
       <div className="mb-5 flex flex-wrap gap-3">
         <input
           className="field max-w-sm"
+          aria-label="Search users by name or email"
           placeholder="Search name or email"
           value={search}
           onChange={(e) => {
@@ -216,6 +157,7 @@ export function AdminUsers() {
         />
         <select
           className="field max-w-52"
+          aria-label="Filter users by access status"
           value={filter}
           onChange={(e) => {
             setFilter(e.target.value);
@@ -231,8 +173,8 @@ export function AdminUsers() {
       {loading ? (
         <Spinner />
       ) : (
-        <div className="panel overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="panel">
+          <table className="admin-records w-full text-left text-sm">
             <thead>
               <tr className="border-b border-black/10 dark:border-white/10">
                 {['User', 'Access', 'Plan', 'Expires', 'Telegram'].map((label) => (
@@ -245,7 +187,7 @@ export function AdminUsers() {
             <tbody>
               {result?.data?.map((row) => (
                 <tr key={row._id} className="border-b border-black/5 dark:border-white/5">
-                  <td className="p-4">
+                  <td data-label="User" className="p-4">
                     <Link
                       className="font-bold text-primary hover:underline"
                       to={`/admin/users/${row._id}`}
@@ -254,14 +196,14 @@ export function AdminUsers() {
                     </Link>
                     <div className="text-xs text-muted">{row.email}</div>
                   </td>
-                  <td className="p-4">
+                  <td data-label="Status" className="p-4">
                     <StatusBadge tone={row.accessStatus === 'ACTIVE' ? 'success' : 'warning'}>
                       {row.accessStatus}
                     </StatusBadge>
                   </td>
-                  <td className="p-4">{row.access?.planSnapshot?.name || '—'}</td>
-                  <td className="p-4">{date(row.access?.expiresAt)}</td>
-                  <td className="p-4">{row.telegram ? 'Connected' : '—'}</td>
+                  <td data-label="Plan" className="p-4">{row.access?.planSnapshot?.name || '—'}</td>
+                  <td data-label="Expires" className="p-4">{date(row.access?.expiresAt)}</td>
+                  <td data-label="Telegram" className="p-4">{row.telegram ? 'Connected' : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -269,7 +211,7 @@ export function AdminUsers() {
           {!result?.data?.length && <p className="p-6 text-sm text-muted">No users found.</p>}
         </div>
       )}
-      <div className="mt-4 flex items-center gap-3 text-sm">
+      <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
         <button className="btn-secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
           Previous
         </button>
@@ -324,7 +266,7 @@ export function AdminUserDetail() {
       <ErrorText error={error || actionError} />
       {data && (
         <div className="grid gap-5 lg:grid-cols-2">
-          <section className="panel space-y-3 p-5 text-sm">
+          <section className="panel admin-break space-y-3 p-5 text-sm">
             <h2 className="font-display text-lg font-bold">Identity and access</h2>
             <p>
               Status:{' '}
@@ -466,7 +408,7 @@ export function AdminActivationLinks() {
         description="Single-use invitations for first access and renewal."
       />
       <ErrorText error={error || actionError} />
-      <form onSubmit={generate} className="panel mb-5 grid gap-3 p-5 sm:grid-cols-4">
+      <form onSubmit={generate} className="panel mb-5 grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
         <label>
           <span className="label">Plan</span>
           <select
@@ -516,7 +458,7 @@ export function AdminActivationLinks() {
       {loading ? (
         <Spinner />
       ) : (
-        <div className="panel overflow-x-auto">
+        <div className="panel admin-scroll-table">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-black/10 dark:border-white/10">
@@ -634,8 +576,8 @@ export function AdminActivity() {
       ) : (
         <div className="panel divide-y divide-black/5 dark:divide-white/5">
           {data?.map((row) => (
-            <div key={row._id} className="flex justify-between gap-3 p-4 text-sm">
-              <div>
+            <div key={row._id} className="flex flex-wrap justify-between gap-3 p-4 text-sm">
+              <div className="min-w-0 break-words">
                 <b>{row.event}</b>
                 <p className="text-xs text-muted">
                   {row.actorType} · {row.targetType || 'Platform'}
@@ -681,10 +623,11 @@ export function AdminAdmins() {
         description="Separate administrative accounts and roles."
       />
       <ErrorText error={error || actionError} />
-      <form onSubmit={create} className="panel mb-5 grid gap-3 p-5 sm:grid-cols-5">
+      <form onSubmit={create} className="panel mb-5 grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-5">
         <input
           required
           className="field"
+          aria-label="Admin full name"
           placeholder="Full name"
           value={form.fullName}
           onChange={(e) => setForm({ ...form, fullName: e.target.value })}
@@ -693,6 +636,7 @@ export function AdminAdmins() {
           required
           type="email"
           className="field"
+          aria-label="Admin email"
           placeholder="Email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -702,12 +646,14 @@ export function AdminAdmins() {
           minLength="12"
           type="password"
           className="field"
+          aria-label="Admin password"
           placeholder="Password (12+)"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
         <select
           className="field"
+          aria-label="Admin role"
           value={form.role}
           onChange={(e) => setForm({ ...form, role: e.target.value })}
         >
@@ -722,7 +668,7 @@ export function AdminAdmins() {
         <div className="space-y-3">
           {data?.map((row) => (
             <div key={row._id} className="panel flex flex-wrap items-center gap-3 p-4 text-sm">
-              <div className="flex-1">
+              <div className="min-w-0 flex-1 break-words">
                 <b>{row.fullName}</b>
                 <p className="text-xs text-muted">{row.email}</p>
               </div>
@@ -747,75 +693,6 @@ export function AdminAdmins() {
               </button>
             </div>
           ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-export function AdminSettings() {
-  const { data, error, loading, refresh } = useResource('/admin/settings');
-  const [actionError, setActionError] = useState('');
-  const [sales, setSales] = useState({ whatsappNumber: '', whatsappMessage: '' });
-  const [salesSaved, setSalesSaved] = useState(false);
-  const [salesSaving, setSalesSaving] = useState(false);
-  useEffect(() => { if (data?.sales) setSales(data.sales); }, [data]);
-  async function saveSales(event) {
-    event.preventDefault(); setSalesSaving(true); setActionError(''); setSalesSaved(false);
-    try { const response = await api.put('/admin/settings/sales', sales); setSales(response.data); setSalesSaved(true); refresh(); }
-    catch (failure) { setActionError(failure.message); }
-    finally { setSalesSaving(false); }
-  }
-  async function webhook(action) {
-    try {
-      await api.post(`/admin/settings/telegram/webhook/${action}`);
-      setActionError('');
-      refresh();
-    } catch (failure) {
-      setActionError(failure.message);
-    }
-  }
-  return (
-    <>
-      <PageHeader
-        eyebrow="Super Admin"
-        title="Platform settings"
-        description="Manage platform contact settings and Telegram infrastructure."
-      />
-      <Link to="/admin/settings/automation" className="btn-secondary mb-5 inline-flex">Automation Settings</Link>
-      <ErrorText error={error || actionError} />
-      {loading ? (
-        <Spinner />
-      ) : (
-        <div className="space-y-5">
-        <form onSubmit={saveSales} className="panel max-w-xl space-y-4 p-5 text-sm">
-          <h2 className="font-display text-lg font-bold">Sales / Contact Settings</h2>
-          <label className="block"><span className="label">WhatsApp phone number</span><input className="field" type="tel" autoComplete="tel" placeholder="+213…" value={sales.whatsappNumber} onChange={(event) => { setSales((value) => ({ ...value, whatsappNumber: event.target.value })); setSalesSaved(false); }}/></label>
-          <label className="block"><span className="label">Default WhatsApp message</span><textarea className="field h-28 py-3" maxLength={1000} value={sales.whatsappMessage} onChange={(event) => { setSales((value) => ({ ...value, whatsappMessage: event.target.value })); setSalesSaved(false); }}/></label>
-          <p className="text-xs text-muted">Use an international number. Leave the number blank to make contact unavailable on the public site.</p>
-          <div className="flex items-center gap-3"><button type="submit" className="btn-primary" disabled={salesSaving}>{salesSaving ? 'Saving…' : 'Save contact settings'}</button>{salesSaved && <span role="status" className="text-xs text-success">Saved</span>}</div>
-        </form>
-        <div className="panel max-w-xl space-y-4 p-5 text-sm">
-          <h2 className="font-display text-lg font-bold">Telegram infrastructure</h2>
-          <p>
-            Bot token: <b>{data?.telegramConfigured ? 'Configured' : 'Not configured'}</b>
-          </p>
-          <p>
-            Bot username: <b>{data?.botUsername || 'Not configured'}</b>
-          </p>
-          <p>
-            Webhook secret: <b>{data?.webhookConfigured ? 'Configured' : 'Not configured'}</b>
-          </p>
-          <div className="flex gap-2">
-            <button className="btn-secondary" onClick={() => webhook('register')}>
-              Register webhook
-            </button>
-            <button className="btn-secondary" onClick={() => webhook('remove')}>
-              Remove webhook
-            </button>
-          </div>
-          <p className="text-xs text-muted">Secrets are never returned to this page.</p>
-        </div>
         </div>
       )}
     </>

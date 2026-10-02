@@ -45,6 +45,11 @@ adminOperationRoutes.get('/settings', adminRoleGuard('SUPER_ADMIN'), asyncHandle
 const salesInput = z.strictObject({
   whatsappNumber: z.string().max(40).refine((value) => { try { normalizeWhatsAppNumber(value); return true; } catch { return false; } }, 'Enter 8 to 15 international digits, or leave blank.'),
   whatsappMessage: z.string().trim().max(1000),
+  salesEmail: z.union([z.email().max(254), z.literal('')]).optional(),
+  supportEmail: z.union([z.email().max(254), z.literal('')]).optional(),
+  phoneNumber: z.string().trim().max(40).refine((value) => !value || (/^\+?[\d\s().-]+$/.test(value) && /^\d{7,15}$/.test(value.replace(/\D/g, ''))), 'Enter 7 to 15 phone digits, or leave blank.').optional(),
+  whatsappEnabled: z.boolean().optional(),
+  contactVisible: z.boolean().optional(),
 });
 adminOperationRoutes.put('/settings/sales', adminRoleGuard('SUPER_ADMIN'), validate(salesInput), asyncHandler(async (req, res) => success(res, await updateSalesConfig(req.body))));
 adminOperationRoutes.post('/settings/telegram/webhook/register', adminRoleGuard('SUPER_ADMIN'), asyncHandler(async (_req, res) => {

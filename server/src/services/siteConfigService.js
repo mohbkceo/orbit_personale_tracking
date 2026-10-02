@@ -11,26 +11,37 @@ export function normalizeWhatsAppNumber(value) {
   return digits;
 }
 
-export async function getSalesConfig() {
-  const config = await SiteConfig.findOne({ key: 'site' }).lean();
+function formatSales(sales) {
   return {
-    whatsappNumber: config?.sales?.whatsappNumber || '',
-    whatsappMessage: config?.sales?.whatsappMessage || '',
+    whatsappNumber: sales?.whatsappNumber || '',
+    whatsappMessage: sales?.whatsappMessage || '',
+    salesEmail: sales?.salesEmail || '',
+    supportEmail: sales?.supportEmail || '',
+    phoneNumber: sales?.phoneNumber || '',
+    whatsappEnabled: sales?.whatsappEnabled ?? true,
+    contactVisible: sales?.contactVisible ?? false,
   };
 }
 
-export async function updateSalesConfig({ whatsappNumber, whatsappMessage }) {
+export async function getSalesConfig() {
+  const config = await SiteConfig.findOne({ key: 'site' }).lean();
+  return formatSales(config?.sales);
+}
+
+export async function updateSalesConfig({ whatsappNumber, whatsappMessage, salesEmail, supportEmail, phoneNumber, whatsappEnabled, contactVisible }) {
   const sales = {
     whatsappNumber: normalizeWhatsAppNumber(whatsappNumber),
     whatsappMessage: whatsappMessage.trim(),
   };
+  if (salesEmail !== undefined) sales.salesEmail = salesEmail.trim().toLowerCase();
+  if (supportEmail !== undefined) sales.supportEmail = supportEmail.trim().toLowerCase();
+  if (phoneNumber !== undefined) sales.phoneNumber = phoneNumber.trim();
+  if (whatsappEnabled !== undefined) sales.whatsappEnabled = whatsappEnabled;
+  if (contactVisible !== undefined) sales.contactVisible = contactVisible;
   const config = await SiteConfig.findOneAndUpdate(
     { key: 'site' },
-    { $set: { sales } },
+    { $set: Object.fromEntries(Object.entries(sales).map(([key, value]) => [`sales.${key}`, value])) },
     { upsert: true, new: true, runValidators: true },
   );
-  return {
-    whatsappNumber: config.sales.whatsappNumber,
-    whatsappMessage: config.sales.whatsappMessage,
-  };
+  return formatSales(config.sales);
 }

@@ -12,5 +12,6 @@ describe('WhatsApp purchase link', () => {
     expect(whatsappUrl({ whatsappNumber: '', whatsappMessage: 'Hello' })).toBeNull();
     expect(whatsappUrl({ whatsappNumber: '123', whatsappMessage: 'Hello' })).toBeNull();
     expect(whatsappUrl({ whatsappNumber: '213555123456', whatsappMessage: '' })).toBeNull();
+    expect(whatsappUrl({ whatsappNumber: '213555123456', whatsappMessage: 'Hello', whatsappEnabled: false })).toBeNull();
   });
 });

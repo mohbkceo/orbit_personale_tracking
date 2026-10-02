@@ -172,7 +172,7 @@ describe('admin analytics dashboard', () => {
     await screen.findByText('Source performance');
     await screen.findByText('Source quality');
     await waitFor(() => expect(screen.getAllByText('Meta').length).toBeGreaterThan(0));
-    const table = screen.getByRole('table');
+    const table = screen.getAllByRole('table')[0];
     fireEvent.click(within(table).getByRole('button', { name: /Visitors/ }));
     fireEvent.click(within(table).getByRole('button', { name: /Visitors/ }));
     expect(within(table).getAllByRole('row')[1].textContent).toContain('Google');

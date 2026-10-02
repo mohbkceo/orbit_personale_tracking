@@ -17,19 +17,25 @@ function Performance({ params, revision, dimension, onSelect, description }) {
         report={report}
         empty={`No ${dimension} data for this period. Try clearing filters.`}
       >
-        {(data) => !data.rows?.length ? <div className="flex min-h-44 items-center justify-center text-center text-sm text-muted">No {dimension} data for this period. Try clearing filters or widening the date range.</div> : (
-          <>
-            <div className="mb-6 max-w-xl">
-              <RankedBars rows={data.rows || []} valueKey="sessions" onSelect={onSelect} />
+        {(data) =>
+          !data.rows?.length ? (
+            <div className="flex min-h-44 items-center justify-center text-center text-sm text-muted">
+              No {dimension} data for this period. Try clearing filters or widening the date range.
             </div>
-            <AnalyticsTable
-              rows={data.rows || []}
-              columns={performanceColumns}
-              sortable
-              onRowClick={onSelect}
-            />
-          </>
-        )}
+          ) : (
+            <>
+              <div className="mb-6 max-w-xl">
+                <RankedBars rows={data.rows || []} valueKey="sessions" onSelect={onSelect} />
+              </div>
+              <AnalyticsTable
+                rows={data.rows || []}
+                columns={performanceColumns}
+                sortable
+                onRowClick={onSelect}
+              />
+            </>
+          )
+        }
       </ReportBody>
     </Panel>
   );
@@ -37,7 +43,50 @@ function Performance({ params, revision, dimension, onSelect, description }) {
 
 export function SourceQuality({ params, revision, onSelect }) {
   const report = useAnalyticsData('sourceQuality', params, revision);
-  return <Panel title="Source quality" description="Registration cohorts first seen in the selected period; activation and first value may happen later. Select a source for campaign detail."><ReportBody report={report}>{(data) => <AnalyticsTable rows={data.rows || []} columns={[{ key: 'value', label: 'Source' }, { key: 'registrations', label: 'Registered', numeric: true, render: (row) => count(row.registrations) }, { key: 'activated', label: 'Activated', numeric: true, render: (row) => count(row.activated) }, { key: 'reachedFirstValue', label: 'First value', numeric: true, render: (row) => count(row.reachedFirstValue) }, { key: 'activationRate', label: 'Activation rate', numeric: true, render: (row) => percent(row.activationRate) }]} sortable onRowClick={onSelect} empty="No registrations from these sources in this period." />}</ReportBody></Panel>;
+  return (
+    <Panel
+      title="Source quality"
+      description="Users who registered in the selected period; activation and first value may happen later. Select a source for campaign detail."
+    >
+      <ReportBody report={report}>
+        {(data) => (
+          <AnalyticsTable
+            rows={data.rows || []}
+            columns={[
+              { key: 'value', label: 'Source' },
+              {
+                key: 'registrations',
+                label: 'Registered',
+                numeric: true,
+                render: (row) => count(row.registrations),
+              },
+              {
+                key: 'activated',
+                label: 'Activated',
+                numeric: true,
+                render: (row) => count(row.activated),
+              },
+              {
+                key: 'reachedFirstValue',
+                label: 'First value',
+                numeric: true,
+                render: (row) => count(row.reachedFirstValue),
+              },
+              {
+                key: 'activationRate',
+                label: 'Activation rate',
+                numeric: true,
+                render: (row) => percent(row.activationRate),
+              },
+            ]}
+            sortable
+            onRowClick={onSelect}
+            empty="No registrations from these sources in this period."
+          />
+        )}
+      </ReportBody>
+    </Panel>
+  );
 }
 
 export function Acquisition({ state, params, revision, setParams, go, search }) {
@@ -74,7 +123,13 @@ export function Acquisition({ state, params, revision, setParams, go, search }) 
           else if (dimension === 'channel') go('/campaigns', { channel: row.value });
         }}
       />
-      {dimension === 'source' && <SourceQuality params={params} revision={revision} onSelect={(row) => go('/campaigns', { source: row.value })} />}
+      {dimension === 'source' && (
+        <SourceQuality
+          params={params}
+          revision={revision}
+          onSelect={(row) => go('/campaigns', { source: row.value })}
+        />
+      )}
       <p className="text-xs text-muted">
         Conversion counts are attributed using {models[state.model].toLowerCase()}. A period
         activation may follow an earlier visit, so period outcome ratios are directional.

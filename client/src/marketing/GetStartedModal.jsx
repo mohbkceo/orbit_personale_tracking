@@ -103,6 +103,11 @@ export function GetStartedModal({ open, onClose }) {
             </span>
           </button>
         </div>
+        {sales?.contactVisible && (sales.salesEmail || sales.supportEmail || sales.phoneNumber) && <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          {sales.salesEmail && <a className="break-all" href={`mailto:${sales.salesEmail}`}>{sales.salesEmail}</a>}
+          {sales.supportEmail && <a className="break-all" href={`mailto:${sales.supportEmail}`}>{sales.supportEmail}</a>}
+          {sales.phoneNumber && <a className="break-all" href={`tel:${sales.phoneNumber}`}>{sales.phoneNumber}</a>}
+        </div>}
         {error && (
           <p className="marketing-modal-error" role="alert">
             {error}

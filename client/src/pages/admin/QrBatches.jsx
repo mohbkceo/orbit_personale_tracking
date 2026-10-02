@@ -261,7 +261,7 @@ export function AdminQrBatches() {
       {batches.loading ? (
         <Spinner label="Loading QR batches…" />
       ) : (
-        <div className="panel overflow-x-auto">
+        <div className="panel admin-scroll-table">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-black/10 dark:border-white/10">
@@ -381,7 +381,7 @@ export function AdminQrBatchDetail() {
         />
         <button className="btn-secondary">Search</button>
       </form>
-      <div className="panel overflow-x-auto">
+      <div className="panel admin-scroll-table">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-black/10 dark:border-white/10">

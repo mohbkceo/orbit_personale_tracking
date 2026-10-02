@@ -30,14 +30,15 @@ const About = lazy(() => import('./marketing/About.jsx'));
 const PanelShell = lazy(() => import('./components/PanelShell.jsx'));
 const adminPage = (name) =>
   lazy(() => import('./pages/Admin.jsx').then((module) => ({ default: module[name] })));
-const AdminLayout = adminPage('AdminLayout');
+const AdminLayout = lazy(() => import('./admin/layout/AdminLayout.jsx'));
 const AdminDashboard = adminPage('AdminDashboard');
 const AdminUsers = adminPage('AdminUsers');
 const AdminUserDetail = adminPage('AdminUserDetail');
 const AdminActivationLinks = adminPage('AdminActivationLinks');
 const AdminActivity = adminPage('AdminActivity');
 const AdminAdmins = adminPage('AdminAdmins');
-const AdminSettings = adminPage('AdminSettings');
+const AdminSettingsLayout = lazy(() => import('./admin/settings/AdminSettingsLayout.jsx'));
+const AdminSalesContactSettings = lazy(() => import('./admin/settings/SalesContactSettings.jsx'));
 const AdminQrBatches = lazy(() =>
   import('./pages/admin/QrBatches.jsx').then((module) => ({ default: module.AdminQrBatches })),
 );
@@ -154,18 +155,14 @@ export default function App() {
               path="settings"
               element={
                 <AdminProtectedRoute superOnly>
-                  <AdminSettings />
+                  <AdminSettingsLayout />
                 </AdminProtectedRoute>
               }
-            />
-            <Route
-              path="settings/automation"
-              element={
-                <AdminProtectedRoute superOnly>
-                  <AdminAutomationSettings />
-                </AdminProtectedRoute>
-              }
-            />
+            >
+              <Route index element={<Navigate to="automation" replace />} />
+              <Route path="automation" element={<AdminAutomationSettings />} />
+              <Route path="sales-contact" element={<AdminSalesContactSettings />} />
+            </Route>
           </Route>
         </Route>
         <Route path="tasks" element={<LegacyPanelRedirect />} />

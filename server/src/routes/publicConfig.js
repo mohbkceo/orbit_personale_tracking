@@ -6,5 +6,8 @@ import { getSalesConfig } from '../services/siteConfigService.js';
 export const publicConfigRoutes = Router();
 publicConfigRoutes.get(
   '/',
-  asyncHandler(async (_req, res) => success(res, { sales: await getSalesConfig() })),
+  asyncHandler(async (_req, res) => {
+    const sales = await getSalesConfig();
+    return success(res, { sales: sales.contactVisible ? sales : { ...sales, salesEmail: '', supportEmail: '', phoneNumber: '' } });
+  }),
 );

@@ -1,0 +1,29 @@
+.admin-shell {
+  color-scheme: light;
+  --color-canvas: 250 250 250; --color-surface: 255 255 255; --color-surface-alt: 245 246 248;
+  --color-text: 21 24 29; --color-muted: 105 116 131; --color-primary: 189 77 22;
+  --color-primary-hover: 165 68 20; --color-primary-text: 255 255 255; --color-border: 231 234 239;
+  --color-success: 32 117 76; --color-warning: 146 92 24; --color-danger: 185 64 80;
+  --color-hover: 245 246 248; --color-selected: 255 245 240;
+  --orbit-radius: 8px; --orbit-control-radius: 7px; --orbit-card-padding: 18px; --orbit-row-padding: 10px;
+}
+.admin-shell .panel, .admin-shell .panel-flat { box-shadow: none; }
+.admin-shell .field { min-width: 0; }
+.admin-main > * { min-width: 0; }
+.admin-shell .admin-scroll-table { max-width: 100%; overflow-x: auto; }
+.admin-shell .admin-scroll-table table { min-width: 720px; }
+.admin-shell .admin-break { overflow-wrap: anywhere; }
+.admin-shell .admin-main .panel { min-width: 0; }
+.admin-shell .admin-main p, .admin-shell .admin-main td, .admin-shell .admin-main b { overflow-wrap: anywhere; }
+.admin-mobile-drawer .admin-sidebar > a { padding-right: 44px; }
+@media (max-width: 639px) {
+  .admin-shell .admin-records thead { display: none; }
+  .admin-shell .admin-records tbody, .admin-shell .admin-records tr, .admin-shell .admin-records td { display: block; width: 100%; }
+  .admin-shell .admin-records tr { padding: 14px; border-bottom: 1px solid rgb(var(--color-border)); }
+  .admin-shell .admin-records td { padding: 5px 0; overflow-wrap: anywhere; }
+  .admin-shell .admin-records td[data-label]:not(:first-child) { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; text-align: right; }
+  .admin-shell .admin-records td[data-label]:not(:first-child)::before { content: attr(data-label); color: rgb(var(--color-muted)); font-size: 12px; font-weight: 600; text-align: left; }
+  .admin-shell .admin-records td:first-child { padding-bottom: 10px; }
+  .admin-shell .admin-records td:first-child a { display: inline-block; }
+  .admin-shell .admin-records td:first-child .text-xs { overflow-wrap: anywhere; }
+}
