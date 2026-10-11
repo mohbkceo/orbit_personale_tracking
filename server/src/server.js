@@ -4,10 +4,14 @@ import { env } from './config/env.js';
 import { startJobs } from './jobs/scheduler.js';
 import { TelegramSession } from './models/TelegramSession.js';
 import { TaskDigestDelivery } from './models/TaskDigestDelivery.js';
+import { DzEvent } from './models/DzEvent.js';
+import { EventSubscription } from './models/EventSubscription.js';
+import { EventDiscoveryDelivery } from './models/EventDiscoveryDelivery.js';
 
 await connectDatabase();
 await TelegramSession.createIndexes();
 await TaskDigestDelivery.createIndexes();
+await Promise.all([DzEvent.createIndexes(), EventSubscription.createIndexes(), EventDiscoveryDelivery.createIndexes()]);
 const server = app.listen(env.PORT, () => {
   console.log(`Orbit API listening on http://localhost:${env.PORT}`);
   if (env.NODE_ENV !== 'test') startJobs();

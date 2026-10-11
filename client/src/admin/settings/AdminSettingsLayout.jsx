@@ -1,8 +1,9 @@
-import { Bot, ContactRound } from 'lucide-react';
+import { Bot, CalendarDays, ContactRound } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 
 const sections = [
   { to: '/admin/settings/automation', label: 'Automation', icon: Bot },
+  { to: '/admin/settings/events', label: 'Events & Notifications', icon: CalendarDays },
   { to: '/admin/settings/sales-contact', label: 'Sales / Contact', icon: ContactRound },
 ];
 

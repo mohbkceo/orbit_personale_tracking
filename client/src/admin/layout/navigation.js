@@ -1,4 +1,4 @@
-import { Activity, ChartNoAxesCombined, CircleGauge, KeyRound, Layers3, QrCode, Settings2, Shield, Users, WandSparkles } from 'lucide-react';
+import { Activity, CalendarDays, ChartNoAxesCombined, CircleGauge, KeyRound, Layers3, QrCode, Settings2, Shield, Users, WandSparkles } from 'lucide-react';
 
 export const adminNavigation = [
   { label: 'Overview', items: [{ label: 'Dashboard', to: '/admin', icon: CircleGauge, end: true }] },
@@ -10,6 +10,8 @@ export const adminNavigation = [
   ] },
   { label: 'Operations', items: [
     { label: 'QR Batches', to: '/admin/qr-batches', icon: QrCode },
+    { label: 'Print Templates', to: '/admin/qr-batches/print-templates', icon: Layers3 },
+    { label: 'Events', to: '/admin/events', icon: CalendarDays },
     { label: 'Activity', to: '/admin/activity', icon: Activity },
     { label: 'Analytics', to: '/admin/analytics', icon: ChartNoAxesCombined },
   ] },
@@ -21,7 +23,8 @@ export const adminNavigation = [
 
 export function adminPageLabel(pathname) {
   if (/^\/admin\/users\/[^/]+/.test(pathname)) return 'User details';
+  if (pathname.startsWith('/admin/qr-batches/print-templates')) return 'Print Templates';
   if (/^\/admin\/qr-batches\/[^/]+/.test(pathname)) return 'QR batch details';
-  if (pathname.startsWith('/admin/settings/')) return pathname.endsWith('/sales-contact') ? 'Sales / Contact' : 'Automation';
+  if (pathname.startsWith('/admin/settings/')) return pathname.endsWith('/sales-contact') ? 'Sales / Contact' : pathname.endsWith('/events') ? 'Events & Notifications' : 'Automation';
   return adminNavigation.flatMap((group) => group.items).find((item) => item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`))?.label || 'Admin';
 }

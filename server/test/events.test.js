@@ -1,0 +1,253 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import { app } from '../src/app.js';
+import { env } from '../src/config/env.js';
+import { connectDatabase, disconnectDatabase } from '../src/config/db.js';
+import { User } from '../src/models/User.js';
+import { Admin } from '../src/models/Admin.js';
+import { Setting } from '../src/models/Setting.js';
+import { AccessSubscription } from '../src/models/AccessSubscription.js';
+import { EventSettings } from '../src/models/EventSettings.js';
+import { DzEvent } from '../src/models/DzEvent.js';
+import { EventSubscription } from '../src/models/EventSubscription.js';
+import { EventDiscoveryDelivery } from '../src/models/EventDiscoveryDelivery.js';
+import { TelegramConnection } from '../src/models/TelegramConnection.js';
+import { Reminder } from '../src/models/Reminder.js';
+import { ReminderEvent } from '../src/models/ReminderEvent.js';
+import { getDzEventApiKey, getEffectiveEventSettings, updateEventSettings } from '../src/services/events/eventSettingsService.js';
+import { eventReminderAt, followEvent, syncSubscriptionReminders } from '../src/services/events/eventSubscriptionService.js';
+import { fetchDzEvents } from '../src/services/events/dzEventClient.js';
+import { runDzEventSync } from '../src/jobs/dzEventSyncWorker.js';
+import { runJobsOnce } from '../src/jobs/scheduler.js';
+import { processDueReminders } from '../src/jobs/reminderWorker.js';
+import { sendTelegramNotification } from '../src/telegram/notifier.js';
+import { sendMessage } from '../src/telegram/botClient.js';
+import { deliverReminder } from '../src/services/reminders/reminderDeliveryService.js';
+import { handleReminderCallback } from '../src/telegram/callbacks/reminderCallbacks.js';
+import { getSettingsDocument } from '../src/services/settingsService.js';
+import { coordinateReminder } from '../src/services/reminders/reminderCoordinatorService.js';
+
+vi.mock('../src/telegram/botClient.js', () => ({ sendMessage: vi.fn().mockResolvedValue({}), telegramRequest: vi.fn().mockResolvedValue({}) }));
+const cookie = (type, id) => `orbit_${type}=${jwt.sign({ sub: String(id), type }, env.AUTH_JWT_SECRET, { expiresIn: '1h', issuer: 'orbit' })}`;
+const providerEvent = (id = 21, startsAt = new Date(Date.now() + 7 * 86400000)) => ({ id, title: 'Algeria Tech Conference', slug: 'algeria-tech-conference', startsAt: new Date(startsAt).toISOString(), endsAt: new Date(new Date(startsAt).getTime() + 3600000).toISOString(), scheduleStatus: 'scheduled', venueName: 'CIC Alger', wilaya: { id: 16, code: 16, slug: 'alger', names: { en: 'Alger' } }, eventType: { slug: 'conference' }, categories: [{ slug: 'technology' }], format: 'physical', url: 'https://www.dzevent.com/events/algeria-tech-conference' });
+const response = (data, status = 200, headers = {}) => ({ ok: status >= 200 && status < 300, status, headers: { get: (key) => headers[key.toLowerCase()] || null }, json: async () => ({ data, pagination: { page: 1, limit: 100, totalPages: 1, hasNextPage: false } }) });
+let mongo; let user; let other; let superAdmin; let admin;
+const originalEnvKey = env.DZEVENT_API_KEY;
+const originalBotToken = env.ORBIT_TELEGRAM_BOT_TOKEN;
+beforeAll(async () => { mongo = await MongoMemoryServer.create(); await connectDatabase(mongo.getUri()); await Promise.all([Reminder.init(), DzEvent.init(), EventSubscription.init(), EventDiscoveryDelivery.init()]); });
+afterAll(async () => { env.DZEVENT_API_KEY = originalEnvKey; env.ORBIT_TELEGRAM_BOT_TOKEN = originalBotToken; await disconnectDatabase(); await mongo.stop(); });
+beforeEach(async () => {
+  await Promise.all([User.deleteMany(), Admin.deleteMany(), Setting.deleteMany(), AccessSubscription.deleteMany(), EventSettings.deleteMany(), DzEvent.deleteMany(), EventSubscription.deleteMany(), EventDiscoveryDelivery.deleteMany(), TelegramConnection.deleteMany(), Reminder.deleteMany(), ReminderEvent.deleteMany()]);
+  env.DZEVENT_API_KEY = ''; env.ORBIT_TELEGRAM_BOT_TOKEN = '';
+  user = await User.create({ fullName: 'Owner', email: 'event-owner@example.com', passwordHash: 'unused' });
+  other = await User.create({ fullName: 'Other', email: 'event-other@example.com', passwordHash: 'unused' });
+  superAdmin = await Admin.create({ fullName: 'Super', email: 'event-super@example.com', passwordHash: 'unused', role: 'SUPER_ADMIN' });
+  admin = await Admin.create({ fullName: 'Admin', email: 'event-admin@example.com', passwordHash: 'unused', role: 'ADMIN' });
+  await Promise.all([user, other].map((person) => AccessSubscription.create({ user: person._id, plan: new mongoose.Types.ObjectId(), activationLink: new mongoose.Types.ObjectId(), startedAt: new Date(), activatedAt: new Date(), expiresAt: new Date(Date.now() + 30 * 86400000), planSnapshot: { name: 'Month', durationValue: 1, durationUnit: 'MONTH' } })));
+  await Promise.all([user, other].map((person) => Setting.create({ user: person._id, timezone: 'UTC', reminders: { quietHours: { enabled: false }, activeHours: { start: '00:00', end: '00:00' } } })));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([providerEvent()])));
+  vi.clearAllMocks();
+});
+
+describe('DZ Event settings and access', () => {
+  it('encrypts Admin key, never returns it, preserves blank input and falls back to environment', async () => {
+    const key = 'dze_live_abcdefgh12345678';
+    await request(app).put('/api/admin/settings/events').set('Cookie', cookie('admin', superAdmin._id)).send({ apiKey: key }).expect(200);
+    const stored = await EventSettings.findOne({ key: 'global' }).select('+provider.encryptedApiKey');
+    expect(JSON.stringify(stored.provider.encryptedApiKey)).not.toContain(key);
+    expect((await getDzEventApiKey()).key).toBe(key);
+    const get = await request(app).get('/api/admin/settings/events').set('Cookie', cookie('admin', superAdmin._id)).expect(200);
+    expect(JSON.stringify(get.body)).not.toContain(key);
+    expect(JSON.stringify(get.body)).not.toContain('encryptedApiKey');
+    expect(get.body.data.provider).toMatchObject({ configured: true, keySource: 'database', lastConnectionTestSuccess: true });
+    expect(get.body.data.provider.lastConnectionTestAt).toBeTruthy();
+    const userPreferences = await request(app).get('/api/events/preferences').set('Cookie', cookie('user', user._id)).expect(200);
+    expect(JSON.stringify(userPreferences.body)).not.toContain(key);
+    expect(JSON.stringify(userPreferences.body)).not.toContain('encryptedApiKey');
+    await request(app).put('/api/admin/settings/events').set('Cookie', cookie('admin', superAdmin._id)).send({ apiKey: '', integration: { syncIntervalMinutes: 180 } }).expect(200);
+    expect((await getDzEventApiKey()).key).toBe(key);
+    env.DZEVENT_API_KEY = 'dze_live_environment1234';
+    expect((await getDzEventApiKey()).source).toBe('database');
+    await request(app).delete('/api/admin/settings/events/api-key').set('Cookie', cookie('admin', superAdmin._id)).expect(200);
+    expect(await getDzEventApiKey()).toEqual({ key: env.DZEVENT_API_KEY, source: 'environment' });
+  });
+  it('requires Admin for reads and Super Admin for writes', async () => {
+    await request(app).get('/api/admin/settings/events').set('Cookie', cookie('user', user._id)).expect(401);
+    await request(app).put('/api/admin/settings/events').set('Cookie', cookie('admin', admin._id)).send({ provider: { enabled: false } }).expect(403);
+  });
+  it('handles authentication failures and Retry-After without leaking provider data', async () => {
+    env.DZEVENT_API_KEY = 'dze_live_environment1234';
+    await EventSettings.create({ key: 'global' });
+    fetch.mockResolvedValueOnce(response([], 401));
+    await expect(fetchDzEvents({ limit: 1 })).rejects.toMatchObject({ publicMessage: 'Authentication failed' });
+    fetch.mockResolvedValueOnce(response([], 429, { 'retry-after': '120' }));
+    await expect(fetchDzEvents({ limit: 1 })).rejects.toMatchObject({ status: 429, retryAfterSeconds: 120 });
+    expect(new Date((await EventSettings.findOne({ key: 'global' })).sync.rateLimitedUntil).getTime()).toBeGreaterThan(Date.now());
+    fetch.mockResolvedValueOnce(response([], 429, { 'retry-after': new Date(Date.now() + 120000).toUTCString() }));
+    const dateRateLimit = await fetchDzEvents({ limit: 1 }).catch((error) => error);
+    expect(dateRateLimit).toMatchObject({ status: 429 });
+    expect(dateRateLimit.retryAfterSeconds).toBeGreaterThan(110);
+  });
+});
+
+describe('following and reminders', () => {
+  it('creates two idempotent Orbit reminders, enforces ownership and reschedules pending cues', async () => {
+    const item = await DzEvent.create({ provider: 'dzevent', externalId: '21', title: 'Algeria Tech Conference', startsAt: new Date(Date.now() + 7 * 86400000), scheduleStatus: 'scheduled', providerUrl: 'https://www.dzevent.com/events/algeria-tech-conference' });
+    const start = new Date(item.startsAt);
+    const first = await request(app).post('/api/events/21/follow').set('Cookie', cookie('user', user._id)).send({}).expect(201);
+    await request(app).post('/api/events/21/follow').set('Cookie', cookie('user', user._id)).send({}).expect(201);
+    expect(await EventSubscription.countDocuments({ user: user._id })).toBe(1);
+    const reminders = await Reminder.find({ user: user._id, 'metadata.integration': 'dzevent' }).sort({ 'metadata.offsetMinutes': -1 });
+    expect(reminders).toHaveLength(2);
+    expect(new Set(reminders.map((row) => row.policyKey)).size).toBe(2);
+    expect(new Date(reminders[0].trigger.at).getTime()).toBe(start.getTime() - reminders[0].metadata.offsetMinutes * 60000);
+    await request(app).patch('/api/events/21/follow').set('Cookie', cookie('user', other._id)).send({}).expect(404);
+    item.startsAt = new Date(start.getTime() + 4 * 86400000); await item.save();
+    await syncSubscriptionReminders(await EventSubscription.findById(first.body.data._id), item);
+    const moved = await Reminder.findById(reminders[0]._id);
+    expect(new Date(moved.nextTriggerAt).getTime()).toBe(item.startsAt.getTime() - moved.metadata.offsetMinutes * 60000);
+    await request(app).delete('/api/events/21/follow').set('Cookie', cookie('user', user._id)).expect(200);
+    expect(await Reminder.countDocuments({ user: user._id, status: 'cancelled', 'metadata.integration': 'dzevent' })).toBe(2);
+  });
+  it('enforces platform limits and user overrides', async () => {
+    await DzEvent.create({ provider: 'dzevent', externalId: '21', title: 'Event one', startsAt: new Date(Date.now() + 7 * 86400000) });
+    await DzEvent.create({ provider: 'dzevent', externalId: '22', title: 'Event two', startsAt: new Date(Date.now() + 8 * 86400000) });
+    await updateEventSettings({ limits: { maxFollowedEvents: 1 }, reminders: { maxPerEvent: 2, defaultOffsetsMinutes: [1440, 120] } });
+    await request(app).patch('/api/events/preferences').set('Cookie', cookie('user', user._id)).send({ defaultReminderOffsetsMinutes: [60] }).expect(200);
+    const effective = await getEffectiveEventSettings(user._id);
+    expect(effective.reminderOffsetsMinutes).toEqual([60]);
+    await followEvent(user._id, '21');
+    await expect(followEvent(user._id, '22')).rejects.toThrow('limit');
+    await updateEventSettings({ reminders: { userCanCustomize: false } });
+    await request(app).patch('/api/events/21/follow').set('Cookie', cookie('user', user._id)).send({ defaultReminderOffsetsMinutes: [120] }).expect(403);
+    await updateEventSettings({ integration: { enabled: false } });
+    await expect(followEvent(other._id, '22')).rejects.toThrow('disabled');
+  });
+  it('enforces active reminder and delivery channel limits', async () => {
+    await DzEvent.create({ provider: 'dzevent', externalId: '31', title: 'Limited event', startsAt: new Date(Date.now() + 7 * 86400000) });
+    await updateEventSettings({ limits: { maxActiveEventReminders: 1 } });
+    await expect(followEvent(user._id, '31')).rejects.toThrow('reminder limit');
+    await updateEventSettings({ limits: { maxActiveEventReminders: 2 } });
+    await followEvent(user._id, '31');
+    await request(app).patch('/api/events/31/follow').set('Cookie', cookie('user', user._id)).send({ defaultReminderOffsetsMinutes: [120], deliveryChannels: ['web'] }).expect(200);
+    const pending = await Reminder.find({ user: user._id, 'metadata.integration': 'dzevent', status: 'scheduled' });
+    expect(pending).toHaveLength(1);
+    expect(pending[0].deliveryChannels).toEqual(['web']);
+    await updateEventSettings({ limits: { maxActiveEventReminders: 1 } });
+    await request(app).patch('/api/events/31/follow').set('Cookie', cookie('user', user._id)).send({ defaultReminderOffsetsMinutes: [1440, 120] }).expect(409);
+    expect(await Reminder.countDocuments({ user: user._id, 'metadata.integration': 'dzevent', status: 'scheduled' })).toBe(1);
+    await updateEventSettings({ delivery: { web: false } });
+    await expect(getEffectiveEventSettings(user._id, { deliveryChannels: ['web'] })).rejects.toThrow('unavailable');
+  });
+  it('moves a quiet-hours cue earlier and validates Telegram URL and callback buttons', async () => {
+    const start = new Date('2030-10-20T08:00:00.000Z');
+    const settings = { timezone: 'UTC', reminders: { quietHours: { enabled: true, start: '22:00', end: '08:00' }, activeHours: { start: '08:00', end: '22:00' } } };
+    expect(eventReminderAt(start, 60, settings, 'move_earlier').toISOString()).toBe('2030-10-19T21:59:00.000Z');
+    expect(eventReminderAt(start, 60, settings, 'skip')).toBeNull();
+    env.ORBIT_TELEGRAM_BOT_TOKEN = 'test-token';
+    await TelegramConnection.create({ user: user._id, telegramUserId: '123', chatId: '123' });
+    await sendTelegramNotification(user._id, { title: 'Event', message: 'Starts tomorrow', buttons: [[{ text: 'View', url: 'https://www.dzevent.com/events/test' }], [{ text: 'Later', callbackData: 'r:later:123' }]] });
+    expect(sendMessage).toHaveBeenCalledWith('test-token', '123', expect.any(String), { inline_keyboard: [[{ text: 'View', url: 'https://www.dzevent.com/events/test' }], [{ text: 'Later', callback_data: 'r:later:123' }]] });
+    await expect(sendTelegramNotification(user._id, { title: 'Event', message: 'Invalid button', buttons: [[{ text: 'View', url: 'https://' }]] })).rejects.toThrow('Invalid Telegram button');
+  });
+  it('suppresses a moved-earlier cue if quiet hours change before delivery', async () => {
+    await DzEvent.create({ provider: 'dzevent', externalId: '39', title: 'Quiet event', startsAt: new Date(Date.now() + 7 * 86400000) });
+    await followEvent(user._id, '39');
+    const reminder = await Reminder.findOne({ user: user._id, policyKey: 'dzevent:39:120' });
+    await Setting.updateOne({ user: user._id }, { $set: { 'reminders.quietHours': { enabled: true, start: '00:00', end: '23:59' } } });
+    await expect(coordinateReminder(reminder, new Date())).resolves.toMatchObject({ action: 'suppress', reason: 'Event reminder falls in quiet hours' });
+  });
+  it('delivers an event reminder through the existing bot and keeps snooze and dismiss callbacks', async () => {
+    await DzEvent.create({ provider: 'dzevent', externalId: '41', title: 'Bot event', startsAt: new Date(Date.now() + 7 * 86400000), providerUrl: 'https://www.dzevent.com/events/bot-event' });
+    await followEvent(user._id, '41');
+    const reminder = await Reminder.findOne({ user: user._id, policyKey: 'dzevent:41:120' });
+    env.ORBIT_TELEGRAM_BOT_TOKEN = 'test-token';
+    await TelegramConnection.create({ user: user._id, telegramUserId: '456', chatId: '456' });
+    await deliverReminder(reminder);
+    const keyboard = sendMessage.mock.lastCall[3].inline_keyboard;
+    expect(keyboard[0][0].url).toBe('https://www.dzevent.com/events/bot-event');
+    expect(keyboard[1].map((button) => button.callback_data)).toEqual([`r:later:${reminder._id}`, `r:done:${reminder._id}`]);
+    const settings = await getSettingsDocument(user._id);
+    const callback = (action) => ({ data: `r:${action}:${reminder._id}`, id: 'callback-id', message: { chat: { id: 456 }, message_id: 1 } });
+    await handleReminderCallback(callback('s30'), user._id, 'test-token', settings);
+    expect((await Reminder.findById(reminder._id)).status).toBe('snoozed');
+    await handleReminderCallback(callback('done'), user._id, 'test-token', settings);
+    expect((await Reminder.findById(reminder._id)).status).toBe('completed');
+  });
+});
+
+describe('central synchronization', () => {
+  it('bundles opted-in discovery without following or generating pre-event reminders', async () => {
+    env.DZEVENT_API_KEY = 'dze_live_environment1234';
+    await Setting.updateOne({ user: user._id }, { $set: { events: { discoveryEnabled: true } } });
+    await updateEventSettings({ discovery: { bundleWindowMinutes: 60, minimumSpacingMinutes: 1, maxNotificationsPerDay: 1 } });
+    expect((await getEffectiveEventSettings(user._id)).discoveryEnabled).toBe(true);
+    const first = new Date();
+    fetch.mockResolvedValueOnce(response([providerEvent(71), providerEvent(72)]));
+    await runDzEventSync({ now: first });
+    expect(await DzEvent.countDocuments()).toBe(2);
+    let notices = await Reminder.find({ user: user._id, 'metadata.integration': 'dzevent-discovery' });
+    expect(notices).toHaveLength(1);
+    expect(notices[0].metadata.eventIds).toHaveLength(2);
+    expect(await EventSubscription.countDocuments({ user: user._id })).toBe(0);
+    expect(await Reminder.countDocuments({ user: user._id, 'metadata.integration': 'dzevent' })).toBe(0);
+    fetch.mockResolvedValueOnce(response([providerEvent(71), providerEvent(72), providerEvent(73)]));
+    await runDzEventSync({ force: true, now: new Date(first.getTime() + 6 * 60000) });
+    notices = await Reminder.find({ user: user._id, 'metadata.integration': 'dzevent-discovery' });
+    expect(notices).toHaveLength(1);
+    expect(notices[0].metadata.eventIds).toHaveLength(3);
+    await Setting.updateOne({ user: user._id }, { $set: { 'events.discoveryEnabled': false } });
+    await processDueReminders({ now: new Date(first.getTime() + 61 * 60000), limit: 10 });
+    expect((await Reminder.findById(notices[0]._id)).status).toBe('suppressed');
+    expect(await EventDiscoveryDelivery.countDocuments({ user: user._id, kind: 'discovery' })).toBe(0);
+  });
+  it('keeps Admin visibility local and never subscribes users to featured events', async () => {
+    const item = await DzEvent.create({ provider: 'dzevent', externalId: '91', title: 'Featured event', startsAt: new Date(Date.now() + 7 * 86400000) });
+    await request(app).patch(`/api/admin/events/${item._id}/visibility`).set('Cookie', cookie('admin', superAdmin._id)).send({ status: 'featured' }).expect(200);
+    expect(await EventSubscription.countDocuments()).toBe(0);
+    await request(app).patch(`/api/admin/events/${item._id}/visibility`).set('Cookie', cookie('admin', superAdmin._id)).send({ status: 'hidden' }).expect(200);
+    const catalog = await request(app).get('/api/events').set('Cookie', cookie('user', user._id)).expect(200);
+    expect(catalog.body.data).toHaveLength(0);
+  });
+  it('updates pending reminders when the provider moves an event', async () => {
+    env.DZEVENT_API_KEY = 'dze_live_environment1234';
+    const start = new Date(Date.now() + 7 * 86400000);
+    fetch.mockResolvedValueOnce(response([providerEvent(61, start)]));
+    const first = new Date();
+    await runDzEventSync({ now: first });
+    await followEvent(user._id, '61');
+    const original = await Reminder.findOne({ user: user._id, policyKey: 'dzevent:61:1440' });
+    const moved = new Date(start.getTime() + 2 * 86400000);
+    fetch.mockResolvedValueOnce(response([providerEvent(61, moved)]));
+    await runDzEventSync({ force: true, now: new Date(first.getTime() + 6 * 60000) });
+    const updated = await Reminder.findById(original._id);
+    expect(new Date(updated.nextTriggerAt).getTime()).toBe(moved.getTime() - 1440 * 60000);
+    expect(await Reminder.countDocuments({ user: user._id, 'metadata.integration': 'dzevent-change' })).toBe(1);
+    expect(await EventSubscription.countDocuments({ user: user._id })).toBe(1);
+  });
+  it('does not call the provider per user and marks repeated absences unavailable, never cancelled', async () => {
+    env.DZEVENT_API_KEY = 'dze_live_environment1234';
+    const initial = new Date('2030-10-01T00:00:00.000Z');
+    fetch.mockResolvedValueOnce(response([providerEvent(51, new Date('2030-11-01T09:00:00.000Z'))]));
+    await runDzEventSync({ now: initial });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    for (let step = 1; step <= 3; step += 1) {
+      fetch.mockResolvedValueOnce(response([]));
+      await runDzEventSync({ force: true, now: new Date(initial.getTime() + step * 6 * 60000) });
+    }
+    const item = await DzEvent.findOne({ externalId: '51' });
+    expect(item.verificationStatus).toBe('unavailable');
+    expect(item.scheduleStatus).toBe('scheduled');
+  });
+  it('isolates a provider outage from the existing scheduler', async () => {
+    env.DZEVENT_API_KEY = 'dze_live_environment1234';
+    fetch.mockRejectedValueOnce(new Error('provider outage'));
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(runJobsOnce()).resolves.toBeUndefined();
+    expect(log).toHaveBeenCalledWith('DZ Event synchronization failed:', 'DZ Event is temporarily unreachable');
+    log.mockRestore();
+  });
+});

@@ -27,6 +27,8 @@ import { getAutomationSettings } from '../services/automationSettings.service.js
 import { executeTask } from '../services/taskExecution.service.js';
 import { clearPending, getPending, pendingExpired, setPending } from './sessionService.js';
 import { escapeHtml as h } from './formatters.js';
+import { DzEvent } from '../models/DzEvent.js';
+import { followEvent } from '../services/events/eventSubscriptionService.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -213,6 +215,17 @@ export async function handleTelegramUpdate(update) {
   const settings = await getSettingsDocument(user._id);
   const identity = { userId: from.id, chatId };
   if (callback) {
+    if (String(callback.data).startsWith('e:follow:')) {
+      try {
+        const id = String(callback.data).slice('e:follow:'.length);
+        const item = mongoose.isValidObjectId(id) ? await DzEvent.findById(id) : null;
+        if (!item) throw new Error('Event unavailable');
+        await followEvent(user._id, item.externalId);
+        await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: 'Event notifications enabled' });
+        await telegramRequest(token, 'editMessageReplyMarkup', { chat_id: chatId, message_id: callback.message.message_id, reply_markup: { inline_keyboard: [] } });
+      } catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); }
+      return;
+    }
     if (String(callback.data).startsWith('taskdigest:')) {
       try { return await handleTaskReminderDigestCallback(callback, user._id, token); }
       catch (error) { console.error('Task digest callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }

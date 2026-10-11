@@ -36,6 +36,14 @@ After deploying to an existing workspace, run `npm run backfill:reminders` once.
 
 MongoDB claims prevent overlapping workers from sending the same due cue during normal operation. Telegram does not provide an idempotency key for `sendMessage`, so a process crash in the narrow interval after Telegram accepts a message but before MongoDB records success can still produce a retry; check `ReminderEvent` delivery history when investigating such a case.
 
+## Events and DZ Event
+
+Super Admins configure the DZ Event key and notification policy at **Admin → Settings → Events & Notifications** (`/admin/settings/events`). The key is tested before it replaces the current one and is encrypted in `EventSettings` with `SETTINGS_ENCRYPTION_KEY`. An optional `DZEVENT_API_KEY` environment value is used only when no Admin key is saved. The API key is never sent to the browser. Admins can inspect cached events and control local visibility at `/admin/events`; featuring an event does not follow it for anyone.
+
+The existing minute scheduler checks the configured sync interval and fetches provider pages centrally into the shared `DzEvent` cache. Orbit keeps one `EventSubscription` per user and provider event. Users browse `/panel/events`, then explicitly follow an event to create their pre-event records in the existing `Reminder` collection. Event reminders use the existing reminder worker, Telegram bot, and callback actions. A changed provider start time reschedules pending reminders from stored minute offsets. The provider's list API only returns public upcoming events, so disappearance is treated as unavailable after repeated complete sync misses, never as proof of cancellation.
+
+Discovery is separate from following. It is off by default, can be enabled in **Settings → Events**, and queues a single Orbit reminder for a configurable bundle of matching events. `EventDiscoveryDelivery` records which events were already presented. Discovery never creates event subscriptions or normal pre-event reminders. The Admin policy controls catalog restrictions, timing, channels, change alerts, quiet hours, and per-user limits. Defaults affect future follows; existing subscriptions retain their selected timing while hard platform restrictions remain enforced.
+
 ## Prerequisites
 
 - Node.js 20.19+ or 22.12+
@@ -80,11 +88,12 @@ Open `http://localhost:5173/login`. The API runs at `http://localhost:5000`. The
 | `APP_BASE_URL`                                                          | Public HTTPS API origin used to construct the webhook URL                               |
 | `ORBIT_TELEGRAM_BOT_TOKEN`                                              | One platform-wide Telegram bot token; never exposed through user settings               |
 | `ORBIT_TELEGRAM_BOT_USERNAME`                                           | Bot username without `@`, used for connection deep links                                |
+| `DZEVENT_API_KEY`                                                       | Optional server-side fallback; an encrypted Admin key takes precedence                  |
 | `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_NAME`, `SUPER_ADMIN_PASSWORD`         | First Super Admin bootstrap credentials; password must be at least 12 characters        |
 | `ORBIT_OWNER_EMAIL`, `ORBIT_OWNER_NAME`, `ORBIT_OWNER_INITIAL_PASSWORD` | Existing workspace owner's account migration; password must be at least 12 characters   |
 | `ORBIT_OWNER_ACCESS_DAYS`                                               | One-time migrated owner's initial grant length, default 365 days                        |
 
-Do not rotate `AUTH_JWT_SECRET` without planning to invalidate sessions. Rotating `SETTINGS_ENCRYPTION_KEY` makes existing encrypted Activation Link URLs uncopyable, although their hashes still validate existing shared links. Never commit `.env`.
+Do not rotate `AUTH_JWT_SECRET` without planning to invalidate sessions. Rotating `SETTINGS_ENCRYPTION_KEY` makes existing encrypted Activation Link URLs uncopyable and Admin-configured DZ Event keys unreadable until replaced. Never commit `.env`.
 
 ## Commands
 

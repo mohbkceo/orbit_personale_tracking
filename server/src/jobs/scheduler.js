@@ -9,6 +9,7 @@ import { runAutomationForUser } from './automationWorker.js';
 import { getAutomationSettings } from '../services/automationSettings.service.js';
 import { runTaskReminderDigestForUser } from './taskReminderDigestWorker.js';
 import { backfillTaskReminderState, suppressLegacyTaskReminders } from '../services/migrateTaskReminders.service.js';
+import { runDzEventSync } from './dzEventSyncWorker.js';
 
 export async function runJobsOnce() {
   const now = new Date();
@@ -16,6 +17,8 @@ export async function runJobsOnce() {
   await backfillTaskReminderState();
   await suppressLegacyTaskReminders();
   await processDueReminders();
+  try { await runDzEventSync({ now }); }
+  catch (error) { console.error('DZ Event synchronization failed:', error.publicMessage || 'Provider unavailable'); }
   const users = await User.find({ status: 'ACTIVE' }).select('_id status');
   const connections = await TelegramConnection.find({ user: { $in: users.map((user) => user._id) } });
   const connected = new Set(connections.map((row) => String(row.user)));

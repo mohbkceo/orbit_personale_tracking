@@ -43,6 +43,7 @@ const settingSchema = new mongoose.Schema(
       },
       deliveryChannels: { telegram: { type: Boolean, default: true }, web: { type: Boolean, default: true } },
     },
+    events: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true },
 );

@@ -36,14 +36,14 @@ export async function findValidLink(key, { session, countOpen = false } = {}) {
   return link;
 }
 
-export async function createActivationLink(planId, adminId, { validityDays = 7, note = '', intendedUser, qrBatch, batchSequence, batchCode, session, planDocument } = {}) {
+export async function createActivationLink(planId, adminId, { validityDays = 7, noExpiry = false, note = '', intendedUser, qrBatch, batchSequence, batchCode, session, planDocument } = {}) {
   if (!mongoose.isValidObjectId(planId)) throw new AppError('Invalid plan', 422);
   if (intendedUser && (!mongoose.isValidObjectId(intendedUser) || !(await User.exists({ _id: intendedUser }).session(session || null)))) throw new AppError('User not found', 404);
   const plan = planDocument || await Plan.findOne({ _id: planId, status: 'ACTIVE' }).session(session || null);
   if (!plan) throw new AppError('The plan is inactive or unavailable.', 409, undefined, 'PLAN_INACTIVE');
   const token = makeToken();
   const encrypted = encryptSecret(token);
-  const [link] = await ActivationLink.create([{ tokenHash: hashToken(token), encryptedToken: encrypted.encrypted, tokenIv: encrypted.iv, tokenAuthTag: encrypted.authTag, plan: plan._id, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit }, createdByAdmin: adminId, expiresAt: new Date(Date.now() + validityDays * 86400000), note, intendedUser, qrBatch, batchSequence, batchCode }], session ? { session } : {});
+  const [link] = await ActivationLink.create([{ tokenHash: hashToken(token), encryptedToken: encrypted.encrypted, tokenIv: encrypted.iv, tokenAuthTag: encrypted.authTag, plan: plan._id, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit }, createdByAdmin: adminId, expiresAt: noExpiry ? null : new Date(Date.now() + validityDays * 86400000), note, intendedUser, qrBatch, batchSequence, batchCode }], session ? { session } : {});
   await audit('ACTIVATION_LINK_CREATED', { actorType: 'ADMIN', actorId: adminId, targetType: 'ActivationLink', targetId: link._id, metadata: { planId: String(plan._id), ...(qrBatch ? { qrBatch: String(qrBatch) } : {}) }, session });
   return { link: { _id: link._id, plan: link.plan, planSnapshot: link.planSnapshot, status: link.status, expiresAt: link.expiresAt, note: link.note, intendedUser: link.intendedUser, qrBatch: link.qrBatch, batchSequence: link.batchSequence, batchCode: link.batchCode, createdAt: link.createdAt }, url: `${env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')}/activate/${token}` };
 }

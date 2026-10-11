@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client.js';
 import { PageHeader, Spinner, StatusBadge } from '../../components/ui.jsx';
+import { openPrintPdf } from './printPdf.js';
 
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : '—');
 const statusTone = (status) =>
@@ -51,6 +52,7 @@ function saveDownload(blob, filename) {
 }
 
 async function downloadBatch(batch, kind) {
+  if (kind === 'pdf') return openPrintPdf(`/admin/qr-batches/${batch._id}/print.pdf`, `${batch.code}-print.pdf`);
   const isCsv = kind === 'csv';
   const blob = await api.get(
     `/admin/qr-batches/${batch._id}/${isCsv ? 'export.csv' : 'download'}`,
@@ -97,6 +99,7 @@ function BatchActions({ batch, onError, onRevoked }) {
       >
         Export CSV
       </button>
+      {batch.printSnapshot && <button disabled={Boolean(busy)} className="text-primary underline disabled:opacity-50" onClick={() => run('pdf')}>{busy === 'pdf' ? 'Preparing PDF…' : 'Download Print PDF'}</button>}
       <button
         disabled={Boolean(busy) || !batch.stats?.active}
         className="text-danger underline disabled:opacity-40"
@@ -114,11 +117,14 @@ export function AdminQrBatches() {
   const [query, setQuery] = useState('');
   const batches = useApiResource(`/admin/qr-batches?search=${encodeURIComponent(query)}`);
   const plans = useApiResource('/admin/plans');
+  const templates = useApiResource('/admin/qr-print-templates');
   const [form, setForm] = useState({
     name: '',
     planId: '',
-    quantity: 10,
+    quantity: 100,
     validityDays: 7,
+    noExpiry: false,
+    templateId: '',
     note: '',
     qrFormat: 'PNG',
     qrSize: 1024,
@@ -134,7 +140,7 @@ export function AdminQrBatches() {
     event.preventDefault();
     setCreating(true);
     try {
-      const response = await api.post('/admin/qr-batches', form);
+      const response = await api.post('/admin/qr-batches', { ...form, templateId: form.templateId || undefined, validityDays: form.noExpiry ? undefined : form.validityDays });
       setActionError('');
       navigate(`/admin/qr-batches/${response.data.batch._id}`);
     } catch (failure) {
@@ -150,8 +156,9 @@ export function AdminQrBatches() {
         eyebrow="Access"
         title="QR Batches"
         description="Generate independent, single-use activation QR codes and download them as a batch."
+        actions={<Link className="btn-secondary" to="/admin/qr-batches/print-templates">Print Templates</Link>}
       />
-      <ErrorText error={batches.error || plans.error || actionError} />
+      <ErrorText error={batches.error || plans.error || templates.error || actionError} />
       <form onSubmit={create} className="panel mb-6 grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
         <label>
           <span className="label">Batch name</span>
@@ -194,9 +201,18 @@ export function AdminQrBatches() {
           />
         </label>
         <label>
+          <span className="label">Print template</span>
+          <select className="field" value={form.templateId} onChange={(event) => update('templateId', event.target.value)}>
+            <option value="">No print template (legacy ZIP/CSV)</option>
+            {templates.data?.map((template) => <option key={template._id} value={template._id}>{template.name} · v{template.version}</option>)}
+          </select>
+          {form.templateId && <button type="button" className="mt-1 text-xs text-primary underline" onClick={() => openPrintPdf(`/admin/qr-print-templates/${form.templateId}/preview.pdf`, 'sample-print-card.pdf', undefined, { preview: true }).catch((failure) => setActionError(failure.message))}>Preview selected design</button>}
+        </label>
+        <label>
           <span className="label">Valid for days</span>
           <input
-            required
+            required={!form.noExpiry}
+            disabled={form.noExpiry}
             type="number"
             min="1"
             max="365"
@@ -205,6 +221,7 @@ export function AdminQrBatches() {
             onChange={(event) => update('validityDays', Number(event.target.value))}
           />
         </label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.noExpiry} onChange={(event) => update('noExpiry', event.target.checked)} />No redemption expiry (printed cards)</label>
         <label>
           <span className="label">QR format</span>
           <select
@@ -240,7 +257,7 @@ export function AdminQrBatches() {
           />
         </label>
         <button disabled={creating} className="btn-primary md:col-span-2 xl:col-span-4">
-          {creating ? 'Generating secure links…' : 'Generate batch'}
+          {creating ? 'Generating secure links…' : form.templateId ? 'Create print batch' : 'Generate batch'}
         </button>
       </form>
       <form
@@ -325,6 +342,16 @@ export function AdminQrBatchDetail() {
   const [query, setQuery] = useState('');
   const resource = useApiResource(`/admin/qr-batches/${id}?search=${encodeURIComponent(query)}`);
   const [actionError, setActionError] = useState('');
+  const templates = useApiResource('/admin/qr-print-templates');
+  const [templateId, setTemplateId] = useState('');
+  const [configuring, setConfiguring] = useState(false);
+  async function configurePrint() {
+    if (!templateId) return;
+    setConfiguring(true);
+    try { await api.post(`/admin/qr-batches/${id}/print-template`, { templateId }); await resource.refresh(); setActionError(''); }
+    catch (failure) { setActionError(failure.message); }
+    finally { setConfiguring(false); }
+  }
   if (resource.loading) return <Spinner label="Loading QR batch…" />;
   const detail = resource.data;
   if (!detail)
@@ -351,6 +378,13 @@ export function AdminQrBatchDetail() {
       <ErrorText error={resource.error || actionError} />
       <div className="mb-5">
         <BatchActions batch={actionBatch} onError={setActionError} onRevoked={resource.refresh} />
+      </div>
+      <div className="panel mb-6 p-5">
+        <h2 className="font-display text-lg font-semibold">Print cards</h2>
+        {batch.printSnapshot ? <p className="mt-1 text-sm text-muted">Locked design: {batch.printSnapshot.name} · version {batch.printSnapshot.version} · 97 × 55 mm · {batch.noExpiry ? 'No redemption expiry' : `${batch.validityDays} day redemption window`}. All {batch.quantity} codes must remain active for a full reprint.</p> :
+          <div className="mt-3 flex flex-wrap items-end gap-2"><label className="text-sm">Choose a template<select className="field mt-1" value={templateId} onChange={(event) => setTemplateId(event.target.value)}><option value="">Select template</option>{templates.data?.map((template) => <option key={template._id} value={template._id}>{template.name} · v{template.version}</option>)}</select></label>
+            <button disabled={!templateId || configuring} className="btn-primary" onClick={configurePrint}>Lock print design</button>
+            {templateId && <button className="btn-secondary" onClick={() => openPrintPdf(`/admin/qr-print-templates/${templateId}/preview.pdf`, 'sample-print-card.pdf', undefined, { preview: true }).catch((failure) => setActionError(failure.message))}>Preview PDF</button>}</div>}
       </div>
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[

@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { ActivationLink } from '../models/ActivationLink.js';
 import { Plan } from '../models/Plan.js';
 import { QrBatch } from '../models/QrBatch.js';
+import { QrPrintTemplate } from '../models/QrPrintTemplate.js';
 import { AppError } from '../utils/AppError.js';
 import { escapeRegex } from '../utils/query.js';
 import { activationUrlFromLink, createActivationLink } from './activationService.js';
@@ -74,6 +75,11 @@ export async function createQrBatch(input, adminId) {
       const plan = await Plan.findOne({ _id: input.planId, status: 'ACTIVE' }).session(session);
       if (!plan)
         throw new AppError('The plan is inactive or unavailable.', 409, undefined, 'PLAN_INACTIVE');
+      let template = null;
+      if (input.templateId) {
+        template = await QrPrintTemplate.findById(input.templateId).session(session);
+        if (!template) throw new AppError('Print template not found', 404);
+      }
       const code = await uniqueBatchCode(input.name, session);
       const [batch] = await QrBatch.create(
         [
@@ -83,6 +89,8 @@ export async function createQrBatch(input, adminId) {
             plan: plan._id,
             quantity: input.quantity,
             validityDays: input.validityDays,
+            noExpiry: input.noExpiry || false,
+            ...(template ? { printTemplate: template._id, printSnapshot: { name: template.name, widthMm: template.widthMm, heightMm: template.heightMm, background: template.background, elements: template.elements, assetRefs: template.assetRefs, version: template.version } } : {}),
             note: input.note,
             qrFormat: input.qrFormat,
             qrSize: input.qrSize,
@@ -96,6 +104,7 @@ export async function createQrBatch(input, adminId) {
       for (let sequence = 1; sequence <= input.quantity; sequence += 1) {
         await createActivationLink(plan._id, adminId, {
           validityDays: input.validityDays,
+          noExpiry: input.noExpiry || false,
           note: input.note,
           qrBatch: batch._id,
           batchSequence: sequence,

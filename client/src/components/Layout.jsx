@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import {
-  Bell, BookOpenText, CalendarCheck2, CircleDollarSign, Command, ContactRound,
+  Bell, BookOpenText, CalendarCheck2, CalendarDays, CircleDollarSign, Command, ContactRound,
   CreditCard, FolderKanban, Gauge, Goal, Landmark, LayoutList, LogOut, Menu,
   Moon, Plus, ReceiptText, Search, Settings, Sparkles, Sun, WalletCards, X,
 } from 'lucide-react';
@@ -18,6 +18,7 @@ const primaryLinks = [
   ['Dashboard', '/panel', Gauge], ['Tasks', '/panel/tasks', CalendarCheck2],
   ['Goals', '/panel/planning/goals', Goal], ['Expenses', '/panel/money/expenses', ReceiptText],
   ['Debts', '/panel/money/debts', Landmark], ['Reminders', '/panel/reminders', Bell],
+  ['Events', '/panel/events', CalendarDays],
 ];
 const secondaryLinks = [
   ['Accounts', '/panel/money/accounts', WalletCards], ['Transactions', '/panel/money/transactions', LayoutList],

@@ -6,6 +6,9 @@ import { isEntityResolved, linkedEntity } from './reminderService.js';
 import { afterQuietHours, inQuietHours, nextActiveTime } from './reminderTime.js';
 import { getAutomationSettings, automationTimezone } from '../automationSettings.service.js';
 import { DailyFocus } from '../../models/DailyFocus.js';
+import { getEventSettings, getEffectiveEventSettings } from '../events/eventSettingsService.js';
+import { EventSubscription } from '../../models/EventSubscription.js';
+import { DzEvent } from '../../models/DzEvent.js';
 
 export async function coordinateReminder(reminder, now = new Date()) {
   const user = await User.findById(reminder.user);
@@ -13,6 +16,29 @@ export async function coordinateReminder(reminder, now = new Date()) {
   if (!(await checkAccess(user)).eligible)
     return { action: 'defer', at: new Date(now.getTime() + 86400000), reason: 'Access inactive' };
   const settings = await getSettingsDocument(reminder.user);
+  const isDzEvent = reminder.metadata?.integration === 'dzevent';
+  if (reminder.metadata?.integration?.startsWith('dzevent-')) {
+    const { value: eventSettings } = await getEventSettings();
+    if (!eventSettings.integration.enabled || (reminder.metadata.integration === 'dzevent-discovery' && !eventSettings.discovery.enabled) || (reminder.metadata.integration === 'dzevent-change' && !eventSettings.changes.enabled)) return { action: 'suppress', reason: 'Event notifications disabled' };
+    if (reminder.metadata.integration === 'dzevent-discovery' && !(await getEffectiveEventSettings(reminder.user)).discoveryEnabled) return { action: 'suppress', reason: 'Discovery disabled by user' };
+    if (reminder.metadata.integration === 'dzevent-change') {
+      const subscription = await EventSubscription.findOne({ user: reminder.user, event: reminder.metadata.eventIds?.[0], status: 'active' });
+      if (!subscription) return { action: 'suppress', reason: 'Event unfollowed' };
+      const effective = await getEffectiveEventSettings(reminder.user, subscription).catch(() => null);
+      if (!effective || !(reminder.metadata.changeFields || []).some((field) => effective.changeAlerts[field])) return { action: 'suppress', reason: 'Change alert disabled' };
+    }
+  }
+  if (isDzEvent) {
+    const { value: eventSettings } = await getEventSettings();
+    const subscription = await EventSubscription.findOne({ _id: reminder.metadata.eventSubscriptionId, user: reminder.user, status: 'active' });
+    if (!subscription || !eventSettings.integration.enabled || !eventSettings.reminders.enabled) return { action: 'suppress', reason: 'Event reminders disabled or unfollowed' };
+    const cachedEvent = await DzEvent.findById(subscription.event);
+    if (!cachedEvent || cachedEvent.verificationStatus === 'unavailable') return { action: 'suppress', reason: 'Event information unavailable' };
+    if (cachedEvent.scheduleStatus === 'postponed') return { action: 'suppress', reason: 'Event postponed' };
+    if (!reminder.deliveryChannels.some((channel) => eventSettings.delivery[channel])) return { action: 'suppress', reason: 'Event delivery channels disabled' };
+    if (reminder.metadata.scheduleStatus === 'cancelled') return { action: 'suppress', reason: 'Event cancelled by provider' };
+    if (reminder.metadata.eventStartsAt && new Date(reminder.metadata.eventStartsAt) <= now) return { action: 'suppress', reason: 'Event already started' };
+  }
   const automation = reminder.metadata?.automation ? await getAutomationSettings() : null;
   if (automation && (!automation.general.enabled || !automation.general.workerEnabled)) return { action: 'defer', at: new Date(now.getTime() + 3600000), reason: 'Automation disabled' };
   const timing = automation ? { timezone: automationTimezone(settings, automation), reminders: { activeHours: { start: automation.general.activeStart, end: automation.general.activeEnd }, quietHours: { enabled: automation.general.quietEnabled, start: automation.general.quietStart, end: automation.general.quietEnd } } } : settings;
@@ -57,10 +83,12 @@ export async function coordinateReminder(reminder, now = new Date()) {
       reminder.followUpCount >= (settings.reminders?.maxAutomaticFollowUps ?? 2))
   )
     return { action: 'suppress', reason: 'Follow-up limit' };
-  if (inQuietHours(now, timing))
+  if (isDzEvent && ['skip', 'move_earlier'].includes(reminder.metadata.quietHoursPolicy) && inQuietHours(now, timing)) return { action: 'suppress', reason: 'Event reminder falls in quiet hours' };
+  if (inQuietHours(now, timing) && !(isDzEvent && reminder.metadata.quietHoursPolicy === 'deliver_exact'))
     return { action: 'defer', at: afterQuietHours(now, timing), reason: 'Quiet hours' };
   const activeAt = nextActiveTime(now, timing);
-  if (activeAt > now)
+  if (isDzEvent && ['skip', 'move_earlier'].includes(reminder.metadata.quietHoursPolicy) && activeAt > now) return { action: 'suppress', reason: 'Event reminder falls outside active hours' };
+  if (activeAt > now && !(isDzEvent && reminder.metadata.quietHoursPolicy === 'deliver_exact'))
     return { action: 'defer', at: activeAt, reason: 'Outside active hours' };
   const spacing = (automation ? automation.reminderBehavior.duplicateSuppressionMinutes : settings.reminders?.minimumReminderSpacingMinutes ?? 120) * 60000;
   if (reminder.entityId && reminder.priority !== 'urgent') {

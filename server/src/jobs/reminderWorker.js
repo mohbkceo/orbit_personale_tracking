@@ -11,6 +11,7 @@ import {
   deliverReminder,
   deliverReminderBundle,
 } from '../services/reminders/reminderDeliveryService.js';
+import { EventDiscoveryDelivery } from '../models/EventDiscoveryDelivery.js';
 
 const workerId = crypto.randomUUID();
 dayjs.extend(utc);
@@ -192,6 +193,7 @@ export async function processDueReminders({ now = new Date(), limit = 50 } = {})
         }
         if (decision.action === 'suppress') {
           reminder.status = 'suppressed';
+          if (reminder.metadata?.integration === 'dzevent-discovery') await EventDiscoveryDelivery.deleteMany({ user: reminder.user, notificationKey: reminder.policyKey, deliveredAt: null });
           audit = ['suppressed', 'system', { reason: decision.reason }];
         }
         if (decision.action === 'defer') {
@@ -254,6 +256,7 @@ export async function processDueReminders({ now = new Date(), limit = 50 } = {})
               dayOfWeek: local.day(),
             },
           ];
+          if (reminder.metadata?.integration?.startsWith('dzevent-')) await EventDiscoveryDelivery.updateMany({ user: reminder.user, notificationKey: reminder.policyKey, deliveredAt: null }, { $set: { deliveredAt: now, channel: result.sent ? 'telegram' : 'web' } });
         }
       }
       reminder.claimUntil = null;

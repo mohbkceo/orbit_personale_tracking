@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Bot,
   Bell,
+  CalendarDays,
   Database,
   Globe2,
   Palette,
@@ -15,12 +16,14 @@ import { useAuth } from '../context/useAuth.js';
 import { EmptyState, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 import { AppearancePicker } from '../appearance/AppearancePicker.jsx';
 import { normalizeAppearance } from '../appearance/themes.js';
+import EventPreferences from './EventPreferences.jsx';
 
 const tabs = [
   ['general', 'General', Globe2],
   ['appearance', 'Appearance', Palette],
   ['telegram', 'Telegram', Bot],
   ['reminders', 'Reminders', Bell],
+  ['events', 'Events', CalendarDays],
   ['account', 'Account & access', UserRound],
   ['data', 'Data', Database],
   ['security', 'Security', ShieldCheck],
@@ -190,6 +193,7 @@ export default function Settings() {
           ))}
         </nav>
         <div className="space-y-4">
+          {tab === 'events' && <EventPreferences />}
           {tab === 'general' && (
             <Section
               title="General preferences"

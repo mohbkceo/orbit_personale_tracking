@@ -146,6 +146,7 @@ export async function listReminders(userId, query = {}) {
 
 export async function updateReminder(userId, id, input) {
   const reminder = await getReminder(userId, id);
+  if (reminder.metadata?.integration?.startsWith('dzevent')) throw new AppError('Manage event reminders from Events', 403);
   const entityType = input.entityType || reminder.entityType;
   const entityId = input.entityId === undefined ? reminder.entityId : input.entityId;
   if (

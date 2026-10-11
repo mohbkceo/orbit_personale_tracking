@@ -10,6 +10,7 @@ import { AnalyticsConsent } from './analytics/AnalyticsConsent.jsx';
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
 const Reminders = lazy(() => import('./pages/Reminders.jsx'));
+const Events = lazy(() => import('./pages/Events.jsx'));
 const Transactions = lazy(() => import('./pages/Transactions.jsx'));
 const Accounts = lazy(() => import('./pages/Accounts.jsx'));
 const Debts = lazy(() => import('./pages/Debts.jsx'));
@@ -45,7 +46,11 @@ const AdminQrBatches = lazy(() =>
 const AdminQrBatchDetail = lazy(() =>
   import('./pages/admin/QrBatches.jsx').then((module) => ({ default: module.AdminQrBatchDetail })),
 );
+const AdminQrPrintTemplates = lazy(() => import('./pages/admin/QrPrintTemplates.jsx').then((module) => ({ default: module.AdminQrPrintTemplates })));
+const AdminQrPrintTemplateEditor = lazy(() => import('./pages/admin/QrPrintTemplates.jsx').then((module) => ({ default: module.AdminQrPrintTemplateEditor })));
 const AdminAutomationSettings = lazy(() => import('./pages/admin/AutomationSettings.jsx'));
+const AdminEventSettings = lazy(() => import('./pages/admin/EventSettings.jsx'));
+const AdminEvents = lazy(() => import('./pages/admin/Events.jsx'));
 const AdminAnalytics = lazy(() => import('./pages/admin/analytics/Analytics.jsx'));
 
 function ProtectedRoute({ children }) {
@@ -104,6 +109,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="tasks" element={<Tasks />} />
             <Route path="reminders" element={<Reminders />} />
+            <Route path="events" element={<Events />} />
             <Route path="money/accounts" element={<Accounts />} />
             <Route path="money/transactions" element={<Transactions />} />
             <Route path="money/expenses" element={<Transactions mode="expense" />} />
@@ -140,8 +146,11 @@ export default function App() {
             <Route path="features" element={<AdminFeatures />} />
             <Route path="activation-links" element={<AdminActivationLinks />} />
             <Route path="qr-batches" element={<AdminQrBatches />} />
+            <Route path="qr-batches/print-templates" element={<AdminQrPrintTemplates />} />
+            <Route path="qr-batches/print-templates/:id" element={<AdminQrPrintTemplateEditor />} />
             <Route path="qr-batches/:id" element={<AdminQrBatchDetail />} />
             <Route path="activity" element={<AdminActivity />} />
+            <Route path="events" element={<AdminEvents />} />
             <Route path="analytics/*" element={<AdminAnalytics />} />
             <Route
               path="admins"
@@ -161,6 +170,7 @@ export default function App() {
             >
               <Route index element={<Navigate to="automation" replace />} />
               <Route path="automation" element={<AdminAutomationSettings />} />
+              <Route path="events" element={<AdminEventSettings />} />
               <Route path="sales-contact" element={<AdminSalesContactSettings />} />
             </Route>
           </Route>

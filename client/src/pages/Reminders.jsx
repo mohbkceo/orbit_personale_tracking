@@ -396,8 +396,9 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted">
-          {item.source === 'automatic' ? 'Automatic' : 'Custom'} · {item.entityType}
+          {item.metadata?.integration?.startsWith('dzevent') ? 'DZ Event · Event notification' : `${item.source === 'automatic' ? 'Automatic' : 'Custom'} · ${item.entityType}`}
         </span>
+        {item.metadata?.integration === 'dzevent' && <span className="text-muted">Event starts {dayjs(item.metadata.eventStartsAt).tz(settings.timezone).format('ddd, D MMM · HH:mm')} · {item.metadata.venueName || 'Venue to be confirmed'} · {item.metadata.offsetMinutes} min before</span>}
         {item.metadata?.explanation && (
           <details className="text-muted">
             <summary className="cursor-pointer">Why this reminder?</summary>
@@ -409,6 +410,7 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
         )}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
+        {item.metadata?.eventUrl && <a className="btn-secondary h-8" href={item.metadata.eventUrl} target="_blank" rel="noopener noreferrer">View event</a>}
         {!resolved && !financial && (
           <button className="btn-secondary h-8" onClick={() => onAction(item, 'complete')}>
             {item.entityType === 'goal' ? 'Reviewed' : 'Done'}
@@ -441,9 +443,7 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
             </>
           )
         )}
-        <button className="btn-secondary h-8" onClick={() => onEdit(item)}>
-          Edit
-        </button>
+        {!item.metadata?.integration?.startsWith('dzevent') && <button className="btn-secondary h-8" onClick={() => onEdit(item)}>Edit</button>}
         {!resolved && (
           <button className="btn-secondary h-8" onClick={() => onAction(item, 'cancel')}>
             Cancel
