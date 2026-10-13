@@ -13,6 +13,7 @@ export const adminNavigation = [
     { label: 'Print Templates', to: '/admin/qr-batches/print-templates', icon: Layers3 },
     { label: 'Events', to: '/admin/events', icon: CalendarDays },
     { label: 'Activity', to: '/admin/activity', icon: Activity },
+    { label: 'Payments', to: '/admin/payments', icon: Layers3 },
     { label: 'Analytics', to: '/admin/analytics', icon: ChartNoAxesCombined },
   ] },
   { label: 'System', items: [

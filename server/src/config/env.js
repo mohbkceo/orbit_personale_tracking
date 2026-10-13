@@ -14,6 +14,17 @@ const schema = z.object({
   ORBIT_TELEGRAM_BOT_USERNAME: z.string().default(''),
   DZEVENT_API_KEY: z.string().default(''),
   ANALYTICS_REQUIRE_CONSENT: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
+  META_PIXEL_ID: z.string().regex(/^\d*$/).default('1432887715641697'),
+  META_CAPI_ACCESS_TOKEN: z.string().default(''),
+  META_CAPI_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  META_CAPI_TEST_EVENT_CODE: z.string().default(''),
+  META_GRAPH_API_VERSION: z.string().regex(/^v\d+\.0$/).default('v26.0'),
+  SLICKPAY_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  SLICKPAY_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  SLICKPAY_API_KEY: z.string().default(''),
+  SLICKPAY_RETURN_URL: z.string().default(''),
+  SLICKPAY_WEBHOOK_URL: z.string().default(''),
+  SLICKPAY_CONTRACT_VERIFIED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 });
 
 export const env = schema.parse(process.env);

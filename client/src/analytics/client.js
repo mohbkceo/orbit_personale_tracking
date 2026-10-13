@@ -2,7 +2,7 @@ import { EVENTS, WEB_EVENT_NAMES } from './events.js';
 import { analyticsPath } from '../../../shared/analyticsPath.js';
 
 const initialPath = window.location.pathname;
-const consentEnabled = () => { try { return import.meta.env.VITE_ANALYTICS_REQUIRE_CONSENT !== 'true' || localStorage.getItem('orbit-analytics-consent') === 'granted'; } catch { return false; } };
+const consentEnabled = () => { try { const choice = localStorage.getItem('orbit-analytics-consent'); return choice !== 'denied' && (import.meta.env.VITE_ANALYTICS_REQUIRE_CONSENT !== 'true' || choice === 'granted'); } catch { return false; } };
 const enabled = () => !window.location.pathname.startsWith('/admin') && consentEnabled();
 const queue = [];
 let active = null;
@@ -30,7 +30,7 @@ async function bootstrap(first = false) {
     }
     return requestWithTimeout(`${endpoint}/session`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(context(first)) });
   })()
-    .then((response) => response.ok ? response.json() : null)
+    .then((response) => response?.ok ? response.json() : null)
     .then((payload) => { session = payload?.data || null; lastActivity = Date.now(); return session; })
     .catch(() => null)
     .finally(() => { active = null; });

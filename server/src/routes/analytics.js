@@ -9,6 +9,7 @@ import { ensureSession } from '../analytics/sessionService.js';
 import { ingestWebEvents, createLead } from '../analytics/analyticsService.js';
 import { WEB_EVENTS } from '../analytics/events.js';
 import { clearAnalyticsIdentity } from '../analytics/identityService.js';
+import { advertisingConsent, setAdvertisingConsent } from '../analytics/advertisingConsent.js';
 import { analyticsAllowed, grantAnalyticsConsent, clearAnalyticsConsent } from '../analytics/consentService.js';
 
 const limit = rateLimit({ windowMs: 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 60, standardHeaders: 'draft-8', legacyHeaders: false });
@@ -29,6 +30,13 @@ const knownUser = async (req) => { try { return await authenticateCookie(req, 'u
 
 export const analyticsRoutes = Router();
 analyticsRoutes.use(limit, smallBody);
+analyticsRoutes.get('/advertising-consent', asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  return success(res, { granted: Boolean(await advertisingConsent(req, await knownUser(req))) });
+}));
+analyticsRoutes.post('/advertising-consent', validate(z.strictObject({ granted: z.boolean() })), asyncHandler(async (req, res) => {
+  return success(res, { granted: await setAdvertisingConsent(req, res, req.body.granted, await knownUser(req)) });
+}));
 analyticsRoutes.use((req, res, next) => /(?:bot|crawler|spider|headless|slurp|bingpreview)/i.test(req.get('User-Agent') || '') ? res.status(204).end() : next());
 analyticsRoutes.post('/consent', validate(z.strictObject({ granted: z.literal(true) })), (_req, res) => { grantAnalyticsConsent(res); return success(res, { granted: true }); });
 analyticsRoutes.post('/opt-out', (_req, res) => { clearAnalyticsIdentity(res); clearAnalyticsConsent(res); return success(res, { optedOut: true }); });

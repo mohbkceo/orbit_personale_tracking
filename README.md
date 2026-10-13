@@ -153,6 +153,10 @@ After a backup, run `npm run backfill:appearance` to persist defaults and legacy
 
 ## Production
 
+For direct registration, verified SlickPay subscription purchases and optional Meta Pixel/CAPI,
+follow the [commerce deployment and migration guide](docs/COMMERCE-DEPLOYMENT.md).
+Payments and server advertising delivery are disabled by default pending merchant validation.
+
 Build the client and run the server:
 
 ```bash

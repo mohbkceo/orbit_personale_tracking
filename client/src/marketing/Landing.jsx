@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   ChartNoAxesColumnIncreasing,
@@ -11,7 +11,6 @@ import {
 import { ProductPreview } from './ProductPreview.jsx';
 
 export default function Landing() {
-  const { openGetStarted } = useOutletContext();
   const [demoOpen, setDemoOpen] = useState(false);
   useEffect(() => {
     if (!demoOpen) return undefined;
@@ -37,21 +36,21 @@ export default function Landing() {
             — so you can focus on what matters most.
           </p>
           <div className="marketing-hero-actions">
-            <button
-              type="button"
+            <Link
+              to="/pricing"
               className="marketing-button marketing-button-primary marketing-hero-primary"
-              onClick={openGetStarted}
             >
               Get Started <ArrowRight size={19} />
-            </button>
+            </Link>
             <button
               type="button"
               className="marketing-button marketing-button-outline"
               onClick={() => setDemoOpen(true)}
             >
-              <CirclePlay size={23} /> Watch Demo
+              <CirclePlay size={23} /> Explore Orbit
             </button>
           </div>
+          <p className="mt-4 text-sm"><Link className="underline" to="/register">Create an account</Link> · <Link className="underline" to="/login">Already a member? Sign in</Link></p>
           <div className="marketing-values">
             <div>
               <span>
@@ -107,11 +106,9 @@ export default function Landing() {
               <X size={20} />
             </button>
             <span className="marketing-eyebrow">Orbit demo</span>
-            <h2 id="demo-title">A closer look is coming soon</h2>
-            <p>
-              We are preparing a short walkthrough of the Orbit workspace. In the meantime, explore
-              the features page to see what it can do.
-            </p>
+            <h2 id="demo-title">One place for your everyday plans</h2>
+            <ol className="mt-4 space-y-4"><li><strong>1. Plan your day.</strong> Capture tasks, set priorities and see what needs your attention.</li><li><strong>2. Understand your money.</strong> Keep expenses, accounts, debts and savings goals together.</li><li><strong>3. Stay on track.</strong> Connect Telegram for reminders and quick updates.</li></ol>
+            <Link to="/pricing" className="marketing-button marketing-button-primary mt-6">Choose your Orbit plan <ArrowRight size={18} /></Link>
           </section>
         </div>
       )}

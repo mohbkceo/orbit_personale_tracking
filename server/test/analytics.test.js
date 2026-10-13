@@ -78,6 +78,13 @@ describe('first-party analytics', () => {
     expect(next.body.data.attribution.firstTouch.utmSource).toBe('meta');
     expect(next.body.data.attribution.lastTouch.utmSource).toBe('google');
   });
+  it('preserves acquisition and the existing session across a hosted payment return', async () => {
+    const agent = request.agent(app);
+    const first = await agent.post('/api/analytics/session').send({ ...entry(), entry: true }).expect(200);
+    const returned = await agent.post('/api/analytics/session').send({ landingUrl: 'http://localhost:5173/checkout/return?order=abc&success=true', referrer: 'https://devapi.slick-pay.com/', entry: true }).expect(200);
+    expect(returned.body.data.sessionId).toBe(first.body.data.sessionId);
+    expect(returned.body.data.attribution.lastNonDirectTouch.utmSource).toBe('meta');
+  });
 
   it('validates batches, deduplicates event IDs, and links anonymous history after login', async () => {
     const agent = request.agent(app);

@@ -11,6 +11,8 @@ import { hashPassword, normalizeEmail } from './authService.js';
 import { encryptSecret, decryptSecret } from '../utils/crypto.js';
 import { AppError } from '../utils/AppError.js';
 import { env } from '../config/env.js';
+import { captureConversionContext, claimRegistrationContext, recordDurableConversion } from '../analytics/analyticsService.js';
+import { EVENTS } from '../analytics/events.js';
 
 export const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 export const makeToken = () => crypto.randomBytes(32).toString('base64url');
@@ -60,7 +62,11 @@ export async function activationUrl(linkId) {
   return activationUrlFromLink(link);
 }
 
-export async function registerWithLink(key, input) {
+export async function registerWithLink(key, input, req, res) {
+  // Validate before claiming analytics identity; the same user ID survives retries.
+  await findValidLink(key);
+  const userId = new mongoose.Types.ObjectId();
+  const context = req ? await captureConversionContext(req, res, { _id: userId, email: normalizeEmail(input.email) }, undefined, { newAccount: true }) : null;
   const session = await mongoose.startSession();
   let user;
   try {
@@ -70,11 +76,13 @@ export async function registerWithLink(key, input) {
       if (link.reservedByUser) throw new AppError('This Activation Link is already reserved.', 409, undefined, 'ACTIVATION_USED');
       const email = normalizeEmail(input.email);
       if (await User.exists({ email }).session(session)) throw new AppError('An Orbit account already exists. Sign in to activate this access.', 409, undefined, 'ACCOUNT_EXISTS');
-      [user] = await User.create([{ fullName: input.fullName, email, gender: input.gender, passwordHash: await hashPassword(input.password) }], { session });
+      [user] = await User.create([{ _id: userId, fullName: input.fullName, email, gender: input.gender, passwordHash: await hashPassword(input.password) }], { session });
       const claimed = await ActivationLink.updateOne({ _id: link._id, status: 'ACTIVE', reservedByUser: null }, { $set: { reservedByUser: user._id } }, { session });
       if (claimed.modifiedCount !== 1) throw new AppError('This Activation Link is already reserved.', 409, undefined, 'ACTIVATION_USED');
       await Setting.create([{ user: user._id, ...(input.preferences || {}) }], { session });
       await audit('USER_CREATED', { actorType: 'USER', actorId: user._id, targetType: 'User', targetId: user._id, session });
+      const claimedContext = await claimRegistrationContext(context, user._id, session);
+      await recordDurableConversion(EVENTS.REGISTRATION_COMPLETED, `registration:${user._id}`, user._id, claimedContext, {}, session);
     });
   } finally { await session.endSession(); }
   return user;

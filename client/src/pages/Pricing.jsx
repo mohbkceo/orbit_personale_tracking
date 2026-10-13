@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { Spinner } from '../components/ui.jsx';
 
@@ -357,6 +357,7 @@ function PricingCard({ plan, onGetStarted }) {
 
 export default function Pricing() {
   const { openGetStarted } = useOutletContext();
+  const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -495,7 +496,7 @@ export default function Pricing() {
               ].join(' ')}
             >
               {plans.map((plan, index) => (
-                <PricingCard key={plan.id || plan._id || index} plan={plan} onGetStarted={openGetStarted} />
+                <PricingCard key={plan.id || plan._id || index} plan={plan} onGetStarted={() => plan.price?.currency === 'DZD' && plan.price.amount > 0 ? navigate(`/checkout?plan=${encodeURIComponent(plan.id)}`) : openGetStarted()} />
               ))}
             </div>
           ) : (

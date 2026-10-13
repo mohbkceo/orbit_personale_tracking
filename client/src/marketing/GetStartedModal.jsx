@@ -3,6 +3,7 @@ import { ArrowUpRight, CreditCard, MessageCircle, X } from 'lucide-react';
 import { api } from '../api/client.js';
 import { whatsappUrl } from './whatsapp.js';
 import { analytics } from '../analytics/client.js';
+import { Link } from 'react-router-dom';
 
 export function GetStartedModal({ open, onClose }) {
   const [sales, setSales] = useState(null);
@@ -72,6 +73,8 @@ export function GetStartedModal({ open, onClose }) {
         <h2 id="get-started-title">Get started with Orbit</h2>
         <p>Choose how you would like to arrange access to your workspace.</p>
         <div className="marketing-choice-list">
+          <Link to="/pricing" onClick={onClose} className="marketing-choice"><span className="marketing-choice-icon"><CreditCard size={21} /></span><span><strong>Choose your plan</strong><small>See features, prices and available payment options</small></span><ArrowUpRight size={19} /></Link>
+          <Link to="/register" onClick={onClose} className="marketing-choice"><span><strong>Create an account</strong><small>Start with your name, email and password</small></span><ArrowUpRight size={19} /></Link>
           <button
             type="button"
             disabled={loading || !available}
@@ -92,15 +95,6 @@ export function GetStartedModal({ open, onClose }) {
               </small>
             </span>
             <ArrowUpRight size={19} />
-          </button>
-          <button type="button" disabled className="marketing-choice">
-            <span className="marketing-choice-icon">
-              <CreditCard size={21} />
-            </span>
-            <span>
-              <strong>Pay online</strong>
-              <small>Coming soon</small>
-            </span>
           </button>
         </div>
         {sales?.contactVisible && (sales.salesEmail || sales.supportEmail || sales.phoneNumber) && <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">

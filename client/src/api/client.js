@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { meta } from '../analytics/meta.js';
 
 export const api = axios.create({ baseURL: '/api', timeout: 15000, withCredentials: true, headers: { 'Content-Type': 'application/json' } });
+api.interceptors.request.use((config) => { Object.assign(config.headers, meta.headers()); return config; });
 api.interceptors.response.use((response) => response.data, (error) => {
   const failure = new Error(error.response?.data?.message || error.message || 'Something went wrong');
   failure.code = error.response?.data?.code;

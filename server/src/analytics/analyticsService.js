@@ -10,6 +10,9 @@ import { EVENTS } from './events.js';
 import { readAnalyticsIds } from './identityService.js';
 import { analyticsAllowed } from './consentService.js';
 import { analyticsPath } from '../../../shared/analyticsPath.js';
+import { captureAdvertising, metaDelivery } from './metaProvider.js';
+import { User } from '../models/User.js';
+import { AdvertisingConsent } from '../models/AdvertisingConsent.js';
 
 const snapshot = (visitor) => ({ firstTouch: visitor.firstTouch, lastTouch: visitor.lastTouch, lastNonDirectTouch: visitor.lastNonDirectTouch });
 
@@ -30,9 +33,42 @@ export async function ingestWebEvents(req, res, events, userId = null) {
 export async function recordServerEvent(name, eventId, userId, req, res, properties = {}, attributionOverride = null) {
   const { visitor, session } = await ensureSession(req, res, {}, userId);
   const row = { eventId, name, visitorId: visitor.visitorId, sessionId: session.sessionId, user: userId, source: 'server', path: session.landingPath, properties, occurredAt: new Date(), attribution: attributionOverride || snapshot(visitor) };
+  const user = await User.findById(userId);
+  row.metaDelivery = metaDelivery(row, user ? await captureAdvertising(req, user) : null);
   const result = await AnalyticsEvent.updateOne({ eventId }, { $setOnInsert: row }, { upsert: true });
   if (result.upsertedCount) { void dispatchAnalyticsEvents([row]); void dispatchConversion(row); }
   return result.upsertedCount === 1;
+}
+
+// Capture once before a transaction. Payment retries use this frozen attribution, not
+// a provider referrer or a newly created analytics session.
+export async function captureConversionContext(req, res, user, phone, { newAccount = false } = {}) {
+  if (!analyticsAllowed(req)) return null;
+  const { visitor, session } = await ensureSession(req, res, {}, newAccount ? null : user._id);
+  // Never attach a second account to another account's browser history.
+  if (newAccount && visitor.user) return {};
+  return { visitorId: visitor.visitorId, sessionId: session.sessionId, attribution: snapshot(visitor), advertising: await captureAdvertising(req, user, phone, { claim: !newAccount }) };
+}
+export async function claimRegistrationContext(context, userId, dbSession) {
+  if (!context?.visitorId) return context;
+  const claimed = await AnalyticsVisitor.updateOne({ visitorId: context.visitorId, user: null }, { $set: { user: userId } }, { session: dbSession });
+  // A concurrent registration may have claimed this browser first. Keep its history private.
+  if (claimed.modifiedCount !== 1) return {};
+  for (const model of [AnalyticsSession, AnalyticsEvent, AnalyticsLead]) {
+    await model.updateMany({ visitorId: context.visitorId, user: null }, { $set: { user: userId } }, { session: dbSession });
+  }
+  if (context.advertising) {
+    const consent = await AdvertisingConsent.updateOne({ _id: context.advertising.consent, user: null, granted: true }, { $set: { user: userId } }, { session: dbSession });
+    if (consent.modifiedCount !== 1) return { ...context, advertising: null };
+  }
+  return context;
+}
+export async function recordDurableConversion(name, eventId, userId, context, properties, dbSession) {
+  if (!context) return;
+  const row = { name, eventId, user: userId, visitorId: context.visitorId, sessionId: context.sessionId,
+    attribution: context.attribution, source: 'server', path: name === EVENTS.REGISTRATION_COMPLETED ? '/register' : '/checkout', properties, occurredAt: new Date() };
+  row.metaDelivery = metaDelivery(row, context.advertising);
+  await AnalyticsEvent.updateOne({ eventId }, { $setOnInsert: row }, { upsert: true, session: dbSession });
 }
 
 export async function createLead(req, res, userId = null) {

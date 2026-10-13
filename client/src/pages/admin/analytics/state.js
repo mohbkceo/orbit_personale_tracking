@@ -12,7 +12,7 @@ export const models = {
   lastNonDirectTouch: 'Last non-direct',
 };
 export const channels = ['direct', 'organic_search', 'paid_search', 'organic_social', 'paid_social', 'referral', 'email', 'creator', 'affiliate', 'display', 'other', 'unknown'];
-export const conversionNames = [EVENTS.REGISTRATION_COMPLETED, EVENTS.ACCESS_ACTIVATED];
+export const conversionNames = [EVENTS.REGISTRATION_COMPLETED, EVENTS.ACCESS_ACTIVATED, EVENTS.PAYMENT_CONFIRMED];
 export const filterKeys = [
   'channel',
   'source',

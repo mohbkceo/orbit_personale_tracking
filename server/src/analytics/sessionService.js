@@ -25,6 +25,12 @@ export async function ensureSession(req, res, context = {}, userId = null) {
   const ids = readAnalyticsIds(req);
   let session = ids.visitorId === visitor.visitorId && ids.sessionId ? await AnalyticsSession.findOne({ sessionId: ids.sessionId, visitorId: visitor.visitorId }) : null;
   const origins = [...env.CLIENT_URL.split(',').map((value) => value.trim()), env.APP_BASE_URL];
+  // The hosted payment return is a continuation, never a new acquisition source.
+  // Preserve the same active session and don't attribute a sale to the payment gateway.
+  try {
+    const landing = new URL(context.landingUrl);
+    if (landing.pathname === '/checkout/return' && origins.some((origin) => new URL(origin).origin === landing.origin)) context = { ...context, entry: false, referrer: '' };
+  } catch { /* An absent/invalid landing URL follows existing attribution validation. */ }
   const entryTouch = context.entry && context.landingUrl && !internalReferrer(context.referrer, origins) ? parseAttribution(context, origins, now) : null;
   const newAcquisition = entryTouch && entryTouch.channel !== 'direct' && acquisitionKey(entryTouch) !== acquisitionKey(session?.attribution);
   if (session && !newAcquisition && (!session.endedAt && now - session.lastActivityAt < INACTIVITY_MS) && (!session.user || !userId || String(session.user) === String(userId))) {

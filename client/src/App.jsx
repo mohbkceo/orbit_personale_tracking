@@ -5,7 +5,8 @@ import { AuthProvider, AdminAuthProvider } from './context/AuthContext.jsx';
 import { useAuth, useAdminAuth } from './context/useAuth.js';
 import { MarketingLayout } from './marketing/MarketingLayout.jsx';
 import { analytics } from './analytics/client.js';
-import { AnalyticsConsent } from './analytics/AnalyticsConsent.jsx';
+import { AdvertisingConsent } from './analytics/AdvertisingConsent.jsx';
+import { meta } from './analytics/meta.js';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
@@ -19,6 +20,10 @@ const Personal = lazy(() => import('./pages/Personal.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const Checkout = lazy(() => import('./pages/Checkout.jsx'));
+const Onboarding = lazy(() => import('./pages/Onboarding.jsx'));
+const AdminPayments = lazy(() => import('./pages/AdminPayments.jsx'));
 const Activation = lazy(() => import('./pages/Activation.jsx'));
 const Access = lazy(() => import('./pages/Access.jsx'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin.jsx'));
@@ -78,6 +83,8 @@ function AdminProtectedRoute({ children, superOnly = false }) {
 
 export default function App() {
   const location = useLocation();
+  useEffect(() => { void meta.sync(); }, []);
+  useEffect(() => { meta.page(); }, [location.pathname]);
   useEffect(() => { if (!location.pathname.startsWith('/admin')) { void analytics.start(); analytics.page(); } }, [location.pathname]);
   return (
     <Suspense fallback={<Spinner label="Opening Orbit…" />}>
@@ -96,6 +103,10 @@ export default function App() {
           }
         >
           <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="checkout" element={<Checkout />} />
+          <Route path="checkout/return" element={<Checkout />} />
+          <Route path="onboarding" element={<Onboarding />} />
           <Route path="activate/:key" element={<Activation />} />
           <Route path="access" element={<Access />} />
           <Route
@@ -143,6 +154,7 @@ export default function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="users/:id" element={<AdminUserDetail />} />
             <Route path="plans" element={<AdminPlans />} />
+            <Route path="payments" element={<AdminPayments />} />
             <Route path="features" element={<AdminFeatures />} />
             <Route path="activation-links" element={<AdminActivationLinks />} />
             <Route path="qr-batches" element={<AdminQrBatches />} />
@@ -183,7 +195,7 @@ export default function App() {
         <Route path="personal/*" element={<LegacyPanelRedirect />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <AnalyticsConsent />
+      <AdvertisingConsent />
     </Suspense>
   );
 }

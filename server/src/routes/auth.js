@@ -12,9 +12,17 @@ import { User } from '../models/User.js';
 import { ensureSession } from '../analytics/sessionService.js';
 import { clearAnalyticsIdentity } from '../analytics/identityService.js';
 import { analyticsAllowed } from '../analytics/consentService.js';
+import { registerPublic } from '../services/registrationService.js';
 
 const loginInput = z.object({ email: z.email(), password: z.string().min(1) });
 export const authRoutes = Router();
+authRoutes.post('/register', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(z.strictObject({
+  fullName: z.string().trim().min(2).max(120), email: z.string().trim().toLowerCase().max(254).pipe(z.email()), password: z.string().min(12).max(200),
+})), asyncHandler(async (req, res) => {
+  const user = await registerPublic(req.body, req, res);
+  issueCookie(res, user, 'user');
+  return success(res, { user: safeIdentity(user), access: await checkAccess(user), conversion: { name: 'CompleteRegistration', eventId: `registration:${user._id}` } }, 201);
+}));
 authRoutes.post('/login', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(loginInput), asyncHandler(async (req, res) => {
   const user = await login(req.body.email, req.body.password, 'user');
   issueCookie(res, user, 'user');

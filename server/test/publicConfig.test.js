@@ -43,7 +43,7 @@ beforeEach(async () => {
 describe('public sales configuration', () => {
   it('exposes only safe fields and handles missing configuration', async () => {
     const empty = await request(app).get('/api/public/config').expect(200);
-    expect(empty.body.data).toEqual({ sales: { whatsappNumber: '', whatsappMessage: '', salesEmail: '', supportEmail: '', phoneNumber: '', whatsappEnabled: true, contactVisible: false } });
+    expect(empty.body.data).toEqual({ payments: { enabled: false, currency: 'DZD' }, sales: { whatsappNumber: '', whatsappMessage: '', salesEmail: '', supportEmail: '', phoneNumber: '', whatsappEnabled: true, contactVisible: false } });
     await SiteConfig.collection.insertOne({
       key: 'site',
       sales: { whatsappNumber: '213555123456', whatsappMessage: 'Hello', token: 'private' },
@@ -51,6 +51,7 @@ describe('public sales configuration', () => {
     });
     const response = await request(app).get('/api/public/config').expect(200);
     expect(response.body.data).toEqual({
+      payments: { enabled: false, currency: 'DZD' },
       sales: { whatsappNumber: '213555123456', whatsappMessage: 'Hello', salesEmail: '', supportEmail: '', phoneNumber: '', whatsappEnabled: true, contactVisible: false },
     });
     expect(JSON.stringify(response.body)).not.toContain('private');

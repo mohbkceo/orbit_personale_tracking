@@ -1,11 +1,14 @@
 import { Link, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../api/client.js';
 import { useAuth } from '../context/useAuth.js';
 import { Spinner } from '../components/ui.jsx';
 
 export default function Access() {
   const { loading, user, access, logout } = useAuth();
   const [key, setKey] = useState('');
+  const [orders, setOrders] = useState([]);
+  useEffect(() => { if (user) api.get('/payments/orders').then((result) => setOrders(result.data)).catch(() => {}); }, [user]);
   if (loading) return <Spinner label="Checking access…" />;
   if (!user) return <Navigate to="/login" replace />;
   if (access?.eligible) return <Navigate to="/panel" replace />;
@@ -28,7 +31,7 @@ export default function Access() {
         <p className="mt-3 text-sm text-muted">
           {suspended
             ? 'Contact an Orbit administrator for help. Suspension does not pause your access period.'
-            : 'Your data is safe. Redeem a new Activation Link to continue using your workspace.'}
+            : 'Choose a subscription plan or redeem an Activation Link to open your workspace.'}
         </p>
         {subscription && (
           <div className="mt-6 rounded-xl border border-border bg-surface-alt p-4 text-sm">
@@ -56,6 +59,8 @@ export default function Access() {
             <button className="btn-primary">Redeem</button>
           </form>
         )}
+        {!suspended && <Link to="/pricing" className="btn-primary mt-5">Choose a plan</Link>}
+        {orders.filter((order) => ['PENDING', 'PROCESSING', 'PAID'].includes(order.state)).slice(0, 3).map((order) => <Link key={order.id} to={`/checkout?order=${order.id}`} className="mt-3 block text-sm text-primary underline">{order.state === 'PAID' ? 'View payment' : 'Resume order'}: {order.plan.name} · {order.state.toLowerCase()}</Link>)}
         <div className="mt-7 flex items-center justify-between text-sm">
           <span>{user.fullName}</span>
           <button onClick={logout} className="text-primary underline">

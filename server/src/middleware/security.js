@@ -9,6 +9,14 @@ export const securityMiddleware = [
   rateLimit({ windowMs: 60_000, limit: env.NODE_ENV === 'test' ? 10_000 : 240 }),
 ];
 
+export function advertisingFramePolicy(req, res, next) {
+  if (req.path === '/meta-pixel.html') {
+    res.set('Content-Security-Policy', "default-src 'none'; script-src 'self' https://connect.facebook.net; connect-src https://www.facebook.com https://connect.facebook.net; img-src https://www.facebook.com; frame-ancestors 'self'; base-uri 'none'; form-action 'none'");
+    res.set('Referrer-Policy', 'no-referrer');
+  }
+  next();
+}
+
 export function verifyBrowserOrigin(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path.startsWith('/api/telegram/webhook/')) return next();
   const origin = req.get('Origin');

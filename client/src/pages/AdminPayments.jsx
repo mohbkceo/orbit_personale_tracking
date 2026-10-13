@@ -1,0 +1,11 @@
+import { useCallback, useEffect, useState } from 'react';
+import { api } from '../api/client.js';
+import { PageHeader, Spinner } from '../components/ui.jsx';
+
+export default function AdminPayments() {
+  const [data, setData] = useState(null); const [page, setPage] = useState(1); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => { try { setData((await api.get(`/admin/payments?page=${page}`)).data); } catch (failure) { setError(failure.message); } }, [page]);
+  useEffect(() => { void load(); }, [load]);
+  async function reconcile(id) { setBusy(true); setError(''); try { await api.post(`/admin/payments/${id}/verify`, {}); await load(); } catch (failure) { setError(failure.message); } finally { setBusy(false); } }
+  return <><PageHeader eyebrow="Operations" title="Online payments" description="Confirmed payments, pending verification and orders needing support." />{error && <p role="alert" className="text-danger">{error}</p>}{!data ? <Spinner /> : <><div className="panel overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr>{['Order / reference', 'Plan', 'Amount', 'Status', 'Action'].map((label) => <th className="p-4" key={label}>{label}</th>)}</tr></thead><tbody>{data.rows.map((order) => <tr key={order.id} className="border-t border-border"><td className="p-4"><span className="block break-all">{order.id}</span><span className="text-xs text-muted">{order.reference || (order.invoiceId ? `Invoice ${order.invoiceId}` : 'No invoice')} · {order.environment}</span></td><td className="p-4">{order.plan.name}</td><td className="p-4">{order.amount} {order.currency}</td><td className="p-4">{order.state}<span className="block text-xs text-muted">{order.reviewCode}</span></td><td className="p-4">{order.state === 'PROCESSING' && order.invoiceId && <button disabled={busy} className="btn-secondary" onClick={() => reconcile(order.id)}>Verify with SlickPay</button>}</td></tr>)}</tbody></table></div><div className="mt-4 flex items-center gap-4"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="btn-secondary">Previous</button><span>Page {page} · {data.total} orders</span><button disabled={page * 30 >= data.total} onClick={() => setPage(page + 1)} className="btn-secondary">Next</button></div></>}</>;
+}

@@ -14,6 +14,6 @@ export function loginDestination(next, eligible) {
   const path = next.split(/[?#]/, 1)[0];
   if (oldPanelPaths.includes(path) || oldPanelPrefixes.some((prefix) => path.startsWith(prefix)))
     return `/panel${next}`;
-  if (path === '/panel' || path.startsWith('/panel/') || path.startsWith('/activate/')) return next;
+  if (path === '/panel' || path.startsWith('/panel/') || path.startsWith('/activate/') || path === '/checkout' || path === '/checkout/return' || path === '/onboarding') return next;
   return fallback;
 }

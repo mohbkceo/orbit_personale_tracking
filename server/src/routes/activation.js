@@ -24,13 +24,9 @@ activationRoutes.get('/:key', validationLimit, asyncHandler(async (req, res) => 
   return success(res, { valid: true, requiresExistingAccount: Boolean(link.intendedUser), plan: { name: link.plan.name, durationValue: link.plan.durationValue, durationUnit: link.plan.durationUnit }, expiresAt: link.expiresAt });
 }));
 activationRoutes.post('/:key/register', validationLimit, validate(registrationInput), asyncHandler(async (req, res) => {
-  const user = await registerWithLink(req.params.key, req.body);
+  const user = await registerWithLink(req.params.key, req.body, req, res);
   issueCookie(res, user, 'user');
-  if (analyticsAllowed(req)) {
-    try { await recordServerEvent(EVENTS.REGISTRATION_COMPLETED, `registration:${user._id}`, user._id, req, res); }
-    catch (error) { if (process.env.NODE_ENV !== 'test') console.error('Registration analytics failed', error); }
-  }
-  return success(res, { user: safeIdentity(user), activationPending: true }, 201);
+  return success(res, { user: safeIdentity(user), activationPending: true, conversion: { name: 'CompleteRegistration', eventId: `registration:${user._id}` } }, 201);
 }));
 activationRoutes.post('/:key/activate', userAuth, asyncHandler(async (req, res) => {
   const access = await activateLink(req.params.key, req.user);

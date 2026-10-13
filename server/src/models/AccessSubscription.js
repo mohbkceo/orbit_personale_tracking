@@ -7,9 +7,10 @@ const accessSubscriptionSchema = new mongoose.Schema(
     activationLink: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ActivationLink',
-      required: true,
-      unique: true,
+      required() { return this.source !== 'SLICKPAY'; },
     },
+    source: { type: String, enum: ['ACTIVATION_LINK', 'SLICKPAY'], default: 'ACTIVATION_LINK' },
+    order: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentOrder', required() { return this.source === 'SLICKPAY'; } },
     startedAt: { type: Date, required: true },
     activatedAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true, index: true },
@@ -18,11 +19,13 @@ const accessSubscriptionSchema = new mongoose.Schema(
       name: String,
       durationValue: Number,
       durationUnit: String,
-      features: [{ key: String, type: String, enabled: Boolean, limit: Number, value: String }],
+      features: [new mongoose.Schema({ key: String, type: { type: String }, enabled: Boolean, limit: Number, value: String }, { _id: false })],
     },
   },
   { timestamps: true },
 );
 accessSubscriptionSchema.index({ user: 1, expiresAt: -1 });
+accessSubscriptionSchema.index({ activationLink: 1 }, { name: 'activationLink_partial_unique', unique: true, partialFilterExpression: { activationLink: { $type: 'objectId' } } });
+accessSubscriptionSchema.index({ order: 1 }, { unique: true, partialFilterExpression: { order: { $type: 'objectId' } } });
 
 export const AccessSubscription = mongoose.model('AccessSubscription', accessSubscriptionSchema);
