@@ -8,13 +8,14 @@ import { success } from '../utils/api.js';
 import { AppError } from '../utils/AppError.js';
 import { accountBalances } from '../services/financeService.js';
 import { recordActivity } from '../services/activityService.js';
+import { withFeatureLimit } from '../services/featureLimitService.js';
 
 export const accountRoutes = Router();
 
 accountRoutes.get('/', asyncHandler(async (req, res) => success(res, await accountBalances(req.user._id, req.query.includeArchived === 'true' ? {} : { archived: false }))));
 
 accountRoutes.post('/', validate(accountInput), asyncHandler(async (req, res) => {
-  const account = await Account.create({ ...req.body, user: req.user._id });
+  const account = await withFeatureLimit(req.user._id, 'accounts-limit', Account, { archived: false }, () => Account.create({ ...req.body, user: req.user._id }));
   await recordActivity(req.user._id, { action: 'created', entityType: 'Account', entityId: account._id, description: `Created ${account.name}`, newData: account.toObject() });
   return success(res, { ...account.toObject(), currentBalance: account.openingBalance }, 201);
 }));

@@ -63,16 +63,22 @@ export async function validateEntitlements(entries) {
 }
 
 export async function publicPlans() {
-  const plans = await Plan.find({ status: 'ACTIVE', 'public.visible': true })
-    .select('name slug description durationValue durationUnit price appearance public features')
+  const [plans, globallyFree] = await Promise.all([Plan.find({ status: 'ACTIVE', 'public.visible': true })
+    .select('name slug kind description durationValue durationUnit price appearance public features')
     .sort({ 'public.order': 1, _id: 1 })
-    .populate({ path: 'features.feature', match: { status: 'ACTIVE', publicVisible: true }, select: 'key name description category icon type order' })
-    .lean();
-  return plans.map((plan) => ({
-    id: String(plan._id), name: plan.name, slug: plan.slug,
+    .populate({ path: 'features.feature', match: { status: 'ACTIVE', publicVisible: true }, select: 'key name description category icon type order accessMode' })
+    .lean(), Feature.find({ accessMode: 'FREE', status: 'ACTIVE', publicVisible: true }).select('key name description category icon type order accessMode').lean()]);
+  const free = plans.find((plan) => plan.kind === 'FREE' || plan.slug === 'free');
+  return plans.map((plan) => {
+    const entries = new Map();
+    for (const feature of globallyFree) entries.set(feature.key, { enabled: true, feature });
+    for (const entry of free?.features || []) if (entry.enabled && entry.feature && entry.feature.accessMode !== 'DISABLED') entries.set(entry.feature.key, entry);
+    for (const entry of plan.features || []) if (entry.enabled && entry.feature && entry.feature.accessMode !== 'DISABLED') entries.set(entry.feature.key, entry);
+    return ({
+    id: String(plan._id), name: plan.name, slug: plan.slug, kind: plan.kind || 'PAID',
     durationValue: plan.durationValue, durationUnit: plan.durationUnit,
     price: plan.price, appearance: plan.appearance, public: plan.public,
-    features: (plan.features || []).filter((entry) => entry.enabled && entry.feature)
+    features: [...entries.values()]
       .sort((a, b) => a.feature.order - b.feature.order || a.feature.name.localeCompare(b.feature.name))
       .map((entry) => ({
         key: entry.feature.key, name: entry.feature.name, description: entry.feature.description,
@@ -80,5 +86,6 @@ export async function publicPlans() {
         ...(entry.feature.type === 'LIMIT' ? { limit: entry.limit } : {}),
         ...(entry.feature.type === 'TEXT' ? { value: entry.value } : {}),
       })),
-  }));
+  });
+  });
 }

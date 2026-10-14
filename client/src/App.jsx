@@ -7,6 +7,7 @@ import { MarketingLayout } from './marketing/MarketingLayout.jsx';
 import { analytics } from './analytics/client.js';
 import { AdvertisingConsent } from './analytics/AdvertisingConsent.jsx';
 import { meta } from './analytics/meta.js';
+import { FeatureGate } from './components/FeatureGate.jsx';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
@@ -57,11 +58,14 @@ const AdminAutomationSettings = lazy(() => import('./pages/admin/AutomationSetti
 const AdminEventSettings = lazy(() => import('./pages/admin/EventSettings.jsx'));
 const AdminEvents = lazy(() => import('./pages/admin/Events.jsx'));
 const AdminAnalytics = lazy(() => import('./pages/admin/analytics/Analytics.jsx'));
+const AdminAccessControl = lazy(() => import('./pages/AdminAccessControl.jsx'));
+const gate = (featureKey, child) => <FeatureGate featureKey={featureKey}>{child}</FeatureGate>;
 
 function ProtectedRoute({ children }) {
-  const { loading, user, access } = useAuth();
+  const { loading, user, access, error, refresh } = useAuth();
   const location = useLocation();
   if (loading) return <Spinner label="Checking access…" />;
+  if (error && !user) return <main className="grid min-h-screen place-items-center bg-canvas"><div className="panel p-6"><p>Orbit could not verify your session. {error}</p><button className="btn-primary mt-4" onClick={refresh}>Retry</button></div></main>;
   if (!user)
     return (
       <Navigate
@@ -117,18 +121,18 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Dashboard />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="reminders" element={<Reminders />} />
-            <Route path="events" element={<Events />} />
-            <Route path="money/accounts" element={<Accounts />} />
-            <Route path="money/transactions" element={<Transactions />} />
-            <Route path="money/expenses" element={<Transactions mode="expense" />} />
-            <Route path="money/income" element={<Transactions mode="income" />} />
-            <Route path="money/debts" element={<Debts />} />
-            <Route path="planning/bills" element={<Planning kind="bills" />} />
-            <Route path="planning/subscriptions" element={<Planning kind="subscriptions" />} />
-            <Route path="planning/goals" element={<Planning kind="goals" />} />
+            <Route index element={gate('dashboard', <Dashboard />)} />
+            <Route path="tasks" element={gate('tasks', <Tasks />)} />
+            <Route path="reminders" element={gate('reminders', <Reminders />)} />
+            <Route path="events" element={gate('events', <Events />)} />
+            <Route path="money/accounts" element={gate('accounts', <Accounts />)} />
+            <Route path="money/transactions" element={gate('transactions', <Transactions />)} />
+            <Route path="money/expenses" element={gate('expenses', <Transactions mode="expense" />)} />
+            <Route path="money/income" element={gate('income', <Transactions mode="income" />)} />
+            <Route path="money/debts" element={gate('debts', <Debts />)} />
+            <Route path="planning/bills" element={gate('bills', <Planning kind="bills" />)} />
+            <Route path="planning/subscriptions" element={gate('subscriptions', <Planning kind="subscriptions" />)} />
+            <Route path="planning/goals" element={gate('goals', <Planning kind="goals" />)} />
             <Route path="personal/:kind" element={<PersonalRoute />} />
             <Route path="settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
@@ -156,6 +160,7 @@ export default function App() {
             <Route path="plans" element={<AdminPlans />} />
             <Route path="payments" element={<AdminPayments />} />
             <Route path="features" element={<AdminFeatures />} />
+            <Route path="access-control" element={<AdminProtectedRoute superOnly><AdminAccessControl /></AdminProtectedRoute>} />
             <Route path="activation-links" element={<AdminActivationLinks />} />
             <Route path="qr-batches" element={<AdminQrBatches />} />
             <Route path="qr-batches/print-templates" element={<AdminQrPrintTemplates />} />
@@ -208,7 +213,7 @@ function LegacyPanelRedirect() {
 function PersonalRoute() {
   const { kind } = useParams();
   return ['projects', 'habits', 'wishlist', 'contacts', 'notes'].includes(kind) ? (
-    <Personal kind={kind} />
+    gate(kind, <Personal kind={kind} />)
   ) : (
     <NotFound />
   );

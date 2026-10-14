@@ -23,6 +23,7 @@ import { verifyInvoiceResponse, paymentsAvailable } from '../src/services/slickp
 import { migrateCommerce } from '../src/scripts/migrateCommerce.js';
 import { decryptSecret } from '../src/utils/crypto.js';
 import { createActivationLink } from '../src/services/activationService.js';
+import { ensureAccessCatalog } from '../src/services/accessCatalogSeed.js';
 
 let mongo; let plan; let admin; let agent; let user;
 const originalEnv = { ...env };
@@ -65,16 +66,17 @@ beforeEach(async () => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('registration and entitlement isolation', () => {
-  it('registers with only essentials, keeps attribution/session, and grants no paid access', async () => {
+  it('registers with only essentials, keeps attribution/session, and grants permanent Free access', async () => {
+    await ensureAccessCatalog();
     const result = await register();
-    expect(result.body.data.access.eligible).toBe(false);
+    expect(result.body.data.access).toMatchObject({ eligible: true, planType: 'FREE', subscription: null });
     expect(result.body.data.conversion.eventId).toBe(`registration:${user._id}`);
     expect(await Setting.countDocuments({ user: user._id })).toBe(1);
     expect(await AccessSubscription.countDocuments()).toBe(0);
     expect(await AnalyticsSession.countDocuments()).toBe(1);
     const event = await AnalyticsEvent.findOne({ name: 'registration_completed' });
     expect(event.attribution.firstTouch.utmCampaign).toBe('launch');
-    await agent.get('/api/tasks').expect(403);
+    await agent.get('/api/tasks').expect(200);
     await agent.get('/api/payments/orders').expect(200);
     expect(fetch).not.toHaveBeenCalled();
   });

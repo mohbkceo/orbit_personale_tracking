@@ -12,6 +12,7 @@ import { escapeRegex } from '../utils/query.js';
 import { resolveTelegramAccount } from './accountResolver.js';
 import { escapeHtml as h, money, rows, taskDue, localDate, localDay } from './formatters.js';
 import { setPending } from './sessionService.js';
+import { assertFeature } from '../services/entitlementService.js';
 
 const open = { archived: false, status: { $in: ['todo', 'in_progress'] } };
 const openDebt = { archived: false, status: { $ne: 'paid' }, remainingAmount: { $gt: 0 } };
@@ -144,6 +145,7 @@ export async function lastAction(userId, settings, undo = false) {
   ]);
   const item = [{ kind: 'task', row: task }, { kind: 'debt', row: debt }, { kind: 'tx', row: tx }].filter((entry) => entry.row).sort((a, b) => b.row.createdAt - a.row.createdAt)[0];
   if (!item) return { text: 'No safe Telegram creation to undo.' };
+  await assertFeature(userId, item.kind === 'tx' ? item.row.type === 'income' ? 'income' : 'expenses' : item.kind === 'debt' ? 'debts' : 'tasks');
   if (undo) {
     if (item.kind === 'task') await archiveTask(userId, item.row._id);
     if (item.kind === 'tx') await archiveTransaction(userId, item.row._id, 'telegram');

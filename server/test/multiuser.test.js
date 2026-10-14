@@ -52,7 +52,8 @@ beforeEach(async () => {
   await Admin.create({ fullName: 'Root Admin', email: 'root@example.com', passwordHash: await hashPassword('very-long-root-password'), role: 'SUPER_ADMIN' });
   superAgent = request.agent(app);
   await superAgent.post('/api/admin/auth/login').send({ email: 'root@example.com', password: 'very-long-root-password' }).expect(200);
-  plan = (await superAgent.post('/api/admin/plans').send({ name: '3 Months', durationValue: 3, durationUnit: 'MONTH' }).expect(201)).body.data;
+  const contacts = (await superAgent.post('/api/admin/features').send({ key: 'contacts', name: 'Contacts', category: 'Personal', icon: 'mdi:account-multiple-outline', type: 'BOOLEAN' }).expect(201)).body.data;
+  plan = (await superAgent.post('/api/admin/plans').send({ name: '3 Months', durationValue: 3, durationUnit: 'MONTH', features: [{ feature: contacts._id, enabled: true }] }).expect(201)).body.data;
 });
 
 describe('multi-user access', () => {
@@ -86,7 +87,7 @@ describe('multi-user access', () => {
     const agent = request.agent(app);
     await request(app).get(`/api/activation/${link.key}`).expect(200);
     await agent.post(`/api/activation/${link.key}/register`).send({ fullName: 'Alice', email: 'alice@example.com', password: 'very-long-user-password', gender: 'FEMALE' }).expect(201);
-    await agent.get('/api/tasks').expect(403);
+    await agent.get('/api/tasks').expect(200);
     await agent.post('/api/telegram-link').expect(201);
     const responses = await Promise.all([agent.post(`/api/activation/${link.key}/activate`), agent.post(`/api/activation/${link.key}/activate`)]);
     expect(responses.map((row) => row.status).sort()).toEqual([200, 409]);
@@ -155,8 +156,9 @@ describe('multi-user access', () => {
     expect(latest.expiresAt.getTime()).toBe(expected.getTime());
     expect((await agent.get('/api/tasks').expect(200)).body.data).toHaveLength(1);
     await AccessSubscription.updateMany({ user: user._id }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
-    await agent.get('/api/tasks').expect(403);
-    expect((await agent.get('/api/auth/me').expect(200)).body.data.access.reason).toBe('EXPIRED');
+    await agent.get('/api/tasks').expect(200);
+    expect((await agent.get('/api/auth/me').expect(200)).body.data.access).toMatchObject({ eligible: true, planType: 'FREE', subscription: null });
+    await agent.get('/api/contacts').expect(403);
     await superAgent.patch(`/api/admin/users/${user._id}/status`).send({ status: 'SUSPENDED' }).expect(200);
     expect((await agent.get('/api/auth/me').expect(200)).body.data.access.reason).toBe('SUSPENDED');
     expect((await agent.post('/api/auth/login').send({ email: 'renew@example.com', password: 'very-long-user-password' }).expect(200)).body.data.access.reason).toBe('SUSPENDED');
@@ -191,7 +193,7 @@ describe('multi-user access', () => {
     await staff.get('/api/tasks').expect(401);
   });
 
-  it('links Telegram once, scopes commands, blocks expired access, and resumes after renewal', async () => {
+  it('links Telegram once, scopes commands, keeps Free commands after expiry, and resumes paid access after renewal', async () => {
     const a = await onboard('telegram@example.com');
     const b = await onboard('other@example.com');
     const fetchMock = vi.fn(async (_url, requestOptions) => ({ ok: true, json: async () => ({ ok: true, result: { message_id: 1, body: JSON.parse(requestOptions.body) } }) }));
@@ -216,11 +218,11 @@ describe('multi-user access', () => {
     expect(await Transaction.countDocuments({ user: b.user._id })).toBe(0);
     await AccessSubscription.updateMany({ user: a.user._id }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
     await handleTelegramUpdate({ message: { from: { id: 12345 }, chat: { id: 12345 }, text: 'spent 500 coffee' } });
-    expect(await Transaction.countDocuments({ user: a.user._id })).toBe(1);
+    expect(await Transaction.countDocuments({ user: a.user._id })).toBe(2);
     const renewal = await makeLink();
     await a.agent.post(`/api/activation/${renewal.key}/activate`).expect(200);
     await handleTelegramUpdate({ message: { from: { id: 12345 }, chat: { id: 12345 }, text: 'spent 500 coffee' } });
-    expect(await Transaction.countDocuments({ user: a.user._id })).toBe(2);
+    expect(await Transaction.countDocuments({ user: a.user._id })).toBe(3);
   });
 
   it('migrates existing records once without deleting them', async () => {

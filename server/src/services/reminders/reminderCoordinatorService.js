@@ -2,6 +2,7 @@ import { Reminder } from '../../models/Reminder.js';
 import { User } from '../../models/User.js';
 import { getSettingsDocument } from '../settingsService.js';
 import { checkAccess } from '../accessService.js';
+import { canAccess } from '../entitlementService.js';
 import { isEntityResolved, linkedEntity } from './reminderService.js';
 import { afterQuietHours, inQuietHours, nextActiveTime } from './reminderTime.js';
 import { getAutomationSettings, automationTimezone } from '../automationSettings.service.js';
@@ -15,6 +16,8 @@ export async function coordinateReminder(reminder, now = new Date()) {
   if (!user) return { action: 'suppress', reason: 'Owner no longer exists' };
   if (!(await checkAccess(user)).eligible)
     return { action: 'defer', at: new Date(now.getTime() + 86400000), reason: 'Access inactive' };
+  const feature = reminder.metadata?.integration?.startsWith('dzevent') ? 'events' : reminder.metadata?.automation?.startsWith('focus-') ? 'daily-focus' : 'reminders';
+  if (!(await canAccess(user, feature)).allowed) return { action: 'defer', at: new Date(now.getTime() + 86400000), reason: 'Feature unavailable' };
   const settings = await getSettingsDocument(reminder.user);
   const isDzEvent = reminder.metadata?.integration === 'dzevent';
   if (reminder.metadata?.integration?.startsWith('dzevent-')) {

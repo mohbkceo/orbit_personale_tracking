@@ -8,6 +8,7 @@ import { archiveUnpaidDebt } from '../services/debtService.js';
 import { executeIntent, paymentReply } from './commandHandlers.js';
 import { setPending, getPending, clearPending } from './sessionService.js';
 import { escapeHtml as h, money } from './formatters.js';
+import { assertFeature } from '../services/entitlementService.js';
 
 const prompts = {
   task: ['CREATE_TASK', 'Send the task.\n\nExample: Call supplier tomorrow 14:00 high'],
@@ -30,6 +31,7 @@ export async function handleCallbackAction(callback, userId, settings) {
     const kind = id;
     const row = kind === 'task' ? await Task.findOne({ _id: extra, user: userId, createdVia: 'telegram', archived: false }) : kind === 'tx' ? await Transaction.findOne({ _id: extra, user: userId, createdVia: 'telegram', deletedAt: null, type: { $in: ['income', 'expense'] } }) : await Debt.findOne({ _id: extra, user: userId, createdVia: 'telegram', archived: false, 'payments.0': { $exists: false } });
     if (!row) return { answer: 'Action unavailable', text: 'This item can no longer be undone.', removeMarkup: true };
+    await assertFeature(userId, kind === 'tx' ? row.type === 'income' ? 'income' : 'expenses' : kind === 'debt' ? 'debts' : 'tasks');
     if (kind === 'task') await archiveTask(userId, extra);
     if (kind === 'tx') await archiveTransaction(userId, extra, 'telegram');
     if (kind === 'debt') await archiveUnpaidDebt(userId, extra);
@@ -70,6 +72,7 @@ export async function handleCallbackAction(callback, userId, settings) {
   if (namespace === 'tx' && ['edit', 'undo'].includes(action)) {
     const tx = await Transaction.findOne({ _id: id, user: userId, createdVia: 'telegram', deletedAt: null, type: { $in: ['income', 'expense'] } });
     if (!tx) return { answer: 'Transaction unavailable', text: 'This transaction is no longer available.', removeMarkup: true };
+    await assertFeature(userId, tx.type === 'income' ? 'income' : 'expenses');
     if (action === 'edit') {
       await setPending(session.userId, session.chatId, 'EDIT_TX', { id });
       return { answer: 'Ready', text: `Send the updated amount and description.\n\nCurrent: ${money(tx.amount, settings.defaultCurrency)} · ${h(tx.description)}` };

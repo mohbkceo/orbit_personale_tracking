@@ -7,6 +7,7 @@ import { getSettingsDocument } from '../services/settingsService.js';
 import { getAutomationSettings, automationTimezone } from '../services/automationSettings.service.js';
 import { getDailyFocus, focusDate, focusProgress } from '../services/dailyFocus.service.js';
 import { event } from '../services/reminders/reminderService.js';
+import { canAccess } from '../services/entitlementService.js';
 
 dayjs.extend(utc); dayjs.extend(timezone);
 
@@ -25,6 +26,7 @@ async function createFocusReminder(userId, focus, kind, sequence, at, settings, 
 export async function runAutomationForUser(userId, now = new Date(), rules) {
   rules ||= await getAutomationSettings();
   if (!rules.general.enabled || !rules.general.workerEnabled) return;
+  if (!(await canAccess(userId, 'daily-focus')).allowed || !(await canAccess(userId, 'reminders')).allowed) return;
   const settings = await getSettingsDocument(userId);
   const zone = automationTimezone(settings, rules);
   if (!settings.reminders?.enabled || !settings.reminders?.automaticEnabled) return;

@@ -9,6 +9,7 @@ import { getEventSettings, getEffectiveEventSettings } from '../services/events/
 import { fetchDzEvents } from '../services/events/dzEventClient.js';
 import { safeEventUrl, syncSubscriptionReminders } from '../services/events/eventSubscriptionService.js';
 import { checkAccess } from '../services/accessService.js';
+import { canAccess } from '../services/entitlementService.js';
 
 const digest = (value) => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const slug = (value) => typeof value === 'string' ? value.slice(0, 80) : '';
@@ -108,7 +109,7 @@ async function notifyDiscovery(items, settings, now) {
   const users = await User.find({ status: 'ACTIVE' }).select('_id status');
   const startOfDay = new Date(now); startOfDay.setUTCHours(0, 0, 0, 0);
   for (const user of users) {
-    if (!(await checkAccess(user)).eligible) continue;
+    if (!(await checkAccess(user)).eligible || !(await canAccess(user, 'events')).allowed) continue;
     let effective;
     try { effective = await getEffectiveEventSettings(user._id); } catch { continue; }
     if (!effective.discoveryEnabled) continue;

@@ -5,6 +5,7 @@ import { TaskDigestDelivery } from '../models/TaskDigestDelivery.js';
 import { TelegramConnection } from '../models/TelegramConnection.js';
 import { User } from '../models/User.js';
 import { checkAccess } from '../services/accessService.js';
+import { canAccess } from '../services/entitlementService.js';
 import { getSettingsDocument } from '../services/settingsService.js';
 import { automationTimezone } from '../services/automationSettings.service.js';
 import { collectTaskDigest, renderTaskDigest } from '../services/taskReminderDigest.service.js';
@@ -19,6 +20,7 @@ export async function runTaskReminderDigestForUser(userId, now, rules) {
   if (!rules.general.enabled || !rules.general.workerEnabled || !policy?.enabled || !env.ORBIT_TELEGRAM_BOT_TOKEN) return false;
   const [settings, connection, user] = await Promise.all([getSettingsDocument(userId), TelegramConnection.findOne({ user: userId }), User.findById(userId)]);
   if (!user || !(await checkAccess(user)).eligible || !connection || !settings.reminders?.enabled || !settings.reminders?.automaticEnabled || settings.reminders?.deliveryChannels?.telegram === false) return false;
+  if (!(await canAccess(user, 'tasks')).allowed || !(await canAccess(user, 'reminders')).allowed || !(await canAccess(user, 'telegram-assistant')).allowed) return false;
   const zone = automationTimezone(settings, rules);
   const local = dayjs(now).tz(zone);
   const time = local.format('HH:mm');

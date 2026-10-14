@@ -10,6 +10,7 @@ import { TelegramConnection } from '../models/TelegramConnection.js';
 import { updateTransaction } from '../services/financeService.js';
 import { updateTask } from '../services/taskService.js';
 import { checkAccess } from '../services/accessService.js';
+import { assertFeature } from '../services/entitlementService.js';
 import { getSettingsDocument } from '../services/settingsService.js';
 import { consumeTelegramLink } from '../services/telegramLinkService.js';
 import { snoozeReminder } from '../services/reminders/reminderService.js';
@@ -34,7 +35,43 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 const aliases = { CREATE_TASK: 't', CREATE_RECEIVABLE: 'din', CREATE_PAYABLE: 'dout', CREATE_SALE: 's', CREATE_EXPENSE: 'e', CREATE_INCOME: 'i' };
+const intentFeature = {
+  SHOW_TODAY: 'dashboard', SHOW_MONEY: 'transactions', SHOW_TASKS: 'tasks', SHOW_DEBTS: 'debts', SHOW_SALES: 'income', SHOW_REMINDERS: 'reminders',
+  CREATE_TASK: 'tasks', CREATE_REMINDER: 'reminders', UPDATE_REMINDER: 'reminders', CANCEL_REMINDER: 'reminders',
+  CREATE_RECEIVABLE: 'debts', CREATE_PAYABLE: 'debts', RECORD_RECEIVABLE_PAYMENT: 'debts', RECORD_PAYABLE_PAYMENT: 'debts',
+  CREATE_SALE: 'income', CREATE_EXPENSE: 'expenses', CREATE_INCOME: 'income', EDIT_TASK: 'tasks', EDIT_TX: 'transactions', PAY_DEBT: 'debts',
+};
+function callbackFeature(value) {
+  const [namespace, action, id] = String(value || '').split(':');
+  if (namespace === 'task' || namespace === 'taskdigest') return 'tasks';
+  if (namespace === 'debt') return 'debts';
+  if (namespace === 'tx') return 'transactions';
+  if (namespace === 'r') return 'reminders';
+  if (namespace === 'f') return 'daily-focus';
+  if (namespace === 'e') return 'events';
+  if (namespace === 'add') return action === 'goal' || action.startsWith('goal') ? 'goals' : action === 'reminder' || action.startsWith('remind') ? 'reminders' : action === 'task' || action.startsWith('task') || action === 'priority' ? 'tasks' : null;
+  if (namespace === 'quick') return ({ task: 'tasks', expense: 'expenses', income: 'income', sale: 'income', din: 'debts', dout: 'debts' })[action];
+  if (namespace === 'nav') return ({ tasks: 'tasks', sales: 'income', debts: 'debts' })[action];
+  if (namespace === 'last' && action === 'undo') return ({ task: 'tasks', tx: 'transactions', debt: 'debts' })[id];
+  return null;
+}
+async function messageFeature(text, userId, settings, identity) {
+  const command = text.toLowerCase().split(/\s+/)[0];
+  const fixed = { '/focus': 'daily-focus', '/focusdate': 'daily-focus', '/nextaction': 'tasks', '/taskdate': 'tasks', '/snooze': 'reminders', '/debtpay': 'debts', '/accounts': 'accounts', '/goals': 'goals', '/bills': 'bills', '/subscriptions': 'subscriptions', '/month': 'transactions', '/expenses': 'expenses', '/income': 'income' };
+  if (fixed[command]) return fixed[command];
+  const parsed = parseTelegramMessage(text, { timezone: settings.timezone });
+  if (intentFeature[parsed.intent]) return intentFeature[parsed.intent];
+  const pending = await getPending(identity.userId, identity.chatId);
+  if (pending?.action?.startsWith('ADD_TASK')) return 'tasks';
+  if (pending?.action?.startsWith('ADD_REMINDER')) return 'reminders';
+  if (pending?.action?.startsWith('ADD_GOAL')) return 'goals';
+  return intentFeature[pending?.action] || null;
+}
 const safeError = (error) => {
+  if (error.code === 'FEATURE_NOT_INCLUDED') return `This Orbit feature requires a plan upgrade${error.upgradePlan ? ` to ${error.upgradePlan}` : ''}. ${env.CLIENT_URL.replace(/\/$/, '')}/pricing?feature=${encodeURIComponent(error.feature || '')}`;
+  if (error.code === 'FEATURE_DISABLED') return 'This Orbit feature is temporarily unavailable.';
+  if (error.code === 'USER_SUSPENDED') return 'Your Orbit account is suspended.';
+  if (error.code === 'FEATURE_LIMIT_EXCEEDED') return 'Your plan limit has been reached. Visit Orbit Pricing to increase it.';
   if (/^Set a default (income|expense) account in Settings/.test(error.message)) return error.message;
   if (/^Amount must be greater than 0/.test(error.message)) return 'Amount must be greater than 0.';
   if (/exceeds the remaining balance/i.test(error.message)) return 'Payment exceeds the remaining balance.';
@@ -68,6 +105,7 @@ async function pendingMessage(text, pending, userId, settings, identity) {
     if (!mongoose.isValidObjectId(pending.payload.id)) return { text: 'That action expired. Please try again.', complete: true };
     const tx = await Transaction.findOne({ _id: pending.payload.id, user: userId, createdVia: 'telegram', deletedAt: null, type: { $in: ['income', 'expense'] } });
     if (!tx) return { text: 'That transaction is no longer available.', complete: true };
+    await assertFeature(userId, tx.type === 'income' ? 'income' : 'expenses');
     const alias = tx.category === 'Sale' ? 's' : tx.type === 'expense' ? 'e' : 'i';
     const amountOnly = Boolean(parseAmount(text));
     const parsed = parseTelegramMessage(new RegExp(`^${alias}\\s`, 'i').test(text) ? text : `${alias} ${text}`);
@@ -111,6 +149,7 @@ async function dispatchMessage(text, userId, settings, identity) {
     return { text: '✓ Task rescheduled.' };
   }
   if (command === '/focus') {
+    await assertFeature(userId, 'daily-focus');
     const content = text.slice(6).trim();
     if (content.toLowerCase() === 'done') { const focus = await finishFocusPlanning(userId, 'telegram'); return { text: `✓ Focus plan saved: ${focus.items.length} task${focus.items.length === 1 ? '' : 's'}.` }; }
     if (!content) {
@@ -161,6 +200,7 @@ async function dispatchMessage(text, userId, settings, identity) {
   if (!pending && direct.intent === 'UNKNOWN' && !text.startsWith('/')) {
     const focus = await getDailyFocus(userId);
     if (focus.planningStartedAt && !focus.planningCompleted) {
+      await assertFeature(userId, 'daily-focus');
       if (text.toLowerCase() === 'done') { const complete = await finishFocusPlanning(userId, 'telegram'); return { text: `✓ Focus plan saved: ${complete.items.length} tasks.` }; }
       const updated = await addFocusTask(userId, { title: text }, 'telegram');
       const max = (await getAutomationSettings()).dailyFocus.maxTasks;
@@ -211,9 +251,18 @@ export async function handleTelegramUpdate(update) {
   connection.lastUpdateAt = new Date();
   await connection.save();
   const user = await User.findById(connection.user);
-  if (!user || !(await checkAccess(user)).eligible) return;
+  if (!user) return;
+  if (!(await checkAccess(user)).eligible) return sendMessage(token, chatId, 'Your Orbit account is suspended.');
   const settings = await getSettingsDocument(user._id);
   const identity = { userId: from.id, chatId };
+  try {
+    await assertFeature(user, 'telegram-assistant');
+    const feature = callback ? callbackFeature(callback.data) : text ? await messageFeature(text, user._id, settings, identity) : null;
+    if (feature) await assertFeature(user, feature);
+  } catch (error) {
+    if (callback) return telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error).slice(0, 190), show_alert: true });
+    return sendMessage(token, chatId, safeError(error));
+  }
   if (callback) {
     if (String(callback.data).startsWith('e:follow:')) {
       try {

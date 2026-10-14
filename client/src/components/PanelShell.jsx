@@ -1,10 +1,12 @@
 import { AppProvider } from '../context/AppContext.jsx';
 import { Layout } from './Layout.jsx';
+import { CapabilitiesProvider } from '../context/CapabilitiesProvider.jsx';
+import { TelegramProvider } from '../context/TelegramProvider.jsx';
 
 export default function PanelShell() {
   return (
     <AppProvider>
-      <Layout />
+      <CapabilitiesProvider><TelegramProvider><Layout /></TelegramProvider></CapabilitiesProvider>
     </AppProvider>
   );
 }

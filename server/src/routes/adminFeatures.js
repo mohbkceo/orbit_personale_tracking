@@ -9,17 +9,25 @@ import { success } from '../utils/api.js';
 import { AppError } from '../utils/AppError.js';
 import { audit } from '../services/auditService.js';
 import { featureInput } from '../services/planService.js';
+import { bumpEntitlementVersion } from '../services/entitlementService.js';
+import { DEFAULTS } from '../services/entitlementCatalog.js';
 
 export const adminFeatureRoutes = Router();
 adminFeatureRoutes.use(adminAuth);
 adminFeatureRoutes.get('/', asyncHandler(async (_req, res) => success(res, await Feature.find().sort({ order: 1, name: 1 }))));
 adminFeatureRoutes.post('/', validate(featureInput), asyncHandler(async (req, res) => {
   const feature = await Feature.create(req.body);
+  await bumpEntitlementVersion();
   await audit('FEATURE_CREATED', { actorType: 'ADMIN', actorId: req.admin._id, targetType: 'Feature', targetId: feature._id });
   return success(res, feature, 201);
 }));
 adminFeatureRoutes.patch('/:id', validate(featureInput.partial()), asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('Feature not found', 404);
+  const existing = await Feature.findById(req.params.id);
+  if (!existing) throw new AppError('Feature not found', 404);
+  if (DEFAULTS[existing.key] && req.body.key && req.body.key !== existing.key) throw new AppError('System feature keys cannot be changed.', 422);
+  if (existing.key === 'dashboard' && req.body.status === 'INACTIVE') throw new AppError('The workspace dashboard must remain available.', 422);
+  if (DEFAULTS[existing.key] && req.body.status && req.body.status !== existing.status && req.admin.role !== 'SUPER_ADMIN') throw new AppError('Only a Super Admin may change feature availability.', 403, undefined, 'ADMIN_FORBIDDEN');
   if (req.body.type) {
     const current = await Feature.findById(req.params.id);
     if (!current) throw new AppError('Feature not found', 404);
@@ -29,14 +37,18 @@ adminFeatureRoutes.patch('/:id', validate(featureInput.partial()), asyncHandler(
   }
   const feature = await Feature.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   if (!feature) throw new AppError('Feature not found', 404);
+  await bumpEntitlementVersion();
   await audit('FEATURE_UPDATED', { actorType: 'ADMIN', actorId: req.admin._id, targetType: 'Feature', targetId: feature._id });
   return success(res, feature);
 }));
 adminFeatureRoutes.delete('/:id', asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('Feature not found', 404);
+  const existing = await Feature.findById(req.params.id);
+  if (existing && DEFAULTS[existing.key]) throw new AppError('System access features cannot be deleted.', 422);
   if (await Plan.exists({ 'features.feature': req.params.id })) throw new AppError('Remove this feature from plans before deleting it', 409);
   const feature = await Feature.findByIdAndDelete(req.params.id);
   if (!feature) throw new AppError('Feature not found', 404);
+  await bumpEntitlementVersion();
   await audit('FEATURE_DELETED', { actorType: 'ADMIN', actorId: req.admin._id, targetType: 'Feature', targetId: feature._id });
   return success(res, { deleted: true });
 }));

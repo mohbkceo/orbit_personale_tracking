@@ -119,7 +119,7 @@ export async function confirmPaidOrder(orderId, verification) {
       const base = previous?.expiresAt > now ? previous.expiresAt : now;
       const expiresAt = addDuration(base, order.planSnapshot.durationValue, order.planSnapshot.durationUnit);
       const [grant] = await AccessSubscription.create([{ user: order.user, plan: order.plan, source: 'SLICKPAY', order: order._id,
-        startedAt: base, activatedAt: now, expiresAt, planSnapshot: order.planSnapshot }], { session });
+        startedAt: base, activatedAt: now, expiresAt, entitlementVersion: 1, planSnapshot: order.planSnapshot }], { session });
       await User.updateOne({ _id: order.user, onboardingCompletedAt: null }, { $set: { onboardingCompletedAt: now } }, { session });
       await PaymentOrder.updateOne({ _id: order._id, state: 'PROCESSING' }, { $set: { state: 'PAID', paidAt: now, paymentReference: verification.reference, subscription: grant._id }, $unset: { openKey: 1, reviewCode: 1, advertising: 1 } }, { session });
       const context = orderContext(order);

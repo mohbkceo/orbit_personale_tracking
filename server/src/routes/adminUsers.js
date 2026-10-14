@@ -27,10 +27,10 @@ adminUserRoutes.get('/', asyncHandler(async (req, res) => {
     { $lookup: { from: 'accesssubscriptions', let: { uid: '$_id' }, pipeline: [{ $match: { $expr: { $eq: ['$user', '$$uid'] } } }, { $sort: { expiresAt: -1 } }, { $limit: 1 }], as: 'access' } },
     { $lookup: { from: 'telegramconnections', localField: '_id', foreignField: 'user', as: 'telegram' } },
     { $set: { access: { $first: '$access' }, telegram: { $first: '$telegram' } } },
-    { $set: { accessStatus: { $switch: { branches: [{ case: { $eq: ['$status', 'SUSPENDED'] }, then: 'SUSPENDED' }, { case: { $not: ['$access'] }, then: 'NO_ACCESS' }, { case: { $lte: ['$access.expiresAt', now] }, then: 'EXPIRED' }], default: 'ACTIVE' } } } },
+    { $set: { accessStatus: { $switch: { branches: [{ case: { $eq: ['$status', 'SUSPENDED'] }, then: 'SUSPENDED' }, { case: { $not: ['$access'] }, then: 'FREE' }, { case: { $lte: ['$access.expiresAt', now] }, then: 'FREE' }], default: 'ACTIVE' } } } },
   );
   if (req.query.filter === 'EXPIRING_SOON') pipeline.push({ $match: { accessStatus: 'ACTIVE', 'access.expiresAt': { $gt: now, $lte: sevenDays } } });
-  else if (['ACTIVE', 'EXPIRED', 'SUSPENDED'].includes(req.query.filter)) pipeline.push({ $match: { accessStatus: req.query.filter } });
+  else if (['ACTIVE', 'FREE', 'SUSPENDED'].includes(req.query.filter)) pipeline.push({ $match: { accessStatus: req.query.filter } });
   pipeline.push({ $project: { fullName: 1, email: 1, status: 1, createdAt: 1, lastLoginAt: 1, accessStatus: 1, access: { planSnapshot: 1, startedAt: 1, expiresAt: 1 }, telegram: { telegramUsername: 1, linkedAt: 1 } } }, { $sort: { createdAt: -1 } }, { $facet: { rows: [{ $skip: (page - 1) * limit }, { $limit: limit }], count: [{ $count: 'total' }] } });
   const [result] = await User.aggregate(pipeline);
   const total = result.count[0]?.total || 0;

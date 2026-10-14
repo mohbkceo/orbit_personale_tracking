@@ -10,6 +10,8 @@ import { cancelEntityReminders, regenerateAutomaticReminderPlan, resolveEntityRe
 import { getSettingsDocument } from './settingsService.js';
 import { getAutomationSettings } from './automationSettings.service.js';
 import { localDateTime, nextOccurrence } from './reminders/reminderTime.js';
+import { withFeatureLimit } from './featureLimitService.js';
+import { assertFeature, canAccess } from './entitlementService.js';
 
 dayjs.extend(utc); dayjs.extend(timezone);
 
@@ -28,7 +30,7 @@ export async function materializeNextTaskOccurrence(userId, task) {
   const seriesId = task.seriesId || task._id;
   let following;
   try {
-    const projectId = task.projectId && await Project.exists({ _id: task.projectId, user: userId }) ? task.projectId : null;
+    const projectId = task.projectId && (await canAccess(userId, 'projects')).allowed && await Project.exists({ _id: task.projectId, user: userId }) ? task.projectId : null;
     following = await createTask(userId, { title: task.title, description: task.description, nextAction: task.nextAction, estimatedMinutes: task.estimatedMinutes, status: 'todo', priority: task.priority, dueDate: new Date(`${day}T00:00:00.000Z`), dueTime: task.dueTime, category: task.category, projectId, recurring: true, recurringRule: task.recurringRule.toObject(), tags: task.tags, reminderMode: task.reminderMode, taskReminderState: task.taskReminderState, seriesId, occurrenceKey: day, createdVia: 'system' });
   } catch (error) {
     if (error.code !== 11000) throw error;
@@ -40,12 +42,15 @@ export async function materializeNextTaskOccurrence(userId, task) {
 }
 
 export async function createTask(userId, input) {
+  if (input.projectId) await assertFeature(userId, 'projects');
   if (input.projectId && !(await Project.exists({ _id: input.projectId, user: userId }))) throw new AppError('Project not found', 404);
   const settings = await getSettingsDocument(userId);
   const mode = input.reminderMode || settings.reminders?.defaultEntityModes?.task || 'automatic';
   const automation = await getAutomationSettings();
   const enabled = mode === 'automatic' && settings.reminders?.enabled !== false && settings.reminders?.automaticEnabled !== false && automation.general.enabled && automation.taskReminderDigest.enabled;
-  const task = await Task.create({ ...input, user: userId, reminderMode: mode, taskReminderState: input.taskReminderState || (enabled ? 'enabled' : 'muted') });
+  const task = await withFeatureLimit(userId, 'active-tasks-limit', Task,
+    { archived: false, status: { $in: ['todo', 'in_progress'] } },
+    () => Task.create({ ...input, user: userId, reminderMode: mode, taskReminderState: input.taskReminderState || (enabled ? 'enabled' : 'muted') }));
   await recordActivity(userId, { action: 'created', entityType: 'Task', entityId: task._id, description: task.title, newData: task.toObject(), source: input.createdVia });
   await regenerateAutomaticReminderPlan(userId, 'task', task._id);
   return task;
@@ -73,6 +78,7 @@ export async function listTasks(userId, query = {}) {
 export async function updateTask(userId, id, input) {
   const current = await Task.findOne({ _id: id, user: userId });
   if (!current) throw new AppError('Task not found', 404);
+  if (input.projectId) await assertFeature(userId, 'projects');
   if (input.projectId && !(await Project.exists({ _id: input.projectId, user: userId }))) throw new AppError('Project not found', 404);
   const previousStatus = current.status;
   Object.assign(current, input);
@@ -82,7 +88,9 @@ export async function updateTask(userId, id, input) {
   if (input.status === 'completed') current.executionState = 'completed';
   if (input.status === 'cancelled') current.executionState = 'cancelled';
   if (input.status === 'todo' && ['completed', 'cancelled'].includes(previousStatus)) current.executionState = 'idle';
-  await current.save();
+  if (!['todo', 'in_progress'].includes(previousStatus) && ['todo', 'in_progress'].includes(current.status) && !current.archived) {
+    await withFeatureLimit(userId, 'active-tasks-limit', Task, { archived: false, status: { $in: ['todo', 'in_progress'] } }, () => current.save());
+  } else await current.save();
   await recordActivity(userId, { action: input.status === 'completed' ? 'completed' : 'updated', entityType: 'Task', entityId: current._id, description: current.title, previousData: { status: previousStatus }, newData: input });
   if (current.status === 'completed') {
     await resolveEntityReminders(userId, 'task', current._id);

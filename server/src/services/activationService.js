@@ -43,6 +43,7 @@ export async function createActivationLink(planId, adminId, { validityDays = 7, 
   if (intendedUser && (!mongoose.isValidObjectId(intendedUser) || !(await User.exists({ _id: intendedUser }).session(session || null)))) throw new AppError('User not found', 404);
   const plan = planDocument || await Plan.findOne({ _id: planId, status: 'ACTIVE' }).session(session || null);
   if (!plan) throw new AppError('The plan is inactive or unavailable.', 409, undefined, 'PLAN_INACTIVE');
+  if (plan.kind === 'FREE' || plan.slug === 'free') throw new AppError('Free access is available automatically. No activation link is needed.', 422, undefined, 'FREE_PLAN');
   const token = makeToken();
   const encrypted = encryptSecret(token);
   const [link] = await ActivationLink.create([{ tokenHash: hashToken(token), encryptedToken: encrypted.encrypted, tokenIv: encrypted.iv, tokenAuthTag: encrypted.authTag, plan: plan._id, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit }, createdByAdmin: adminId, expiresAt: noExpiry ? null : new Date(Date.now() + validityDays * 86400000), note, intendedUser, qrBatch, batchSequence, batchCode }], session ? { session } : {});
@@ -112,7 +113,7 @@ export async function activateLink(key, user) {
         ...(entry.feature.type === 'LIMIT' ? { limit: entry.limit } : {}),
         ...(entry.feature.type === 'TEXT' ? { value: entry.value } : {}),
       }));
-      [grant] = await AccessSubscription.create([{ user: user._id, plan: plan._id, activationLink: link._id, startedAt: base, activatedAt: now, expiresAt, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit, features } }], { session });
+      [grant] = await AccessSubscription.create([{ user: user._id, plan: plan._id, activationLink: link._id, startedAt: base, activatedAt: now, expiresAt, entitlementVersion: 1, planSnapshot: { name: plan.name, durationValue: plan.durationValue, durationUnit: plan.durationUnit, features } }], { session });
       await User.updateOne({ _id: user._id, onboardingCompletedAt: null }, { $set: { onboardingCompletedAt: now } }, { session });
       await audit('ACTIVATION_LINK_USED', { actorType: 'USER', actorId: user._id, targetType: 'ActivationLink', targetId: link._id, session });
       await audit('ACCESS_ACTIVATED', { actorType: 'USER', actorId: user._id, targetType: 'AccessSubscription', targetId: grant._id, metadata: { expiresAt }, session });

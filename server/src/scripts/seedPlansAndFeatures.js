@@ -182,7 +182,7 @@ async function run() {
     await Feature.findOneAndUpdate(
       { key: feature.key },
       {
-        $set: {
+        $setOnInsert: {
           ...feature,
           publicVisible: true,
           status: 'ACTIVE',
@@ -210,7 +210,7 @@ async function run() {
   await Plan.findOneAndUpdate(
     { slug: 'starter' },
     {
-      $set: {
+      $setOnInsert: {
         name: 'Starter',
         slug: 'starter',
 
@@ -244,9 +244,6 @@ async function run() {
         features: buildEntitlements(featuresByKey, STARTER_FEATURES),
 
         status: 'ACTIVE',
-      },
-
-      $setOnInsert: {
         createdBy: admin._id,
       },
     },
@@ -265,7 +262,7 @@ async function run() {
   await Plan.findOneAndUpdate(
     { slug: 'plus' },
     {
-      $set: {
+      $setOnInsert: {
         name: 'Plus',
         slug: 'plus',
 
@@ -300,9 +297,6 @@ async function run() {
         features: buildEntitlements(featuresByKey, PLUS_FEATURES),
 
         status: 'ACTIVE',
-      },
-
-      $setOnInsert: {
         createdBy: admin._id,
       },
     },

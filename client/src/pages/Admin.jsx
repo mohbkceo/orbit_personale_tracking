@@ -164,7 +164,7 @@ export function AdminUsers() {
             setPage(1);
           }}
         >
-          {['ALL', 'ACTIVE', 'EXPIRED', 'SUSPENDED', 'EXPIRING_SOON'].map((value) => (
+          {['ALL', 'ACTIVE', 'FREE', 'SUSPENDED', 'EXPIRING_SOON'].map((value) => (
             <option key={value}>{value}</option>
           ))}
         </select>
@@ -283,7 +283,7 @@ export function AdminUserDetail() {
                 ? 'SUSPENDED'
                 : data.access
                   ? data.access.status
-                  : 'NO_ACCESS'}
+                  : 'FREE'}
             </p>
             <p>Started: {date(data.access?.startedAt)}</p>
             <p>Expires: {date(data.access?.expiresAt)}</p>

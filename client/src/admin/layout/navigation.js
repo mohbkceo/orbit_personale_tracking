@@ -6,6 +6,7 @@ export const adminNavigation = [
     { label: 'Users', to: '/admin/users', icon: Users },
     { label: 'Plans', to: '/admin/plans', icon: Layers3 },
     { label: 'Features', to: '/admin/features', icon: WandSparkles },
+    { label: 'Access Control', to: '/admin/access-control', icon: Shield, superOnly: true },
     { label: 'Activation Links', to: '/admin/activation-links', icon: KeyRound },
   ] },
   { label: 'Operations', items: [

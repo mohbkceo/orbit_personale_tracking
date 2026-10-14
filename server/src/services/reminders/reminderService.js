@@ -10,6 +10,7 @@ import { getSettingsDocument } from '../settingsService.js';
 import { updateTask } from '../taskService.js';
 import { nextOccurrence } from './reminderTime.js';
 import { buildReminderPlan } from './reminderPolicyService.js';
+import { withFeatureLimit } from '../featureLimitService.js';
 
 const models = { task: Task, debt: Debt, bill: Bill, subscription: Subscription, goal: Goal };
 const open = ['scheduled', 'active', 'snoozed', 'waiting'];
@@ -105,7 +106,7 @@ export async function createReminder(userId, input, channel = 'web') {
     throw new AppError('A recurrence rule is required', 400);
   if (input.trigger?.type === 'recurring' && input.followUp?.enabled)
     throw new AppError('Recurring reminders already repeat', 400);
-  const reminder = await Reminder.create({
+  const createRecord = () => Reminder.create({
     ...input,
     user: userId,
     entityType,
@@ -120,6 +121,8 @@ export async function createReminder(userId, input, channel = 'web') {
         .map(([name]) => name),
     trigger: { ...input.trigger, timezone: input.trigger?.timezone || settings.timezone, at: date },
   });
+  const reminder = await withFeatureLimit(userId, 'reminders-limit', Reminder,
+    { archived: false, source: 'custom', status: { $in: open } }, createRecord);
   await event(reminder, 'scheduled', channel);
   return reminder;
 }

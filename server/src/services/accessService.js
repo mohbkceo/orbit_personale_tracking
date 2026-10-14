@@ -16,17 +16,17 @@ export function addDuration(base, value, unit) {
 }
 
 export async function currentSubscription(userId, session) {
-  return AccessSubscription.findOne({ user: userId }).sort({ expiresAt: -1, createdAt: -1 }).session(session || null);
+  return AccessSubscription.findOne({ user: userId, status: { $in: ['ACTIVE', null] } }).sort({ expiresAt: -1, createdAt: -1 }).session(session || null);
 }
 
 export async function checkAccess(user, { now = new Date() } = {}) {
   const subscription = await currentSubscription(user._id);
   if (user.status !== 'ACTIVE') return { eligible: false, reason: 'SUSPENDED', subscription };
-  if (!subscription) return { eligible: false, reason: 'NO_ACCESS', subscription: null };
+  if (!subscription) return { eligible: true, reason: null, subscription: null, planType: 'FREE' };
   if (subscription.expiresAt <= now) {
     const changed = await AccessSubscription.updateMany({ user: user._id, status: 'ACTIVE', expiresAt: { $lte: now } }, { $set: { status: 'EXPIRED' } });
     if (changed.modifiedCount) await audit('ACCESS_EXPIRED', { actorType: 'SYSTEM', targetType: 'User', targetId: user._id });
-    return { eligible: false, reason: 'EXPIRED', subscription };
+    return { eligible: true, reason: null, subscription: null, planType: 'FREE' };
   }
-  return { eligible: true, reason: null, subscription };
+  return { eligible: true, reason: null, subscription, planType: 'PAID' };
 }

@@ -12,8 +12,10 @@ import { AccessSubscription } from './models/AccessSubscription.js';
 import { PaymentOrder } from './models/PaymentOrder.js';
 import { AnalyticsEvent } from './models/AnalyticsEvent.js';
 import { AdvertisingConsent } from './models/AdvertisingConsent.js';
+import { ensureAccessCatalog } from './services/accessCatalogSeed.js';
 
 await connectDatabase();
+await ensureAccessCatalog();
 await Promise.all([PaymentOrder.createIndexes(), AnalyticsEvent.createIndexes(), AdvertisingConsent.createIndexes()]);
 if (env.SLICKPAY_ENABLED) {
   const indexes = await AccessSubscription.collection.indexes();

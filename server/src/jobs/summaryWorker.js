@@ -4,12 +4,14 @@ import timezone from 'dayjs/plugin/timezone.js';
 import { dashboardSummary } from '../services/dashboardService.js';
 import { getSettingsDocument } from '../services/settingsService.js';
 import { sendTelegramNotification } from '../telegram/notifier.js';
+import { canAccess } from '../services/entitlementService.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 const sent = new Set();
 
 export async function sendSummaries(userId) {
+  if (!(await canAccess(userId, 'dashboard')).allowed || !(await canAccess(userId, 'tasks')).allowed || !(await canAccess(userId, 'transactions')).allowed) return;
   const settings = await getSettingsDocument(userId);
   const local = dayjs().tz(settings.timezone);
   for (const [mode, enabled, at] of [

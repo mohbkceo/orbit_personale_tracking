@@ -4,6 +4,7 @@ import {
   Bell, BookOpenText, CalendarCheck2, CalendarDays, CircleDollarSign, Command, ContactRound,
   CreditCard, FolderKanban, Gauge, Goal, Landmark, LayoutList, LogOut, Menu,
   Moon, Plus, ReceiptText, Search, Settings, Sparkles, Sun, WalletCards, X,
+  LockKeyhole,
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import { useApp } from '../context/useApp.js';
@@ -13,6 +14,8 @@ import { QuickAdd } from './QuickAdd.jsx';
 import { SearchPalette } from './SearchPalette.jsx';
 import { AnimatedPage } from '../animations/AnimatedPage.jsx';
 import { api } from '../api/client.js';
+import { useCapabilities } from '../context/CapabilitiesContext.js';
+import { TelegramControl, TelegramConnectionDialog } from './TelegramConnection.jsx';
 
 const primaryLinks = [
   ['Dashboard', '/panel', Gauge], ['Tasks', '/panel/tasks', CalendarCheck2],
@@ -27,6 +30,7 @@ const secondaryLinks = [
   ['Habits', '/panel/personal/habits', Sparkles], ['Wishlist', '/panel/personal/wishlist', BookOpenText],
   ['Contacts', '/panel/personal/contacts', ContactRound], ['Notes', '/panel/personal/notes', BookOpenText],
 ];
+const sectionForPath = (path) => path === '/panel' ? 'dashboard' : path.split('/').at(-1);
 
 function Brand() {
   return <NavLink to="/panel" className="flex items-center gap-2.5 text-sidebar-text" aria-label="Orbit dashboard">
@@ -36,11 +40,14 @@ function Brand() {
 }
 
 function SidebarLink({ label, path, Icon, close }) {
+  const { decision } = useCapabilities();
+  const access = path === '/panel/settings' ? null : decision(sectionForPath(path));
+  if (access && !access.allowed && access.presentation?.visibleWhenLocked === false) return null;
   return <NavLink end={path === '/panel'} to={path} onClick={close} className={({ isActive }) => cn(
     'flex min-h-10 items-center gap-3 rounded-[var(--orbit-control-radius)] px-3 text-[13px] font-medium transition-colors',
     isActive ? 'bg-sidebar-selected font-semibold text-primary' : 'text-sidebar-text hover:bg-sidebar-hover',
   )}>
-    {({ isActive }) => <><Icon size={18} strokeWidth={1.8} className={isActive ? 'text-primary' : 'text-sidebar-muted'} /><span>{label}</span></>}
+    {({ isActive }) => <><Icon size={18} strokeWidth={1.8} className={isActive ? 'text-primary' : 'text-sidebar-muted'} /><span className="flex-1">{label}</span>{access && !access.allowed && <LockKeyhole size={13} className="text-sidebar-muted" aria-label="Locked" />}</>}
   </NavLink>;
 }
 
@@ -95,6 +102,7 @@ function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
         <button type="button" className="icon-btn hidden sm:inline-flex" aria-label="Quick add" title="Quick add (N)" onClick={openQuickAdd}><Plus size={19} /></button>
         <button type="button" className="icon-btn" aria-label="Reminders and notifications" title="Reminders and notifications" onClick={() => navigate('/panel/reminders')}><Bell size={19} /></button>
+        <TelegramControl />
         <div className="relative">
           <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text" aria-label="Open account menu" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>{initials}</button>
           {profileOpen && <div role="menu" className="absolute right-0 top-11 z-50 w-52 rounded-[var(--orbit-radius)] border border-border bg-surface p-1.5 shadow-lift">
@@ -124,19 +132,20 @@ export function Layout() {
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
   const { setQuickAddOpen, darkMode, setSettings } = useApp();
+  const { allowed } = useCapabilities();
   const location = useLocation();
   const outlet = useOutlet();
 
   useEffect(() => { setMenu(false); }, [location.pathname]);
   useEffect(() => {
     const handler = (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setSearch(true); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && allowed('quick-access')) { event.preventDefault(); setSearch(true); }
       const activeTag = document.activeElement?.tagName;
-      if (!event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'n' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) { event.preventDefault(); setQuickAddOpen(true); }
+      if (!event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'n' && allowed('quick-access') && !['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) { event.preventDefault(); setQuickAddOpen(true); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [setQuickAddOpen]);
+  }, [setQuickAddOpen, allowed]);
 
   const toggleTheme = async () => {
     const mode = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
@@ -148,13 +157,14 @@ export function Layout() {
     <Sidebar open={menu} close={() => setMenu(false)} />
     {menu && <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-text/40 lg:hidden" onClick={() => setMenu(false)} />}
     <div className="min-w-0 lg:pl-[236px]">
-      <Header openMenu={() => setMenu(true)} openSearch={() => setSearch(true)} openQuickAdd={() => setQuickAddOpen(true)} toggleTheme={toggleTheme} darkMode={darkMode} />
+      <Header openMenu={() => setMenu(true)} openSearch={() => { if (allowed('quick-access')) setSearch(true); }} openQuickAdd={() => { if (allowed('quick-access')) setQuickAddOpen(true); }} toggleTheme={toggleTheme} darkMode={darkMode} />
       <main className="mx-auto max-w-[1480px] px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
         <AnimatePresence mode="wait" initial={false}><AnimatedPage key={location.pathname}>{outlet}</AnimatedPage></AnimatePresence>
       </main>
     </div>
-    <MobileNav openMenu={() => setMenu(true)} openQuickAdd={() => setQuickAddOpen(true)} />
+    <MobileNav openMenu={() => setMenu(true)} openQuickAdd={() => { if (allowed('quick-access')) setQuickAddOpen(true); }} />
     <QuickAdd />
     <SearchPalette open={search} onClose={() => setSearch(false)} />
+    <TelegramConnectionDialog />
   </div>;
 }

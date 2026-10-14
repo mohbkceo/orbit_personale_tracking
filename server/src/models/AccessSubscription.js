@@ -15,12 +15,14 @@ const accessSubscriptionSchema = new mongoose.Schema(
     activatedAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true, index: true },
     status: { type: String, enum: ['ACTIVE', 'EXPIRED'], default: 'ACTIVE', index: true },
+    entitlementVersion: { type: Number, default: undefined },
     planSnapshot: {
       name: String,
       durationValue: Number,
       durationUnit: String,
       features: [new mongoose.Schema({ key: String, type: { type: String }, enabled: Boolean, limit: Number, value: String }, { _id: false })],
     },
+    entitlementOverrides: [new mongoose.Schema({ key: String, enabled: Boolean, limit: Number, value: String }, { _id: false })],
   },
   { timestamps: true },
 );

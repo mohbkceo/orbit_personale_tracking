@@ -1,6 +1,7 @@
 import { User } from '../models/User.js';
 import { TelegramConnection } from '../models/TelegramConnection.js';
 import { checkAccess } from '../services/accessService.js';
+import { canAccess } from '../services/entitlementService.js';
 import { env } from '../config/env.js';
 import { sendMessage } from './botClient.js';
 import { escapeHtml } from './formatters.js';
@@ -16,7 +17,7 @@ function validTelegramUrl(value) {
 export async function sendTelegramNotification(userId, { title, message, buttons = [] }) {
   if (!env.ORBIT_TELEGRAM_BOT_TOKEN) return { sent: 0 };
   const [user, connection] = await Promise.all([User.findById(userId), TelegramConnection.findOne({ user: userId })]);
-  if (!user || !connection || !(await checkAccess(user)).eligible) return { sent: 0 };
+  if (!user || !connection || !(await checkAccess(user)).eligible || !(await canAccess(user, 'telegram-assistant')).allowed) return { sent: 0 };
   const keyboard = buttons.length ? { inline_keyboard: buttons.map((row) => row.map((button) => {
     if (!button || typeof button.text !== 'string' || !button.text.trim() || button.text.length > 64) throw new Error('Invalid Telegram button');
     const safeUrl = validTelegramUrl(button.url);

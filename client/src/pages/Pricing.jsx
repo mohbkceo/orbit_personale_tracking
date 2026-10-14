@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { Spinner } from '../components/ui.jsx';
 
@@ -67,6 +67,7 @@ function rgba(hex, alpha = 1) {
 }
 
 function durationText(plan) {
+  if (plan?.kind === 'FREE' || plan?.durationUnit === 'PERMANENT' || plan?.slug === 'free') return 'Free forever';
   if (!plan?.durationValue || !plan?.durationUnit) return '';
 
   const unit = plan.durationUnit.toLowerCase();
@@ -75,7 +76,7 @@ function durationText(plan) {
   return `${plan.durationValue} ${plural} access`;
 }
 
-function PricingCard({ plan, onGetStarted }) {
+function PricingCard({ plan, onGetStarted, recommended = false }) {
   const accent = plan.appearance?.color || '#c8ff00';
   const accentText = plan.appearance?.textColor || '#081000';
   const highlighted = Boolean(plan.appearance?.highlighted);
@@ -163,6 +164,7 @@ function PricingCard({ plan, onGetStarted }) {
                   </span>
                 ) : null}
 
+                {recommended ? <span className="rounded-md border border-white/30 px-2 py-1 text-[10px] font-black uppercase text-white">Recommended for you</span> : null}
                 {plan.appearance?.badge ? (
                   <span
                     className="rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wide"
@@ -358,6 +360,9 @@ function PricingCard({ plan, onGetStarted }) {
 export default function Pricing() {
   const { openGetStarted } = useOutletContext();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const originFeature = searchParams.get('feature');
+  const recommendedSlug = searchParams.get('plan');
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -394,6 +399,7 @@ export default function Pricing() {
     () => plans.find((plan) => plan.appearance?.highlighted),
     [plans],
   );
+  const originName = plans.flatMap((plan) => plan.features || []).find((feature) => feature.key === originFeature)?.name || originFeature?.replaceAll('-', ' ');
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0d100f] text-white">
@@ -434,6 +440,7 @@ export default function Pricing() {
             <p className="mt-3 max-w-xl text-[14px] leading-6 text-white/50 sm:text-[15px]">
               Choose the level of access and features that fits the way you work.
             </p>
+            {originFeature && <p className="mt-3 text-sm font-semibold text-white/80">Explore plans for {originName}.</p>}
           </div>
 
           {/* CONTROL BAR */}
@@ -496,7 +503,7 @@ export default function Pricing() {
               ].join(' ')}
             >
               {plans.map((plan, index) => (
-                <PricingCard key={plan.id || plan._id || index} plan={plan} onGetStarted={() => plan.price?.currency === 'DZD' && plan.price.amount > 0 ? navigate(`/checkout?plan=${encodeURIComponent(plan.id)}`) : openGetStarted()} />
+                <PricingCard key={plan.id || plan._id || index} plan={plan} recommended={plan.slug === recommendedSlug} onGetStarted={() => plan.kind === 'FREE' || plan.slug === 'free' ? navigate('/register?next=%2Fpanel') : plan.price?.currency === 'DZD' && plan.price.amount > 0 ? navigate(`/checkout?plan=${encodeURIComponent(plan.id)}${originFeature ? `&feature=${encodeURIComponent(originFeature)}` : ''}`) : openGetStarted()} />
               ))}
             </div>
           ) : (

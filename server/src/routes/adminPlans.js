@@ -8,13 +8,16 @@ import { success } from '../utils/api.js';
 import { AppError } from '../utils/AppError.js';
 import { audit } from '../services/auditService.js';
 import { planInput, validateEntitlements } from '../services/planService.js';
+import { bumpEntitlementVersion } from '../services/entitlementService.js';
 
 export const adminPlanRoutes = Router();
 adminPlanRoutes.use(adminAuth);
 adminPlanRoutes.get('/', asyncHandler(async (_req, res) => success(res, await Plan.find().populate('features.feature', 'key name description category icon type order status publicVisible').sort({ createdAt: -1 }))));
 adminPlanRoutes.post('/', validate(planInput), asyncHandler(async (req, res) => {
+  if (req.body.slug === 'free') throw new AppError('The Free plan is system managed.', 422);
   await validateEntitlements(req.body.features);
   const plan = await Plan.create({ ...req.body, createdBy: req.admin._id });
+  await bumpEntitlementVersion();
   await audit('PLAN_CREATED', { actorType: 'ADMIN', actorId: req.admin._id, targetType: 'Plan', targetId: plan._id });
   return success(res, await plan.populate('features.feature', 'key name description category icon type order status publicVisible'), 201);
 }));
@@ -22,6 +25,10 @@ adminPlanRoutes.patch('/:id', validate(planInput.partial()), asyncHandler(async 
   if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('Plan not found', 404);
   const plan = await Plan.findById(req.params.id);
   if (!plan) throw new AppError('Plan not found', 404);
+  if (plan.kind === 'FREE' || plan.slug === 'free') {
+    if (Object.keys(req.body).some((key) => key !== 'features' && key !== 'public' && key !== 'description' && key !== 'appearance')) throw new AppError('The Free plan cannot be renamed, priced, expired or disabled.', 422);
+    if (req.body.public?.visible === false) throw new AppError('The Free plan must remain visible.', 422);
+  }
   await validateEntitlements(req.body.features);
   for (const [key, value] of Object.entries(req.body)) {
     if (['price', 'appearance', 'public'].includes(key)) {
@@ -29,6 +36,7 @@ adminPlanRoutes.patch('/:id', validate(planInput.partial()), asyncHandler(async 
     } else plan.set(key, value);
   }
   await plan.save();
+  await bumpEntitlementVersion();
   await audit(plan.status === 'INACTIVE' ? 'PLAN_DISABLED' : 'PLAN_UPDATED', { actorType: 'ADMIN', actorId: req.admin._id, targetType: 'Plan', targetId: plan._id });
   return success(res, await plan.populate('features.feature', 'key name description category icon type order status publicVisible'));
 }));

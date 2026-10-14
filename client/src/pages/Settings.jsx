@@ -17,6 +17,7 @@ import { EmptyState, PageHeader, Spinner, StatusBadge } from '../components/ui.j
 import { AppearancePicker } from '../appearance/AppearancePicker.jsx';
 import { normalizeAppearance } from '../appearance/themes.js';
 import EventPreferences from './EventPreferences.jsx';
+import { useTelegram } from '../context/TelegramContext.js';
 
 const tabs = [
   ['general', 'General', Globe2],
@@ -43,22 +44,20 @@ function Section({ title, description, children }) {
 export default function Settings() {
   const { toast, setSettings } = useApp();
   const { user, access, refresh } = useAuth();
+  const { status: telegram, link, setOpen: openTelegram, refresh: refreshTelegram } = useTelegram();
   const [tab, setTab] = useState('general');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [form, setForm] = useState(null);
-  const [telegram, setTelegram] = useState(null);
-  const [link, setLink] = useState(null);
   const [gender, setGender] = useState(user?.gender || '');
   const savedAppearance = useRef(null);
   useEffect(() => {
-    Promise.all([api.get('/settings'), endpoints.list('accounts'), api.get('/telegram-link')])
-      .then(([settings, accountList, connection]) => {
+    Promise.all([api.get('/settings'), endpoints.list('accounts').catch(() => ({ data: [] }))])
+      .then(([settings, accountList]) => {
         savedAppearance.current = normalizeAppearance(settings.data.appearance, settings.data.theme);
         setForm(settings.data);
         setAccounts(accountList.data);
-        setTelegram(connection.data);
       })
       .catch((error) => toast(error.message, 'error'))
       .finally(() => setLoading(false));
@@ -122,40 +121,6 @@ export default function Settings() {
     try { await api.patch('/auth/me', { gender }); await refresh(); toast('Profile updated'); }
     catch (error) { toast(error.message, 'error'); }
     finally { setBusy(false); }
-  }
-  async function connect() {
-    setBusy(true);
-    try {
-      const response = await api.post('/telegram-link');
-      setLink(response.data);
-      window.open(response.data.url, '_blank', 'noopener,noreferrer');
-      toast('Complete the link in Telegram');
-    } catch (error) {
-      toast(error.message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function disconnect() {
-    if (!window.confirm('Disconnect Telegram from Orbit?')) return;
-    setBusy(true);
-    try {
-      await api.delete('/telegram-link');
-      setTelegram({ connected: false });
-      setLink(null);
-      toast('Telegram disconnected');
-    } catch (error) {
-      toast(error.message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function refreshTelegram() {
-    try {
-      setTelegram((await api.get('/telegram-link')).data);
-    } catch (error) {
-      toast(error.message, 'error');
-    }
   }
   if (loading) return <Spinner label="Loading settings…" />;
   if (!form)
@@ -256,11 +221,11 @@ export default function Settings() {
                 </div>
                 <div className="mt-4 flex gap-2">
                   {telegram?.connected ? (
-                    <button disabled={busy} className="btn-secondary" onClick={disconnect}>
-                      Disconnect Telegram
+                    <button disabled={busy} className="btn-secondary" onClick={() => openTelegram(true)}>
+                      Manage connection
                     </button>
                   ) : (
-                    <button disabled={busy} className="btn-primary" onClick={connect}>
+                    <button disabled={busy} className="btn-primary" onClick={() => openTelegram(true)}>
                       Connect Telegram
                     </button>
                   )}
@@ -383,19 +348,19 @@ export default function Settings() {
                   <b>Access:</b> {access?.eligible ? 'ACTIVE' : access?.reason || 'NO_ACCESS'}
                 </p>
                 <p>
-                  <b>Plan:</b> {access?.subscription?.planSnapshot?.name || 'None'}
+                  <b>Plan:</b> {access?.subscription?.planSnapshot?.name || 'Free'}
                 </p>
                 <p>
                   <b>Activated:</b>{' '}
                   {access?.subscription?.activatedAt
                     ? new Date(access.subscription.activatedAt).toLocaleString()
-                    : '—'}
+                    : 'Never'}
                 </p>
                 <p>
                   <b>Expires:</b>{' '}
                   {access?.subscription?.expiresAt
                     ? new Date(access.subscription.expiresAt).toLocaleString()
-                    : '—'}
+                    : 'Never'}
                 </p>
                 <p>
                   <b>Remaining:</b>{' '}
@@ -407,7 +372,7 @@ export default function Settings() {
                             86400000,
                         ),
                       ) + ' days'
-                    : '—'}
+                    : 'Unlimited'}
                 </p>
               </div>
             </Section>

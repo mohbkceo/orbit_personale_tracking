@@ -29,5 +29,6 @@ export function errorHandler(error, _req, res, _next) {
     message = 'Internal server error';
     code = 'INTERNAL_ERROR';
   }
-  res.status(status).json({ success: false, message, ...(code ? { code } : {}), ...(errors ? { errors } : {}) });
+  res.status(status).json({ success: false, message, ...(code ? { code } : {}), ...(errors ? { errors } : {}),
+    ...(error.feature ? { feature: error.feature } : {}), ...(error.upgradePlan ? { upgradePlan: error.upgradePlan } : {}) });
 }

@@ -1,7 +1,7 @@
 const oldPanelPaths = ['/tasks', '/reminders', '/settings'];
 const oldPanelPrefixes = ['/money/', '/planning/', '/personal/'];
 
-export function loginDestination(next, eligible) {
+export function loginDestination(next, eligible = true) {
   const fallback = eligible ? '/panel' : '/access';
   if (
     !next ||

@@ -3,8 +3,9 @@ import mongoose from 'mongoose';
 const planSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 100 },
   slug: { type: String, required: true, unique: true, sparse: true, trim: true },
-  durationValue: { type: Number, required: true, min: 1 },
-  durationUnit: { type: String, enum: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'], required: true },
+  kind: { type: String, enum: ['FREE', 'PAID'], default: 'PAID', index: true },
+  durationValue: { type: Number, required() { return this.kind !== 'FREE'; }, min: 1 },
+  durationUnit: { type: String, enum: ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR', 'PERMANENT'], required: true },
   description: { type: String, maxlength: 500, default: '' },
   price: {
     amount: { type: Number, min: 0, default: 0 },
@@ -32,11 +33,15 @@ const planSchema = new mongoose.Schema({
     value: { type: String, default: '' },
   }],
   status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE', index: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required() { return this.kind !== 'FREE'; } },
 }, { timestamps: true });
 
 planSchema.pre('validate', function setLegacySlug(next) {
   if (!this.slug && this.name) this.slug = this.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (this.kind === 'FREE') {
+    this.slug = 'free'; this.durationUnit = 'PERMANENT'; this.durationValue = undefined;
+    this.price.amount = 0; this.price.originalAmount = null; this.status = 'ACTIVE';
+  }
   next();
 });
 
