@@ -62,6 +62,40 @@ describe('Freemium access control', () => {
     expect(repeated.features.length).toBe(migrated.features.length);
   });
 
+  it('updates access on a legacy plan without generating a duplicate slug', async () => {
+    const legacy = await Plan.collection.insertOne({ name: 'Plus', durationValue: 30, durationUnit: 'DAY', price: { amount: 500, currency: 'DZD' }, features: [], status: 'ACTIVE' });
+    const free = await Plan.findOne({ slug: 'free' });
+    const response = await adminAgent.patch('/api/admin/access-control/goals').send({
+      accessMode: 'PLAN_BASED', scope: 'SECTION', name: 'Goals', description: 'Goals in Orbit.', icon: 'mdi:target', order: 110, publicVisible: true,
+      locked: { title: '', description: '', explanation: '', presentation: 'BLUR', ctaLabel: 'Explore plans', visibleWhenLocked: true, recommendedPlan: null },
+      plans: [{ planId: String(free._id), enabled: true }, { planId: String(legacy.insertedId), enabled: false }, { planId: String(paid._id), enabled: true }], applyExisting: false,
+    }).expect(200);
+    const savedLegacy = await Plan.collection.findOne({ _id: legacy.insertedId });
+    expect(savedLegacy.slug).toBeUndefined();
+    expect(await Plan.countDocuments({ slug: 'plus' })).toBe(1);
+    expect(response.body.data.feature.description).toBe('Goals in Orbit.');
+    expect((await adminAgent.get('/api/admin/access-control/preview').query({ planId: String(paid._id) }).expect(200)).body.data.capabilities.goals.allowed).toBe(true);
+  });
+
+  it('bulk assigns sections and a numeric capability to one paid plan', async () => {
+    const before = await AccessConfiguration.findOne({ key: 'global' });
+    const response = await adminAgent.patch('/api/admin/access-control/bulk').send({
+      planId: String(paid._id), operation: 'GRANT', exclusive: true,
+      features: [{ key: 'goals' }, { key: 'projects-limit', limit: 2 }],
+    }).expect(200);
+    expect(response.body.data).toMatchObject({ updated: 2, configurationVersion: before.version + 1 });
+    const goalFeature = await Feature.findOne({ key: 'goals' });
+    const projectLimit = await Feature.findOne({ key: 'projects-limit' });
+    expect(goalFeature.accessMode).toBe('PLAN_BASED');
+    const free = await Plan.findOne({ slug: 'free' });
+    expect(free.features.some((entry) => String(entry.feature) === String(goalFeature._id))).toBe(false);
+    const assigned = await Plan.findById(paid._id);
+    expect(assigned.features.find((entry) => String(entry.feature) === String(projectLimit._id)).limit).toBe(2);
+    await member.get('/api/goals').expect(403);
+    expect((await adminAgent.get('/api/admin/access-control/preview').query({ planId: String(paid._id) }).expect(200)).body.data.capabilities.goals.allowed).toBe(true);
+    await adminAgent.patch('/api/admin/access-control/bulk').send({ planId: String(paid._id), operation: 'GRANT', exclusive: true, features: [{ key: 'dashboard' }] }).expect(422);
+  });
+
   it('registers directly into permanent Free access and protects premium APIs', async () => {
     const auth = await member.get('/api/auth/me').expect(200);
     expect(auth.body.data.access).toMatchObject({ eligible: true, planType: 'FREE', subscription: null });

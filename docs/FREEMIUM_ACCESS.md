@@ -12,6 +12,8 @@ Deploy with a database backup, let one server instance finish the seed before se
 
 Open **Admin → Access Control** as a Super Admin. Search or filter the matrix, select a section or capability, edit it, then save. The plan columns are generated from active database plans. The preview selector simulates a plan, including inherited Free access.
 
+For bulk changes, tick the sections or capabilities in the matrix (or **Select visible features**), choose a paid plan and **Grant access** or **Remove access**, then submit once. When granting a `LIMIT` or `TEXT` capability, enter its limit or text value in the selection panel. **Only this plan** changes each selected feature to plan-based access and removes its assignments from Free and other plans. Without that option, other plan assignments and global Free access remain. The optional **Apply to existing paid subscribers** choice updates their overrides deliberately.
+
 - **Free for everyone:** set Access mode to **Free for everyone**. All active accounts, including paid accounts, can use it.
 - **Only Plus:** set Access mode to **Selected plans** and enable Plus. Disable the Free and other paid plan boxes. The actual plan name comes from the database.
 - **Only Ultimate:** use **Selected plans** and enable only Ultimate.
@@ -32,6 +34,7 @@ All responses use the existing `{ success, data }` envelope. Authentication is r
 | `GET /api/me/entitlements/:key` | Returns one decision; unknown keys return 404. |
 | `GET /api/admin/access-control` | Returns the Feature catalog, existing Plans with assignments, and configuration version. |
 | `PATCH /api/admin/access-control/:key` | Accepts validated `accessMode`, display fields, `locked` copy/presentation fields, `plans: [{ planId, enabled, limit?, value? }]`, and optional `applyExisting`. Returns the updated Feature and configuration version. |
+| `PATCH /api/admin/access-control/bulk` | Accepts `{ planId, features: [{ key, limit?, value? }], operation: "GRANT" \| "REMOVE", exclusive?, applyExisting? }` for up to 50 features. `exclusive` requires an active paid plan and grants it sole plan assignment. Returns `{ updated, planId, configurationVersion }`. |
 | `GET /api/admin/access-control/preview?planId=...` | Returns effective decisions for that plan, including Free inheritance. |
 | `GET /api/telegram-link` | Returns the shared connection status. Available to every active account. |
 | `POST /api/telegram-link` | Creates a secure temporary single-use bot link; returns 201. |

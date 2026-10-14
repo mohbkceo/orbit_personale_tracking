@@ -16,6 +16,13 @@ import { invalidateEntitlementCache } from '../services/entitlementService.js';
 export const adminAccessControlRoutes = Router();
 adminAccessControlRoutes.use(adminAuth, adminRoleGuard('SUPER_ADMIN'));
 const id = z.string().regex(/^[a-f\d]{24}$/i);
+const featureKey = z.string().regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/).max(100);
+const planAssignment = z.strictObject({ planId: id, enabled: z.boolean(), limit: z.number().int().min(0).nullable().optional(), value: z.string().trim().max(240).optional() });
+const bulkItem = z.strictObject({ key: featureKey, limit: z.number().int().min(0).nullable().optional(), value: z.string().trim().max(240).optional() });
+const bulkPatch = z.strictObject({
+  planId: id, features: z.array(bulkItem).min(1).max(50), operation: z.enum(['GRANT', 'REMOVE']),
+  exclusive: z.boolean().default(false), applyExisting: z.boolean().default(false),
+});
 const patch = z.strictObject({
   accessMode: z.enum(['FREE', 'PLAN_BASED', 'DISABLED']).optional(),
   scope: z.enum(['SECTION', 'CAPABILITY']).optional(),
@@ -30,9 +37,32 @@ const patch = z.strictObject({
     ctaLabel: z.string().trim().max(80).optional(), recommendedPlan: id.nullable().optional(),
     visibleWhenLocked: z.boolean().optional(),
   }).optional(),
-  plans: z.array(z.strictObject({ planId: id, enabled: z.boolean(), limit: z.number().int().min(0).nullable().optional(), value: z.string().trim().max(240).optional() })).optional(),
+  plans: z.array(planAssignment).optional(),
   applyExisting: z.boolean().optional(),
 });
+
+function validateAssignment(feature, item) {
+  if (feature.type === 'LIMIT' && item.enabled && item.limit == null) throw new AppError('Enabled limits require a numeric value. Zero means no new items.', 422);
+  if (feature.type !== 'LIMIT' && item.limit != null) throw new AppError('This feature does not accept a limit.', 422);
+  if (feature.type === 'TEXT' && item.enabled && !item.value) throw new AppError('Enabled text features require a value.', 422);
+  if (feature.type !== 'TEXT' && item.value) throw new AppError('This feature does not accept a text value.', 422);
+}
+
+async function writePlanAssignment(planId, feature, item, session) {
+  // Update only the feature array. Saving a legacy Plan document can generate
+  // a missing slug and collide with another existing paid plan.
+  await Plan.updateOne({ _id: planId }, { $pull: { features: { feature: feature._id } } }, { session });
+  if (item.enabled) await Plan.updateOne({ _id: planId }, { $push: { features: { feature: feature._id, enabled: true,
+    ...(feature.type === 'LIMIT' ? { limit: item.limit } : {}), ...(feature.type === 'TEXT' ? { value: item.value } : {}) } } }, { session });
+}
+
+async function writeSubscriberOverride(plan, feature, item, session) {
+  if (plan.kind === 'FREE' || plan.slug === 'free') return;
+  const filter = { plan: plan._id, status: 'ACTIVE', expiresAt: { $gt: new Date() } };
+  await AccessSubscription.updateMany(filter, { $pull: { entitlementOverrides: { key: feature.key } } }, { session });
+  await AccessSubscription.updateMany(filter, { $push: { entitlementOverrides: { key: feature.key, enabled: item.enabled,
+    ...(feature.type === 'LIMIT' ? { limit: item.limit } : {}), ...(feature.type === 'TEXT' ? { value: item.value } : {}) } } }, { session });
+}
 
 adminAccessControlRoutes.get('/', asyncHandler(async (_req, res) => {
   const [features, plans, config] = await Promise.all([
@@ -40,6 +70,47 @@ adminAccessControlRoutes.get('/', asyncHandler(async (_req, res) => {
     AccessConfiguration.findOne({ key: 'global' }).lean(),
   ]);
   return success(res, { features, plans, configurationVersion: config?.version || 1 });
+}));
+
+adminAccessControlRoutes.patch('/bulk', validate(bulkPatch), asyncHandler(async (req, res) => {
+  const { planId, features: selected, operation, exclusive, applyExisting } = req.body;
+  if (new Set(selected.map((item) => item.key)).size !== selected.length) throw new AppError('Select each feature only once.', 422);
+  const [plan, features] = await Promise.all([Plan.findById(planId), Feature.find({ key: { $in: selected.map((item) => item.key) } })]);
+  if (!plan || plan.status !== 'ACTIVE') throw new AppError('Choose an active plan.', 422);
+  if (features.length !== selected.length) throw new AppError('One or more selected features were not found.', 422);
+  if (exclusive && (operation !== 'GRANT' || plan.kind === 'FREE' || plan.slug === 'free')) throw new AppError('Exclusive access requires granting an active paid plan.', 422);
+  const byKey = new Map(features.map((feature) => [feature.key, feature]));
+  for (const selectedItem of selected) {
+    const feature = byKey.get(selectedItem.key);
+    if (exclusive && feature.key === 'dashboard') throw new AppError('The workspace dashboard must remain free and available.', 422);
+    validateAssignment(feature, { ...selectedItem, enabled: operation === 'GRANT' });
+  }
+  const otherPlans = exclusive && applyExisting ? await Plan.find({ _id: { $ne: plan._id } }).select('_id kind slug') : [];
+  const session = await mongoose.startSession();
+  let version;
+  try {
+    await session.withTransaction(async () => {
+      for (const selectedItem of selected) {
+        const feature = byKey.get(selectedItem.key);
+        const assignment = { ...selectedItem, enabled: operation === 'GRANT' };
+        if (exclusive) {
+          await Feature.updateOne({ _id: feature._id }, { $set: { accessMode: 'PLAN_BASED' } }, { session });
+          await Plan.updateMany({ _id: { $ne: plan._id } }, { $pull: { features: { feature: feature._id } } }, { session });
+          if (applyExisting) for (const other of otherPlans) await writeSubscriberOverride(other, feature, { enabled: false }, session);
+        }
+        await writePlanAssignment(plan._id, feature, assignment, session);
+        if (applyExisting) await writeSubscriberOverride(plan, feature, assignment, session);
+      }
+      const config = await AccessConfiguration.findOneAndUpdate({ key: 'global' }, { $inc: { version: 1 } }, { upsert: true, new: true, session });
+      version = config.version;
+      await audit('ACCESS_CONTROL_BULK_UPDATED', { actorType: 'ADMIN', actorId: req.admin._id, targetType: 'Plan', targetId: plan._id,
+        metadata: { features: selected, operation, exclusive, applyExisting, version }, ip: req.ip, session });
+    });
+  } finally {
+    await session.endSession();
+  }
+  invalidateEntitlementCache();
+  return success(res, { updated: selected.length, planId, configurationVersion: version });
 }));
 
 adminAccessControlRoutes.patch('/:key', validate(patch), asyncHandler(async (req, res) => {
@@ -52,12 +123,7 @@ adminAccessControlRoutes.patch('/:key', validate(patch), asyncHandler(async (req
   if (assignments) {
     const known = await Plan.find({ _id: { $in: assignments.map((item) => item.planId) } });
     if (new Set(assignments.map((item) => item.planId)).size !== assignments.length || known.length !== assignments.length) throw new AppError('Plan assignments contain an unknown or duplicate plan.', 422);
-    for (const item of assignments) {
-      if (feature.type === 'LIMIT' && item.enabled && item.limit == null) throw new AppError('Enabled limits require a numeric value. Zero means no new items.', 422);
-      if (feature.type !== 'LIMIT' && item.limit != null) throw new AppError('This feature does not accept a limit.', 422);
-      if (feature.type === 'TEXT' && item.enabled && !item.value) throw new AppError('Enabled text features require a value.', 422);
-      if (feature.type !== 'TEXT' && item.value) throw new AppError('This feature does not accept a text value.', 422);
-    }
+    for (const item of assignments) validateAssignment(feature, item);
   }
   for (const [key, value] of Object.entries(fields)) feature.set(key, value);
   for (const [key, value] of Object.entries(locked || {})) feature.set(`locked.${key}`, value);
@@ -68,14 +134,8 @@ adminAccessControlRoutes.patch('/:key', validate(patch), asyncHandler(async (req
       await feature.save({ session });
       if (assignments) for (const item of assignments) {
         const plan = await Plan.findById(item.planId).session(session);
-        plan.features = plan.features.filter((entry) => String(entry.feature) !== String(feature._id));
-        if (item.enabled) plan.features.push({ feature: feature._id, enabled: true, ...(feature.type === 'LIMIT' ? { limit: item.limit } : {}), ...(feature.type === 'TEXT' ? { value: item.value } : {}) });
-        await plan.save({ session });
-        if (applyExisting && plan.kind !== 'FREE' && plan.slug !== 'free') {
-          const filter = { plan: plan._id, status: 'ACTIVE', expiresAt: { $gt: new Date() } };
-          await AccessSubscription.updateMany(filter, { $pull: { entitlementOverrides: { key: feature.key } } }, { session });
-          await AccessSubscription.updateMany(filter, { $push: { entitlementOverrides: { key: feature.key, enabled: item.enabled, ...(feature.type === 'LIMIT' ? { limit: item.limit } : {}), ...(feature.type === 'TEXT' ? { value: item.value } : {}) } } }, { session });
-        }
+        await writePlanAssignment(plan._id, feature, item, session);
+        if (applyExisting) await writeSubscriberOverride(plan, feature, item, session);
       }
       const config = await AccessConfiguration.findOneAndUpdate({ key: 'global' }, { $inc: { version: 1 } }, { upsert: true, new: true, session });
       version = config.version;
