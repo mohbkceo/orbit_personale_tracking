@@ -31,9 +31,13 @@ export async function ensureAccessCatalog() {
         if (keys.has(definition.key)) continue;
         const alias = (LEGACY_FEATURE_KEYS[definition.key] || []).find((key) => keys.has(key));
         const old = alias && plan.features.find((entry) => entry.feature?.key === alias);
-        if (old?.enabled || definition.accessMode === 'FREE') plan.features.push({ feature: ids[definition.key], enabled: true, ...(definition.type === 'LIMIT' && old?.limit != null ? { limit: old.limit } : {}) });
+        if (old?.enabled || definition.accessMode === 'FREE') {
+          const entry = { feature: ids[definition.key], enabled: true, ...(definition.type === 'LIMIT' && old?.limit != null ? { limit: old.limit } : {}) };
+          // Legacy plans may have no slug. Saving the whole document would run
+          // Plan's slug generator and can collide with an existing paid plan.
+          await Plan.updateOne({ _id: plan._id, 'features.feature': { $ne: entry.feature } }, { $push: { features: entry } });
+        }
       }
-      await plan.save();
     }
   }
   // Mark the rollout complete only after every plan was migrated, so a restart

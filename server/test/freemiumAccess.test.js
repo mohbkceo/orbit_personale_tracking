@@ -11,6 +11,7 @@ import { Feature } from '../src/models/Feature.js';
 import { User } from '../src/models/User.js';
 import { Account } from '../src/models/Account.js';
 import { AccessSubscription } from '../src/models/AccessSubscription.js';
+import { AccessConfiguration } from '../src/models/AccessConfiguration.js';
 import { TelegramConnection } from '../src/models/TelegramConnection.js';
 import { consumeTelegramLink } from '../src/services/telegramLinkService.js';
 import { handleTelegramUpdate } from '../src/telegram/handler.js';
@@ -43,6 +44,24 @@ beforeEach(async () => {
 });
 
 describe('Freemium access control', () => {
+  it('migrates a legacy paid plan without generating a duplicate slug', async () => {
+    const legacyFeature = await Feature.create({ key: 'accounts_transactions', name: 'Accounts and transactions', category: 'Finance', icon: 'mdi:wallet-outline', type: 'BOOLEAN' });
+    const legacy = await Plan.collection.insertOne({ name: 'Plus', durationValue: 30, durationUnit: 'DAY', price: { amount: 500, currency: 'DZD' }, features: [{ feature: legacyFeature._id, enabled: true }], status: 'ACTIVE' });
+    await AccessConfiguration.deleteOne({ key: 'global' });
+    await ensureAccessCatalog();
+    const migrated = await Plan.collection.findOne({ _id: legacy.insertedId });
+    const accountFeature = await Feature.findOne({ key: 'accounts' });
+    const transactionFeature = await Feature.findOne({ key: 'transactions' });
+    expect(migrated.slug).toBeUndefined();
+    expect(migrated.features.some((entry) => String(entry.feature) === String(accountFeature._id))).toBe(true);
+    expect(migrated.features.some((entry) => String(entry.feature) === String(transactionFeature._id))).toBe(true);
+    expect(await Plan.countDocuments({ slug: 'plus' })).toBe(1);
+    await AccessConfiguration.deleteOne({ key: 'global' });
+    await ensureAccessCatalog();
+    const repeated = await Plan.collection.findOne({ _id: legacy.insertedId });
+    expect(repeated.features.length).toBe(migrated.features.length);
+  });
+
   it('registers directly into permanent Free access and protects premium APIs', async () => {
     const auth = await member.get('/api/auth/me').expect(200);
     expect(auth.body.data.access).toMatchObject({ eligible: true, planType: 'FREE', subscription: null });
