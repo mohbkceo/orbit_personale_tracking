@@ -7,6 +7,7 @@ export function TelegramProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
+  const [watching, setWatching] = useState(false);
   const [link, setLink] = useState(null);
   const [busy, setBusy] = useState(false);
   const refresh = useCallback(async () => {
@@ -20,10 +21,10 @@ export function TelegramProvider({ children }) {
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
-    if (!open || !link || status?.connected) return undefined;
+    if ((!open && !watching) || !link || status?.connected) return undefined;
     const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 4000);
     return () => window.clearInterval(timer);
-  }, [open, link, status?.connected, refresh]);
+  }, [open, watching, link, status?.connected, refresh]);
   const connect = useCallback(async () => {
     setBusy(true); setError('');
     try {
@@ -41,7 +42,7 @@ export function TelegramProvider({ children }) {
     catch (failure) { setError(failure.message); }
     finally { setBusy(false); }
   }, []);
-  const value = useMemo(() => ({ status, loading, error, open, setOpen, link, busy, refresh, connect, disconnect }),
-    [status, loading, error, open, link, busy, refresh, connect, disconnect]);
+  const value = useMemo(() => ({ status, loading, error, open, setOpen, watching, setWatching, link, busy, refresh, connect, disconnect }),
+    [status, loading, error, open, watching, link, busy, refresh, connect, disconnect]);
   return <TelegramContext.Provider value={value}>{children}</TelegramContext.Provider>;
 }

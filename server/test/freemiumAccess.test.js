@@ -44,6 +44,52 @@ beforeEach(async () => {
 });
 
 describe('Freemium access control', () => {
+  it('shows optional first use only for a new public registration and never gates the dashboard', async () => {
+    const first = await member.get('/api/me/onboarding').expect(200);
+    expect(first.body.data).toMatchObject({ status: 'NOT_STARTED', step: 'welcome', autoPresent: true, actions: { task: false, account: false } });
+    await member.get('/api/dashboard/summary').expect(200);
+    await request(app).get('/api/me/onboarding').expect(401);
+    await request(app).patch('/api/me/onboarding').send({ status: 'COMPLETED' }).expect(401);
+    expect(account.onboardingCompletedAt).toBeFalsy();
+    expect(await AccessSubscription.countDocuments({ user: account._id })).toBe(0);
+  });
+
+  it('persists skipping, supports manual resumption, and keeps completion idempotent', async () => {
+    await member.patch('/api/me/onboarding').send({ status: 'SKIPPED' }).expect(200);
+    await member.post('/api/auth/logout').expect(200);
+    await member.post('/api/auth/login').send({ email: signup.email, password: signup.password }).expect(200);
+    expect((await member.get('/api/me/onboarding').expect(200)).body.data).toMatchObject({ status: 'SKIPPED', autoPresent: false });
+    expect((await member.get('/api/me/onboarding?details=1').expect(200)).body.data.actions).toEqual({ task: false, account: false });
+    await member.get('/api/dashboard/summary').expect(200);
+    await member.patch('/api/me/onboarding').send({ status: 'IN_PROGRESS', step: 'first-action' }).expect(200);
+    expect((await member.get('/api/me/onboarding').expect(200)).body.data.status).toBe('SKIPPED');
+    await member.patch('/api/me/onboarding').send({ status: 'IN_PROGRESS', step: 'first-action', resume: true }).expect(200);
+    expect((await member.get('/api/me/onboarding').expect(200)).body.data).toMatchObject({ status: 'IN_PROGRESS', step: 'first-action', autoPresent: false });
+    await member.patch('/api/me/onboarding').send({ status: 'COMPLETED' }).expect(200);
+    const completed = (await User.findById(account._id)).firstUseOnboarding.completedAt;
+    await member.patch('/api/me/onboarding').send({ status: 'COMPLETED' }).expect(200);
+    await member.patch('/api/me/onboarding').send({ status: 'SKIPPED' }).expect(200);
+    expect((await member.get('/api/me/onboarding').expect(200)).body.data.status).toBe('COMPLETED');
+    expect((await User.findById(account._id)).firstUseOnboarding.completedAt).toEqual(completed);
+    expect(await AccessSubscription.countDocuments({ user: account._id })).toBe(0);
+  });
+
+  it('reports real first actions while the existing feature guards remain authoritative', async () => {
+    await member.post('/api/tasks').send({ title: 'My first task' }).expect(201);
+    await member.post('/api/accounts').send({ name: 'Everyday', type: 'bank', currency: 'DZD' }).expect(201);
+    expect((await member.get('/api/me/onboarding').expect(200)).body.data.actions).toEqual({ task: true, account: true });
+    const free = await Plan.findOne({ slug: 'free' });
+    await adminAgent.patch('/api/admin/access-control/tasks').send({ accessMode: 'PLAN_BASED', plans: [{ planId: String(free._id), enabled: false }] }).expect(200);
+    await member.post('/api/tasks').send({ title: 'Not permitted' }).expect(403);
+    await member.patch('/api/me/onboarding').send({ status: 'COMPLETED' }).expect(200);
+    await member.post('/api/tasks').send({ title: 'Still not permitted' }).expect(403);
+  });
+
+  it('does not auto-prompt accounts created before the optional tour existed', async () => {
+    await User.updateOne({ _id: account._id }, { $unset: { firstUseOnboarding: 1 } });
+    expect((await member.get('/api/me/onboarding').expect(200)).body.data).toMatchObject({ status: 'NOT_STARTED', autoPresent: false });
+  });
+
   it('migrates a legacy paid plan without generating a duplicate slug', async () => {
     const legacyFeature = await Feature.create({ key: 'accounts_transactions', name: 'Accounts and transactions', category: 'Finance', icon: 'mdi:wallet-outline', type: 'BOOLEAN' });
     const legacy = await Plan.collection.insertOne({ name: 'Plus', durationValue: 30, durationUnit: 'DAY', price: { amount: 500, currency: 'DZD' }, features: [{ feature: legacyFeature._id, enabled: true }], status: 'ACTIVE' });

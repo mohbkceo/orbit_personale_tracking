@@ -153,7 +153,7 @@ export function Layout() {
     catch { /* The persisted setting remains authoritative if the shortcut cannot be saved. */ }
   };
 
-  return <div className="min-h-screen bg-canvas">
+  return <div data-orbit-panel-root className="min-h-screen bg-canvas">
     <Sidebar open={menu} close={() => setMenu(false)} />
     {menu && <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-text/40 lg:hidden" onClick={() => setMenu(false)} />}
     <div className="min-w-0 lg:pl-[236px]">

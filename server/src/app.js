@@ -40,6 +40,7 @@ import { adminEventsRoutes } from './routes/adminEvents.js';
 import { eventRoutes } from './routes/events.js';
 import { paymentRoutes, adminPaymentRoutes } from './routes/payments.js';
 import { meCapabilityRoutes } from './routes/meCapabilities.js';
+import { meOnboardingRoutes } from './routes/meOnboarding.js';
 import { adminAccessControlRoutes } from './routes/adminAccessControl.js';
 
 export const app = express();
@@ -61,6 +62,7 @@ app.use('/api/admin/payments', adminPaymentRoutes);
 app.use('/api/activation', activationRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/me', userAuth, meCapabilityRoutes);
+app.use('/api/me', userAuth, meOnboardingRoutes);
 app.use('/api/admin/access-control', adminAccessControlRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/plans', adminPlanRoutes);

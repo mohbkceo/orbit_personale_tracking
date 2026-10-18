@@ -4,6 +4,7 @@ import {
   Bell,
   CalendarDays,
   Database,
+  Compass,
   Globe2,
   Palette,
   Save,
@@ -18,6 +19,7 @@ import { AppearancePicker } from '../appearance/AppearancePicker.jsx';
 import { normalizeAppearance } from '../appearance/themes.js';
 import EventPreferences from './EventPreferences.jsx';
 import { useTelegram } from '../context/TelegramContext.js';
+import { Link } from 'react-router-dom';
 
 const tabs = [
   ['general', 'General', Globe2],
@@ -158,6 +160,7 @@ export default function Settings() {
           ))}
         </nav>
         <div className="space-y-4">
+          {tab === 'general' && <section className="panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="flex items-center gap-2 font-display text-lg font-bold"><Compass size={19} className="text-primary" /> Getting Started</h2><p className="mt-1 text-sm text-muted">Revisit the quick Orbit setup whenever it suits you.</p></div><Link to="/panel?onboarding=1" className="btn-secondary shrink-0">Open guide</Link></section>}
           {tab === 'events' && <EventPreferences />}
           {tab === 'general' && (
             <Section

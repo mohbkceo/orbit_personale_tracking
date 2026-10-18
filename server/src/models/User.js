@@ -8,6 +8,15 @@ const userSchema = new mongoose.Schema({
   gender: { type: String, enum: ['MALE', 'FEMALE'] },
   status: { type: String, enum: ['ACTIVE', 'SUSPENDED'], default: 'ACTIVE', index: true },
   onboardingCompletedAt: Date,
+  // Optional product tour. Older accounts have no value and are never auto-prompted.
+  firstUseOnboarding: {
+    status: { type: String, enum: ['NOT_STARTED', 'IN_PROGRESS', 'SKIPPED', 'COMPLETED'] },
+    step: { type: String, enum: ['welcome', 'first-action', 'telegram', 'finish'] },
+    autoPresent: Boolean,
+    startedAt: Date,
+    dismissedAt: Date,
+    completedAt: Date,
+  },
   lastLoginAt: Date,
   accessVersion: { type: Number, default: 0 },
   advertisingAllowed: { type: Boolean, default: undefined },

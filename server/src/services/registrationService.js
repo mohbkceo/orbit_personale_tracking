@@ -10,7 +10,7 @@ import { EVENTS } from '../analytics/events.js';
 export async function registerPublic(input, req, res) {
   const email = normalizeEmail(input.email);
   if (await User.exists({ email })) throw new AppError('An account with this email already exists. Please sign in.', 409, undefined, 'ACCOUNT_EXISTS');
-  const user = new User({ fullName: input.fullName, email, passwordHash: await hashPassword(input.password) });
+  const user = new User({ fullName: input.fullName, email, passwordHash: await hashPassword(input.password), firstUseOnboarding: { status: 'NOT_STARTED', step: 'welcome', autoPresent: true } });
   const context = await captureConversionContext(req, res, user, undefined, { newAccount: true });
   const session = await mongoose.startSession();
   try {
