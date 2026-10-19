@@ -25,7 +25,7 @@ export async function runTaskReminderDigestForUser(userId, now, rules) {
   const local = dayjs(now).tz(zone);
   const time = local.format('HH:mm');
   if (!policy.times.includes(time)) return false;
-  const digest = renderTaskDigest(await collectTaskDigest(userId, rules, zone, now));
+  const digest = renderTaskDigest(await collectTaskDigest(userId, rules, zone, now), settings);
   if (!digest) return false;
   const key = { user: userId, localDate: local.format('YYYY-MM-DD'), time };
   let claim;

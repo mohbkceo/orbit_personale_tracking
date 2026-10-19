@@ -9,8 +9,10 @@ import {
   X,
 } from 'lucide-react';
 import { ProductPreview } from './ProductPreview.jsx';
+import { useTranslation } from 'react-i18next';
 
 export default function Landing() {
+  const { t } = useTranslation();
   const [demoOpen, setDemoOpen] = useState(false);
   useEffect(() => {
     if (!demoOpen) return undefined;
@@ -23,66 +25,81 @@ export default function Landing() {
   return (
     <main className="marketing-hero">
       <div className="marketing-orbit-ring" aria-hidden="true" />
+
       <div className="marketing-hero-inner">
         <div className="marketing-hero-copy">
-          <span className="marketing-hero-pill">A more organized you</span>
+          {/* Eyebrow */}
+          <span className="marketing-hero-pill">{t('marketing:heroPill')}</span>
+
+          {/* Main headline */}
           <h1>
-            Organize your work.
+            {t('marketing:heroTitle1')}
             <br />
-            <span>Track your life.</span>
+            <span>{t('marketing:heroTitle2')}</span>
           </h1>
+
+          {/* Value proposition */}
           <p>
-            Bring your tasks, goals, expenses, debts, and reminders into one simple, beautiful space
-            — so you can focus on what matters most.
+            {t('marketing:heroDescription')}
           </p>
+
+          {/* Primary and secondary actions */}
           <div className="marketing-hero-actions">
             <Link
-              to="/pricing"
-              className="marketing-button marketing-button-primary marketing-hero-primary"
+              to="/register"
+              className="marketing-button  marketing-button-primary marketing-hero-primary"
             >
-              Get Started <ArrowRight size={19} />
+              {t('marketing:startFree')}
+              <ArrowRight size={19} aria-hidden="true" />
             </Link>
+
             <button
               type="button"
               className="marketing-button marketing-button-outline"
               onClick={() => setDemoOpen(true)}
             >
-              <CirclePlay size={23} /> Explore Orbit
+              <CirclePlay size={23} aria-hidden="true" />
+              {t('marketing:explore')}
             </button>
           </div>
-          <p className="mt-4 text-sm"><Link className="underline" to="/register">Create an account</Link> · <Link className="underline" to="/login">Already a member? Sign in</Link></p>
+
+          {/* Registration reassurance */}
+          <p className="text-xs pt-3 p-hero mt-6">
+            {t('marketing:reassurance')}
+          </p>
+
+          {/* Key benefits */}
           <div className="marketing-values">
             <div>
               <span>
-                <Check size={20} />
+                <Check size={20} aria-hidden="true" />
               </span>
-              All-in-one
-              <br />
-              organization
+              {t('marketing:benefitOne')}
             </div>
+
             <div>
               <span>
-                <ChartNoAxesColumnIncreasing size={20} />
+                <ChartNoAxesColumnIncreasing size={20} aria-hidden="true" />
               </span>
-              Built for
-              <br />
-              real life
+              {t('marketing:benefitTwo')}
             </div>
+
             <div>
               <span>
-                <UsersRound size={20} />
+                <UsersRound size={20} aria-hidden="true" />
               </span>
-              Simple,
-              <br />
-              flexible, powerful
+              {t('marketing:benefitThree')}
             </div>
           </div>
         </div>
+
+        {/* Product preview */}
         <div className="marketing-hero-visual">
           <div className="marketing-orange-disc" aria-hidden="true" />
           <ProductPreview />
         </div>
       </div>
+
       {demoOpen && (
         <div
           className="marketing-modal-backdrop"
@@ -100,15 +117,27 @@ export default function Landing() {
               type="button"
               autoFocus
               className="marketing-modal-close"
-              aria-label="Close"
+              aria-label={t('marketing:close')}
               onClick={() => setDemoOpen(false)}
             >
               <X size={20} />
             </button>
-            <span className="marketing-eyebrow">Orbit demo</span>
-            <h2 id="demo-title">One place for your everyday plans</h2>
-            <ol className="mt-4 space-y-4"><li><strong>1. Plan your day.</strong> Capture tasks, set priorities and see what needs your attention.</li><li><strong>2. Understand your money.</strong> Keep expenses, accounts, debts and savings goals together.</li><li><strong>3. Stay on track.</strong> Connect Telegram for reminders and quick updates.</li></ol>
-            <Link to="/pricing" className="marketing-button marketing-button-primary mt-6">Choose your Orbit plan <ArrowRight size={18} /></Link>
+            <span className="marketing-eyebrow">{t('marketing:demo')}</span>
+            <h2 id="demo-title">{t('marketing:demoTitle')}</h2>
+            <ol className="mt-4 space-y-4">
+              <li>
+                {t('marketing:demoStepOne')}
+              </li>
+              <li>
+                {t('marketing:demoStepTwo')}
+              </li>
+              <li>
+                {t('marketing:demoStepThree')}
+              </li>
+            </ol>
+            <Link to="/pricing" className="marketing-button marketing-button-primary mt-6">
+              {t('marketing:choosePlan')} <ArrowRight size={18} />
+            </Link>
           </section>
         </div>
       )}

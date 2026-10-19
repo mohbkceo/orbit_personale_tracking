@@ -54,6 +54,7 @@ export const taskInput = z.object({
 export const taskUpdate = taskInput.partial();
 
 export const settingsInput = z.object({
+  language: z.enum(['en', 'ar']).optional(),
   name: z.string().max(100).optional(), timezone: timezone.optional(), defaultCurrency: z.string().length(3).optional(),
   dateFormat: z.string().max(40).optional(), weekStartsOn: z.coerce.number().int().min(0).max(6).optional(), theme: z.enum(['light', 'dark', 'system']).optional(),
   appearance: z.object(Object.fromEntries(Object.entries(APPEARANCE_VALUES).map(([key, values]) => [key, z.enum(values).optional()]))).strict().optional(),

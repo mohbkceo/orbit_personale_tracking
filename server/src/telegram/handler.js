@@ -11,7 +11,7 @@ import { updateTransaction } from '../services/financeService.js';
 import { updateTask } from '../services/taskService.js';
 import { checkAccess } from '../services/accessService.js';
 import { assertFeature } from '../services/entitlementService.js';
-import { getSettingsDocument } from '../services/settingsService.js';
+import { getSettingsDocument, updateSettings } from '../services/settingsService.js';
 import { consumeTelegramLink } from '../services/telegramLinkService.js';
 import { snoozeReminder } from '../services/reminders/reminderService.js';
 import { env } from '../config/env.js';
@@ -30,6 +30,7 @@ import { clearPending, getPending, pendingExpired, setPending } from './sessionS
 import { escapeHtml as h } from './formatters.js';
 import { DzEvent } from '../models/DzEvent.js';
 import { followEvent } from '../services/events/eventSubscriptionService.js';
+import { telegramText as tr } from '../i18n/telegram.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -67,18 +68,18 @@ async function messageFeature(text, userId, settings, identity) {
   if (pending?.action?.startsWith('ADD_GOAL')) return 'goals';
   return intentFeature[pending?.action] || null;
 }
-const safeError = (error) => {
-  if (error.code === 'FEATURE_NOT_INCLUDED') return `This Orbit feature requires a plan upgrade${error.upgradePlan ? ` to ${error.upgradePlan}` : ''}. ${env.CLIENT_URL.replace(/\/$/, '')}/pricing?feature=${encodeURIComponent(error.feature || '')}`;
-  if (error.code === 'FEATURE_DISABLED') return 'This Orbit feature is temporarily unavailable.';
-  if (error.code === 'USER_SUSPENDED') return 'Your Orbit account is suspended.';
-  if (error.code === 'FEATURE_LIMIT_EXCEEDED') return 'Your plan limit has been reached. Visit Orbit Pricing to increase it.';
-  if (/^Set a default (income|expense) account in Settings/.test(error.message)) return error.message;
-  if (/^Amount must be greater than 0/.test(error.message)) return 'Amount must be greater than 0.';
-  if (/exceeds the remaining balance/i.test(error.message)) return 'Payment exceeds the remaining balance.';
-  if (/already paid/i.test(error.message)) return 'This debt is already paid.';
-  if (/not found/i.test(error.message)) return 'That item is no longer available.';
-  if (error.name === 'ValidationError' || error.name === 'CastError') return 'Please check the details and try again.';
-  return 'I could not save that action. Please try again.';
+const safeError = (error, settings) => {
+  if (error.code === 'FEATURE_NOT_INCLUDED') return `${tr(settings, 'featureUpgrade')} ${env.CLIENT_URL.replace(/\/$/, '')}/pricing?feature=${encodeURIComponent(error.feature || '')}`;
+  if (error.code === 'FEATURE_DISABLED') return tr(settings, 'featureDisabled');
+  if (error.code === 'USER_SUSPENDED') return tr(settings, 'suspended');
+  if (error.code === 'FEATURE_LIMIT_EXCEEDED') return tr(settings, 'planLimit');
+  if (/^Set a default (income|expense) account in Settings/.test(error.message)) return settings?.language === 'ar' ? tr(settings, 'accountRequired', { direction: error.message.includes('expense') ? 'المصاريف' : 'الدخل' }) : error.message;
+  if (/^Amount must be greater than 0/.test(error.message)) return tr(settings, 'amountPositive');
+  if (/exceeds the remaining balance/i.test(error.message)) return tr(settings, 'paymentExceeds');
+  if (/already paid/i.test(error.message)) return tr(settings, 'debtAlreadyPaid');
+  if (/not found/i.test(error.message)) return tr(settings, 'itemUnavailable');
+  if (error.name === 'ValidationError' || error.name === 'CastError') return tr(settings, 'detailsInvalid');
+  return tr(settings, 'couldNotSave');
 };
 
 async function pendingMessage(text, pending, userId, settings, identity) {
@@ -162,12 +163,12 @@ async function dispatchMessage(text, userId, settings, identity) {
     return { text: focus.planningCompleted ? `✓ ${focus.items.length}/${max} — focus plan saved.` : `${focus.items.length}/${max} — ${h(content)}. What's next? Type done if that's enough.` };
   }
   if (['/cancel', 'cancel'].includes(text.toLowerCase())) { await clearPending(identity.userId, identity.chatId); return { text: 'Cancelled.' }; }
-  if (['/quick', '/add', 'add'].includes(command)) { await clearPending(identity.userId, identity.chatId); return quickMenu(); }
+  if (['/quick', '/add', 'add'].includes(command)) { await clearPending(identity.userId, identity.chatId); return quickMenu(settings); }
   if (command.startsWith('/')) {
     const active = await getPending(identity.userId, identity.chatId);
     if (isGuidedAdd(active)) await clearPending(identity.userId, identity.chatId);
   }
-  if (['/start', '/menu', '/help'].includes(command)) return { text: helpText() };
+  if (['/start', '/menu', '/help'].includes(command)) return { text: helpText(settings) };
   if (command === '/last') return lastAction(userId, settings);
   if (command === '/undo' || command === 'undo') return lastAction(userId, settings, true);
   const snooze = text.match(/^\/snooze\s+([a-f\d]{24})\s+(\d{4}-\d{2}-\d{2})\s+([01]\d|2[0-3]):([0-5]\d)$/i);
@@ -242,26 +243,34 @@ export async function handleTelegramUpdate(update) {
       linked.lastInteractionAt = new Date();
       linked.lastUpdateAt = new Date();
       await linked.save();
-      return sendMessage(token, chatId, '✓ Your Telegram account is now connected to Orbit.');
-    } catch { return sendMessage(token, chatId, 'This connection link is invalid or expired. Create a new link in Orbit Settings.'); }
+      const linkedSettings = await getSettingsDocument(linked.user);
+      return sendMessage(token, chatId, tr(linkedSettings, 'linked'));
+    } catch { return sendMessage(token, chatId, tr('ar', 'linkInvalid')); }
   }
   const connection = await TelegramConnection.findOne({ telegramUserId: String(from.id), chatId: String(chatId) });
-  if (!connection) return;
+  if (!connection) return text === '/start' || text === '/language' ? sendMessage(token, chatId, tr('ar', 'connectFirst')) : undefined;
   connection.lastInteractionAt = new Date();
   connection.lastUpdateAt = new Date();
   await connection.save();
   const user = await User.findById(connection.user);
   if (!user) return;
-  if (!(await checkAccess(user)).eligible) return sendMessage(token, chatId, 'Your Orbit account is suspended.');
   const settings = await getSettingsDocument(user._id);
+  if (!(await checkAccess(user)).eligible) return sendMessage(token, chatId, tr(settings, 'suspended'));
   const identity = { userId: from.id, chatId };
+  if (text === '/language') return sendMessage(token, chatId, tr(settings, 'languagePrompt'), { inline_keyboard: [[{ text: 'English', callback_data: 'lang:en' }, { text: 'العربية', callback_data: 'lang:ar' }]] });
+  if (callback && /^lang:(en|ar)$/.test(String(callback.data))) {
+    const language = callback.data.slice(5);
+    await updateSettings(user._id, { language });
+    await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: tr(language, 'languageChanged').slice(0, 190) });
+    return sendMessage(token, chatId, tr(language, 'languageChanged'));
+  }
   try {
     await assertFeature(user, 'telegram-assistant');
     const feature = callback ? callbackFeature(callback.data) : text ? await messageFeature(text, user._id, settings, identity) : null;
     if (feature) await assertFeature(user, feature);
   } catch (error) {
-    if (callback) return telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error).slice(0, 190), show_alert: true });
-    return sendMessage(token, chatId, safeError(error));
+    if (callback) return telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings).slice(0, 190), show_alert: true });
+    return sendMessage(token, chatId, safeError(error, settings));
   }
   if (callback) {
     if (String(callback.data).startsWith('e:follow:')) {
@@ -270,14 +279,14 @@ export async function handleTelegramUpdate(update) {
         const item = mongoose.isValidObjectId(id) ? await DzEvent.findById(id) : null;
         if (!item) throw new Error('Event unavailable');
         await followEvent(user._id, item.externalId);
-        await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: 'Event notifications enabled' });
+        await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: tr(settings, 'eventEnabled') });
         await telegramRequest(token, 'editMessageReplyMarkup', { chat_id: chatId, message_id: callback.message.message_id, reply_markup: { inline_keyboard: [] } });
-      } catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); }
+      } catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true }); }
       return;
     }
     if (String(callback.data).startsWith('taskdigest:')) {
       try { return await handleTaskReminderDigestCallback(callback, user._id, token); }
-      catch (error) { console.error('Task digest callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }
+      catch (error) { console.error('Task digest callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true }); return; }
     }
     if (String(callback.data).startsWith('add:')) {
       try {
@@ -287,15 +296,15 @@ export async function handleTelegramUpdate(update) {
         await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: reply.stale ? 'Action expired' : 'OK' });
         if (!reply.stale) await telegramRequest(token, 'editMessageText', { chat_id: chatId, message_id: callback.message.message_id, text: reply.text, parse_mode: 'HTML', reply_markup: reply.markup || { inline_keyboard: [] } });
         return;
-      } catch (error) { console.error('Guided add callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }
+      } catch (error) { console.error('Guided add callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true }); return; }
     }
     if (String(callback.data).startsWith('f:')) {
       try { return await handleFocusCallback(callback, user._id, token); }
-      catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }
+      catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true }); return; }
     }
     if (String(callback.data).startsWith('r:')) {
       try { return await handleReminderCallback(callback, user._id, token, settings); }
-      catch (error) { console.error('Telegram reminder callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true }); return; }
+      catch (error) { console.error('Telegram reminder callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true }); return; }
     }
     try {
       const reply = await handleCallbackAction(callback, user._id, settings);
@@ -304,7 +313,7 @@ export async function handleTelegramUpdate(update) {
       if (reply.text) await sendMessage(token, chatId, reply.text, reply.markup);
     } catch (error) {
       console.error('Telegram callback failed:', { userId: String(user._id), action: String(callback.data).split(':').slice(0, 2).join(':'), message: error.message });
-      await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error), show_alert: true });
+      await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true });
     }
     return;
   }
@@ -314,6 +323,6 @@ export async function handleTelegramUpdate(update) {
     return sendMessage(token, chatId, reply.text, reply.markup);
   } catch (error) {
     console.error('Telegram message failed:', { userId: String(user._id), message: error.message });
-    return sendMessage(token, chatId, safeError(error));
+    return sendMessage(token, chatId, safeError(error, settings));
   }
 }

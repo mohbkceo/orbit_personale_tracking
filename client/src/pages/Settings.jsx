@@ -20,6 +20,8 @@ import { normalizeAppearance } from '../appearance/themes.js';
 import EventPreferences from './EventPreferences.jsx';
 import { useTelegram } from '../context/TelegramContext.js';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
 
 const tabs = [
   ['general', 'General', Globe2],
@@ -44,6 +46,7 @@ function Section({ title, description, children }) {
 }
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { toast, setSettings } = useApp();
   const { user, access, refresh } = useAuth();
   const { status: telegram, link, setOpen: openTelegram, refresh: refreshTelegram } = useTelegram();
@@ -111,7 +114,7 @@ export default function Settings() {
       savedAppearance.current = response.data.appearance;
       setSettings(response.data);
       if (gender && gender !== user?.gender) { await api.patch('/auth/me', { gender }); await refresh(); }
-      toast('Settings saved');
+      toast(t('saved'));
     } catch (error) {
       toast(error.message, 'error');
     } finally {
@@ -124,60 +127,60 @@ export default function Settings() {
     catch (error) { toast(error.message, 'error'); }
     finally { setBusy(false); }
   }
-  if (loading) return <Spinner label="Loading settings…" />;
+  if (loading) return <Spinner label={t('loading')} />;
   if (!form)
     return (
       <EmptyState
         icon={ShieldCheck}
-        title="Settings unavailable"
-        description="Check that the API and MongoDB are running."
+        title={t('unavailable')}
+        description={t('unavailableDetail')}
       />
     );
   return (
     <>
       <PageHeader
-        eyebrow="Workspace"
-        title="Settings"
-        description="Make Orbit fit your preferences and connected devices."
+        eyebrow={t('workspace')}
+        title={t('settings:title')}
+        description={t('settings:description')}
         actions={
           <button disabled={busy} className="btn-primary" onClick={save}>
             <Save size={16} />
-            {busy ? 'Saving…' : 'Save changes'}
+            {t(busy ? 'saving' : 'save')}
           </button>
         }
       />
       <div className="grid gap-5 lg:grid-cols-[210px_1fr]">
         <nav className="panel-flat h-fit p-2">
-          {tabs.map(([id, label, Icon]) => (
+          {tabs.map(([id, , Icon]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
               className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold ${tab === id ? 'bg-selected text-primary' : 'text-muted hover:bg-hover'}`}
             >
               <Icon size={17} />
-              {label}
+              {t(`settings:${id === 'account' ? 'accountAccess' : id}`)}
             </button>
           ))}
         </nav>
         <div className="space-y-4">
-          {tab === 'general' && <section className="panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="flex items-center gap-2 font-display text-lg font-bold"><Compass size={19} className="text-primary" /> Getting Started</h2><p className="mt-1 text-sm text-muted">Revisit the quick Orbit setup whenever it suits you.</p></div><Link to="/panel?onboarding=1" className="btn-secondary shrink-0">Open guide</Link></section>}
+          {tab === 'general' && <section className="panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="flex items-center gap-2 font-display text-lg font-bold"><Compass size={19} className="text-primary" /> {t('gettingStarted')}</h2><p className="mt-1 text-sm text-muted">{t('settings:gettingStartedDescription')}</p></div><Link to="/panel?onboarding=1" className="btn-secondary shrink-0">{t('openGuide')}</Link></section>}
           {tab === 'events' && <EventPreferences />}
           {tab === 'general' && (
             <Section
-              title="General preferences"
-              description="Used across dates, money and summaries"
+              title={t('settings:generalPreferences')}
+              description={t('settings:generalDescription')}
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <label>
-                  <span className="label">Workspace name</span>
+                  <span className="label">{t('settings:workspaceName')}</span>
                   <input className="field" value={form.name || ''} onChange={set('name')} />
                 </label>
                 <label>
-                  <span className="label">Timezone</span>
+                  <span className="label">{t('timezone')}</span>
                   <input className="field" value={form.timezone || ''} onChange={set('timezone')} />
                 </label>
                 <label>
-                  <span className="label">Default currency</span>
+                  <span className="label">{t('defaultCurrency')}</span>
                   <input
                     maxLength="3"
                     className="field uppercase"
@@ -186,7 +189,7 @@ export default function Settings() {
                   />
                 </label>
                 <label>
-                  <span className="label">Date format</span>
+                  <span className="label">{t('dateFormat')}</span>
                   <select
                     className="field"
                     value={form.dateFormat || 'DD MMM YYYY'}
@@ -198,6 +201,7 @@ export default function Settings() {
                   </select>
                 </label>
               </div>
+              <div className="mt-4 border-t border-border pt-4"><p className="label">{t('language')}</p><p className="mb-2 text-xs text-muted">{t('settings:languageHelp')}</p><LanguageSelector /></div>
             </Section>
           )}
           {tab === 'appearance' && (

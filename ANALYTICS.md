@@ -14,6 +14,19 @@ The browser opens `/api/analytics/session` on initial load with its landing URL 
 
 Signed HttpOnly first-party cookies carry random visitor and session IDs. Login and registration claim an anonymous visitor; another authenticated account on the same browser receives a new visitor ID. Logout clears these analytics cookies. Anonymous event and session rows are linked when an anonymous visitor is claimed. No fingerprinting or IP history is stored.
 
+For an Instagram bio link, tag the public URL with `utm_source=instagram`,
+`utm_medium=bio`, and a campaign name if campaign reporting is needed. The first
+permitted first-party session records these values; registration claims the same
+anonymous visitor and snapshots first, last, and last non-direct touches on the
+durable `registration_completed` event. Admin → Analytics → Acquisition,
+Campaigns, and Conversions expose these dimensions. An Instagram referrer alone
+can classify as organic social; a stripped referrer with no UTM data is direct,
+so unattributed bio visits cannot be counted reliably. A genuine `fbclid` can
+be stored in first-party attribution when internal analytics is permitted;
+`_fbc` is created and shared with Meta only after separate advertising consent.
+Meta reports permitted Pixel/CAPI events in Events Manager and ad attribution,
+which need not match Orbit's first-party counts.
+
 ## WhatsApp leads and conversions
 
 The WhatsApp contact action calls `/api/analytics/leads`, receives a `LEAD-...` code, and includes it in the outgoing message. An admin can create an activation link with `leadCode` in `POST /api/admin/activation-links`. Using that link marks the lead converted and carries its touch snapshot into `access_activated`, even if activation happens on another browser. The server uses unique event IDs (`registration:<userId>` and `access:<subscriptionId>`) to avoid duplicate conversions. External analytics providers can register with `eventDispatcher.js`; advertising conversion providers register with `conversionDispatcher.js`. Meta's provider is registered at startup but performs no HTTP requests until explicitly enabled. Its durable outbox is embedded in the internal conversion event and processed asynchronously; no external provider participates in a business transaction.

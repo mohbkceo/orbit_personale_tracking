@@ -47,7 +47,7 @@ Frontend / Vercel (`client/.env.example`):
 
 | Variable | Value / purpose |
 |---|---|
-| `VITE_META_PIXEL_ID` | `1432887715641697` (public) |
+| `VITE_META_PIXEL_ID` | `1432887715641697` (public); the client uses this ID when the variable is absent and refuses a different configured ID |
 | `VITE_META_PIXEL_ENABLED` | `false`; opt in only for development Pixel tests |
 | `VITE_ANALYTICS_REQUIRE_CONSENT` | Existing internal analytics consent flag; match backend |
 
@@ -90,6 +90,14 @@ https://connect.facebook.net`, `img-src https://www.facebook.com`, and `frame-an
 'self'`. Express sets these for the frame; mirror them in Vercel headers if adding a CSP.
 Disable automatic events and advanced matching rules in Events Manager: Orbit sends only
 explicit events and handles permitted hashed matching on the backend.
+
+After every frontend deployment, inspect the served bundle and confirm a consented
+public landing visit creates exactly one `/meta-pixel.html` iframe, loads
+`fbevents.js`, and sends a `PageView` to dataset `1432887715641697` in Test
+Events. A successful build or an HTTP 200 for `/meta-pixel.html` alone does not
+establish Pixel delivery. In October 2026, the production bundle at
+`https://orbit.tooutdo.com` compiled the Pixel ID as empty and emitted no iframe;
+redeploy the corrected client before treating production measurement as active.
 
 ## Database rollout
 

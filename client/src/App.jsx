@@ -8,6 +8,13 @@ import { analytics } from './analytics/client.js';
 import { AdvertisingConsent } from './analytics/AdvertisingConsent.jsx';
 import { meta } from './analytics/meta.js';
 import { FeatureGate } from './components/FeatureGate.jsx';
+import { useTranslation } from 'react-i18next';
+
+function LocaleGate() {
+  const { loading } = useAuth();
+  if (loading) return <Spinner />;
+  return <Outlet />;
+}
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
@@ -62,10 +69,11 @@ const AdminAccessControl = lazy(() => import('./pages/AdminAccessControl.jsx'));
 const gate = (featureKey, child) => <FeatureGate featureKey={featureKey}>{child}</FeatureGate>;
 
 function ProtectedRoute({ children }) {
+  const { t } = useTranslation();
   const { loading, user, access, error, refresh } = useAuth();
   const location = useLocation();
-  if (loading) return <Spinner label="Checking access…" />;
-  if (error && !user) return <main className="grid min-h-screen place-items-center bg-canvas"><div className="panel p-6"><p>Orbit could not verify your session. {error}</p><button className="btn-primary mt-4" onClick={refresh}>Retry</button></div></main>;
+  if (loading) return <Spinner label={t('auth:checkingAccess')} />;
+  if (error && !user) return <main className="grid min-h-screen place-items-center bg-canvas"><div className="panel p-6"><p>{t('auth:sessionError', { error })}</p><button className="btn-primary mt-4" onClick={refresh}>{t('retry')}</button></div></main>;
   if (!user)
     return (
       <Navigate
@@ -87,25 +95,26 @@ function AdminProtectedRoute({ children, superOnly = false }) {
 
 export default function App() {
   const location = useLocation();
+  const { i18n } = useTranslation();
+  useEffect(() => {
+    const admin = location.pathname.startsWith('/admin');
+    const language = admin ? 'en' : i18n.resolvedLanguage === 'ar' ? 'ar' : 'en';
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }, [location.pathname, i18n.resolvedLanguage]);
   useEffect(() => { void meta.sync(); }, []);
   useEffect(() => { meta.page(); }, [location.pathname]);
   useEffect(() => { if (!location.pathname.startsWith('/admin')) { void analytics.start(); analytics.page(); } }, [location.pathname]);
   return (
-    <Suspense fallback={<Spinner label="Opening Orbit…" />}>
+    <Suspense fallback={<Spinner />}>
       <Routes>
+        <Route element={<AuthProvider><LocaleGate /></AuthProvider>}>
         <Route element={<MarketingLayout />}>
           <Route index element={<Landing />} />
           <Route path="features" element={<Features />} />
           <Route path="about" element={<About />} />
           <Route path="pricing" element={<Pricing />} />
         </Route>
-        <Route
-          element={
-            <AuthProvider>
-              <Outlet />
-            </AuthProvider>
-          }
-        >
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="checkout" element={<Checkout />} />

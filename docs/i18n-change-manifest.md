@@ -1,0 +1,61 @@
+# Localization change manifest
+
+Files modified or added in this work (relative to the repository root):
+
+- `client/package.json`
+- `client/src/analytics/AdvertisingConsent.jsx`
+- `client/src/analytics/AnalyticsConsent.jsx`
+- `client/src/api/client.js`
+- `client/src/App.jsx`
+- `client/src/components/FeatureGate.jsx`
+- `client/src/components/Layout.jsx`
+- `client/src/components/ui.jsx`
+- `client/src/context/AppContext.jsx`
+- `client/src/context/AuthContext.jsx`
+- `client/src/i18n/coverage.test.js`
+- `client/src/i18n/index.js`
+- `client/src/i18n/LanguageSelector.jsx`
+- `client/src/i18n/LanguageSelector.test.jsx`
+- `client/src/i18n/locales/ar.js`
+- `client/src/i18n/locales/en.js`
+- `client/src/i18n/marketingContent.js`
+- `client/src/index.css`
+- `client/src/main.jsx`
+- `client/src/marketing/About.jsx`
+- `client/src/marketing/Features.jsx`
+- `client/src/marketing/GetStartedModal.jsx`
+- `client/src/marketing/Landing.jsx`
+- `client/src/marketing/marketing.css`
+- `client/src/marketing/MarketingHeader.jsx`
+- `client/src/marketing/MarketingLayout.jsx`
+- `client/src/marketing/ProductPreview.jsx`
+- `client/src/pages/Login.jsx`
+- `client/src/pages/NotFound.jsx`
+- `client/src/pages/Register.jsx`
+- `client/src/pages/Settings.jsx`
+- `client/src/test/setup.js`
+- `client/src/utils/format.js`
+- `client/vitest.config.js`
+- `docs/i18n-change-manifest.md`
+- `docs/i18n.md`
+- `package-lock.json`
+- `server/src/i18n/telegram.js`
+- `server/src/jobs/summaryWorker.js`
+- `server/src/jobs/taskReminderDigestWorker.js`
+- `server/src/models/Setting.js`
+- `server/src/routes/activation.js`
+- `server/src/routes/auth.js`
+- `server/src/services/registrationService.js`
+- `server/src/services/reminders/reminderDeliveryService.js`
+- `server/src/services/settingsService.js`
+- `server/src/services/taskReminderDigest.service.js`
+- `server/src/telegram/accountResolver.js`
+- `server/src/telegram/callbacks/taskReminderDigestCallbacks.js`
+- `server/src/telegram/commandHandlers.js`
+- `server/src/telegram/formatters.js`
+- `server/src/telegram/handler.js`
+- `server/src/telegram/parser.js`
+- `server/src/validators/schemas.js`
+- `server/test/arabicI18n.test.js`
+
+Note: `client/src/marketing/Landing.jsx` contained an existing user edit before this localization work; that edit was preserved.

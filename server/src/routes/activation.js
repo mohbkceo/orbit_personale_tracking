@@ -14,7 +14,7 @@ import { analyticsAllowed } from '../analytics/consentService.js';
 
 const registrationInput = z.object({
   fullName: z.string().trim().min(2).max(120), email: z.email(), password: z.string().min(12).max(200), gender: z.enum(['MALE', 'FEMALE']),
-  preferences: z.object({ name: z.string().min(1).max(100).optional(), timezone: z.string().max(100).optional(), defaultCurrency: z.string().length(3).optional(), dateFormat: z.string().max(40).optional(), appearance: z.object({ mode: z.enum(APPEARANCE_VALUES.mode), preset: z.enum(APPEARANCE_VALUES.preset) }).strict().optional() }).optional(),
+  preferences: z.object({ name: z.string().min(1).max(100).optional(), timezone: z.string().max(100).optional(), defaultCurrency: z.string().length(3).optional(), dateFormat: z.string().max(40).optional(), language: z.enum(['en', 'ar']).optional(), appearance: z.object({ mode: z.enum(APPEARANCE_VALUES.mode), preset: z.enum(APPEARANCE_VALUES.preset) }).strict().optional() }).optional(),
 });
 const validationLimit = rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 60 });
 export const activationRoutes = Router();

@@ -8,8 +8,10 @@ import { rewardConfig } from '../animations/rewardConfig.js';
 import { toastMotion, reduced, rewardHold } from '../animations/motionPresets.js';
 import { useAuth } from './useAuth.js';
 import { applyAppearance, defaults, normalizeAppearance } from '../appearance/themes.js';
+import { useTranslation } from 'react-i18next';
 
 export function AppProvider({ children }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [settings, setSettings] = useState(() => {
     try { return { name: 'My workspace', defaultCurrency: 'DZD', appearance: normalizeAppearance(JSON.parse(localStorage.getItem(`orbit-appearance:${user.id}`))) }; }
@@ -35,6 +37,7 @@ export function AppProvider({ children }) {
   }, [reduce, settings.appearance?.personality]);
 
   useEffect(() => { api.get('/settings').then((response) => setSettings(response.data)).catch(() => {}); }, [user.id]);
+  useEffect(() => { const sync = (event) => setSettings(event.detail); window.addEventListener('orbit:settings-synced', sync); return () => window.removeEventListener('orbit:settings-synced', sync); }, []);
   useLayoutEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const appearance = normalizeAppearance(settings.appearance, settings.theme);
@@ -47,5 +50,5 @@ export function AppProvider({ children }) {
   useEffect(() => () => applyAppearance(defaults, window.matchMedia('(prefers-color-scheme: dark)')), []);
 
   const value = useMemo(() => ({ settings, setSettings, darkMode, toast, reward, quickAddOpen, setQuickAddOpen }), [settings, darkMode, toast, reward, quickAddOpen]);
-  return <AppContext.Provider value={value}>{children}<div className="fixed bottom-24 right-4 z-[80] space-y-2 md:bottom-5"><AnimatePresence initial={false}>{toasts.map((item) => <motion.div key={item.id} layout={!reduce} {...(reduce ? reduced(toastMotion) : toastMotion)} className="flex min-w-72 items-center gap-3 rounded-xl border border-border bg-sidebar px-4 py-3 text-sm text-sidebar-text shadow-lift">{item.type === 'error' ? <XCircle size={18} className="text-danger" /> : <CheckCircle2 size={18} className="text-accent" />}<span className="flex-1">{item.message}</span><button onClick={() => setToasts((items) => items.filter((v) => v.id !== item.id))} aria-label="Dismiss notification"><X size={16} /></button></motion.div>)}</AnimatePresence></div><RewardOverlay reward={activeReward}/></AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}<div className="fixed bottom-24 end-4 z-[80] space-y-2 md:bottom-5"><AnimatePresence initial={false}>{toasts.map((item) => <motion.div key={item.id} layout={!reduce} {...(reduce ? reduced(toastMotion) : toastMotion)} className="flex min-w-72 items-center gap-3 rounded-xl border border-border bg-sidebar px-4 py-3 text-sm text-sidebar-text shadow-lift">{item.type === 'error' ? <XCircle size={18} className="text-danger" /> : <CheckCircle2 size={18} className="text-accent" />}<span className="flex-1">{item.message}</span><button onClick={() => setToasts((items) => items.filter((v) => v.id !== item.id))} aria-label={t('notifications:dismiss')}><X size={16} /></button></motion.div>)}</AnimatePresence></div><RewardOverlay reward={activeReward}/></AppContext.Provider>;
 }

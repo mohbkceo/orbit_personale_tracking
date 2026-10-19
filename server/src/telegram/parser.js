@@ -8,16 +8,29 @@ dayjs.extend(timezone);
 const amountToken = '-?(?:\\d[\\d,]*(?:\\.\\d+)?|\\.\\d+)[kK]?';
 const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const result = (intent, data = {}) => ({ intent, confidence: 1, data });
+const arabicWeekdays = { الأحد: 'sunday', الاحد: 'sunday', الإثنين: 'monday', الاثنين: 'monday', الثلاثاء: 'tuesday', الأربعاء: 'wednesday', الاربعاء: 'wednesday', الخميس: 'thursday', الجمعة: 'friday', السبت: 'saturday' };
+export const normalizeDigits = (value) => String(value ?? '').replace(/[\u0660-\u0669\u06f0-\u06f9]/g, (digit) => String((digit.charCodeAt(0) - (digit <= '٩' ? 0x0660 : 0x06f0)))).replace(/[\u066b]/g, '.').replace(/[\u066c]/g, ',');
+const arabicDay = (value) => {
+  const input = String(value).normalize('NFKC').replace(/[\u064b-\u065f]/g, '').trim();
+  if (/(?:^|\s)(?:غدوة|غدا|بكرا|بكرة)(?:\s|$)/.test(input)) return 'tomorrow';
+  if (/(?:^|\s)(?:اليوم|النهارده)(?:\s|$)/.test(input)) return 'today';
+  if (/(?:^|\s)(?:أمس|امس|البارح)(?:\s|$)/.test(input)) return 'yesterday';
+  for (const [name, english] of Object.entries(arabicWeekdays)) if (input.includes(name)) return english;
+  return null;
+};
 
 export function parseAmount(raw) {
-  if (!raw || !new RegExp(`^${amountToken}$`).test(String(raw))) return null;
-  const value = String(raw).replaceAll(',', '').toLowerCase();
+  const normalized = normalizeDigits(raw);
+  if (!raw || !new RegExp(`^${amountToken}$`).test(normalized)) return null;
+  const value = normalized.replaceAll(',', '').toLowerCase();
   const parsed = Number(value.replace(/k$/, '')) * (value.endsWith('k') ? 1000 : 1);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 export function parseNaturalDate(text, now = dayjs()) {
   const input = String(text).toLowerCase();
+  const arabic = arabicDay(text);
+  if (arabic) return parseNaturalDate(arabic, now);
   if (/\btoday\b/.test(input)) return now.startOf('day').toDate();
   if (/\btomorrow\b/.test(input)) return now.add(1, 'day').startOf('day').toDate();
   if (/\byesterday\b/.test(input)) return now.subtract(1, 'day').startOf('day').toDate();
@@ -48,6 +61,7 @@ function taskData(raw, options) {
   }
   const title = raw.replace(/\b(low|medium|high|urgent)\b/gi, '')
     .replace(/\b(?:today|tomorrow|yesterday|(?:next\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi, '')
+    .replace(/(?:غدوة|غدا|غداً|بكرا|بكرة|اليوم|النهارده|أمس|امس|البارح|الأحد|الاحد|الإثنين|الاثنين|الثلاثاء|الأربعاء|الاربعاء|الخميس|الجمعة|السبت)/g, '')
     .replace(clock || /(?!)x/, '').replace(/\s+/g, ' ').trim();
   return { title, dueDate: dateData(raw, options), dueTime, priority };
 }
@@ -81,6 +95,30 @@ function inferCategory(description) {
 export function parseTelegramMessage(text, options = {}) {
   const value = String(text || '').trim();
   if (!value) return result('UNKNOWN');
+  const numeric = normalizeDigits(value).replace(/[،؛]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/^مهامي[؟?]?$/.test(value)) return result('SHOW_TASKS');
+  if (/^مصاريفي[؟?]?$/.test(value)) return result('SHOW_MONEY');
+  let arabicMatch = value.match(/^(?:أضف\s+)?مهمة\s+(.+)$/);
+  if (arabicMatch) return result('CREATE_TASK', taskData(arabicMatch[1], options));
+  arabicMatch = numeric.match(/^(?:صرفت|مصروف)\s+([\d,.]+)(?:\s+(.*))?$/);
+  if (arabicMatch) { const description = (arabicMatch[2] || '').replace(/^(?:دج|دينار)(?:\s+|$)/, '').trim(); return result('CREATE_EXPENSE', { amount: parseAmount(arabicMatch[1]), description, category: inferCategory(description), date: new Date() }); }
+  arabicMatch = numeric.match(/^بعت\s+([\d,.]+)(?:\s+(.*))?$/);
+  if (arabicMatch) return saleData(`${arabicMatch[1]} ${arabicMatch[2] || ''}`.trim());
+  arabicMatch = numeric.match(/^(?:مدخول|دخل)\s+([\d,.]+)(?:\s+(.*))?$/);
+  if (arabicMatch) return result('CREATE_INCOME', { amount: parseAmount(arabicMatch[1]), description: arabicMatch[2]?.trim() || '', category: 'Other', date: new Date() });
+  arabicMatch = numeric.match(/^دين\s+عند\s+(.+?)\s+([\d,.]+)(?:\s+(.*))?$/);
+  if (arabicMatch) return result('CREATE_RECEIVABLE', { personName: arabicMatch[1].trim(), originalAmount: parseAmount(arabicMatch[2]), description: arabicMatch[3]?.trim() || '' });
+  arabicMatch = numeric.match(/^أنا\s+مدين\s+ل\s*(.+?)\s+([\d,.]+)(?:\s+(.*))?$/);
+  if (arabicMatch) return result('CREATE_PAYABLE', { personName: arabicMatch[1].trim(), originalAmount: parseAmount(arabicMatch[2]), description: arabicMatch[3]?.trim() || '' });
+  arabicMatch = numeric.match(/^ذكرني\s+(.+)$/);
+  if (arabicMatch) {
+    const day = arabicDay(arabicMatch[1]);
+    const time = arabicMatch[1].match(/(?:على|الساعة|في)\s+(\d{1,2}:\d{2})/);
+    const title = arabicMatch[1].replace(/(?:غدوة|غدا|غداً|بكرا|بكرة|اليوم|النهارده|الأحد|الاحد|الإثنين|الاثنين|الثلاثاء|الأربعاء|الاربعاء|الخميس|الجمعة|السبت)/g, '').replace(/(?:على|الساعة|في)\s+\d{1,2}:\d{2}/, '').replace(/^(?:ب|أن|باش)\s*/, '').trim();
+    if (day && title) return parseReminderCommand(`${day}${time ? ` at ${time[1]}` : ''} to ${title}`, options);
+    return { intent: 'CLARIFY_REMINDER', confidence: 0.3, data: {} };
+  }
+  if (/^(?:صرفت|بعت|مدخول|دخل|دين|أنا مدين)(?:\s|$)/.test(value)) return result('CLARIFY_AMOUNT');
   const command = value.toLowerCase().split(/\s+/)[0];
   const commands = { '/today': 'SHOW_TODAY', '/money': 'SHOW_MONEY', '/debts': 'SHOW_DEBTS', '/tasks': 'SHOW_TASKS', '/sales': 'SHOW_SALES', '/reminders': 'SHOW_REMINDERS' };
   if (commands[command]) return result(commands[command]);

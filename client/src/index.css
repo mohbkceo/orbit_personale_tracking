@@ -1,3 +1,5 @@
+@import '@fontsource/noto-sans-arabic/400.css';
+@import '@fontsource/noto-sans-arabic/700.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,6 +23,20 @@
 [data-personality='expressive'] { --orbit-button-duration: 220ms; }
 * { scrollbar-width: thin; scrollbar-color: rgb(var(--color-border)) transparent; }
 body { @apply m-0 min-w-[320px] bg-canvas font-sans text-text antialiased; }
+html[lang='ar'] body { font-family: 'Noto Sans Arabic', ui-sans-serif, system-ui, sans-serif; }
+html[lang='ar'] .font-display { font-family: 'Noto Sans Arabic', ui-sans-serif, system-ui, sans-serif; }
+html[dir='rtl'] .orbit-sidebar { left: auto; right: 0; border-right: 0; border-left: 1px solid rgb(var(--color-border)); }
+html[dir='rtl'] .orbit-sidebar[data-open='false'] { transform: translateX(100%); }
+html[dir='rtl'] .orbit-sidebar[data-open='true'] { transform: translateX(0); }
+@media (min-width: 1024px) {
+  html[dir='rtl'] .orbit-sidebar { transform: translateX(0) !important; }
+  html[dir='rtl'] .orbit-panel-content { padding-left: 0; padding-right: 236px; }
+}
+html[dir='rtl'] .marketing-header-actions { margin-left: 0; margin-right: auto; }
+html[dir='rtl'] .marketing-hero-primary svg { transform: rotate(180deg); }
+html[dir='rtl'] .orbit-header-actions { margin-left: 0; margin-inline-start: auto; }
+html[dir='rtl'] .orbit-profile-menu { right: auto; left: 0; }
+html[dir='rtl'] input[type='email'], html[dir='rtl'] input[type='tel'], html[dir='rtl'] input[type='url'] { direction: ltr; text-align: start; }
 button, input, select, textarea { font: inherit; }
 button { @apply transition duration-150; }
 button.btn-primary, button.btn-secondary, button.btn-ghost, button.icon-btn { transition: background-color var(--orbit-button-duration) ease, color var(--orbit-button-duration) ease, border-color var(--orbit-button-duration) ease; }

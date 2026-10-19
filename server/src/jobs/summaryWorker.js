@@ -5,6 +5,7 @@ import { dashboardSummary } from '../services/dashboardService.js';
 import { getSettingsDocument } from '../services/settingsService.js';
 import { sendTelegramNotification } from '../telegram/notifier.js';
 import { canAccess } from '../services/entitlementService.js';
+import { telegramText as tr } from '../i18n/telegram.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -22,8 +23,8 @@ export async function sendSummaries(userId) {
     if (!enabled || at !== local.format('HH:mm') || sent.has(key)) continue;
     const summary = await dashboardSummary(userId);
     await sendTelegramNotification(userId, {
-      title: mode === 'morning' ? 'Good morning' : 'Daily wrap-up',
-      message: `${summary.tasks.open} open tasks · ${summary.tasks.overdue} overdue\nNet this month: ${new Intl.NumberFormat('en-DZ').format(summary.money.net)} ${settings.defaultCurrency}`,
+      title: mode === 'morning' ? (settings.language === 'ar' ? 'صباح الخير' : 'Good morning') : (settings.language === 'ar' ? 'ملخص اليوم' : 'Daily wrap-up'),
+      message: `${summary.tasks.open} ${tr(settings, 'open')} ${tr(settings, 'tasks')} · ${summary.tasks.overdue} ${tr(settings, 'overdue')}\n${tr(settings, 'net')} ${tr(settings, 'thisMonth')}: ${new Intl.NumberFormat(settings.language === 'ar' ? 'ar-DZ' : 'en-DZ').format(summary.money.net)} ${settings.defaultCurrency}`,
     });
     sent.add(key);
   }

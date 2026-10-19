@@ -78,6 +78,12 @@ body:has(.marketing-shell) {
   align-items: center;
   gap: 30px;
 }
+.marketing-mobile-language { display: none; }
+@media (max-width: 680px) {
+  .marketing-mobile-language { display: block; margin-inline-start: auto; }
+  .marketing-header-inner { gap: 10px; }
+  .marketing-menu-toggle { margin-inline-start: 0; }
+}
 .marketing-button {
   min-height: 49px;
   display: inline-flex;

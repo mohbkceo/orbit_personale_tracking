@@ -10,6 +10,7 @@ export async function getSettingsDocument(userId) {
 
 export function publicSettings(settings) {
   const data = settings.toObject ? settings.toObject() : { ...settings };
+  data.language = data.language === 'ar' ? 'ar' : 'en';
   data.appearance = resolveAppearance(data.appearance, data.theme);
   if (data.telegram) {
     const telegram = data.telegram;

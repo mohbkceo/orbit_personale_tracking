@@ -16,7 +16,7 @@ export async function registerPublic(input, req, res) {
   try {
     await session.withTransaction(async () => {
       await User.create([user.toObject()], { session });
-      await Setting.create([{ user: user._id, defaultCurrency: 'DZD' }], { session });
+      await Setting.create([{ user: user._id, defaultCurrency: 'DZD', language: input.language || 'en' }], { session });
       await audit('USER_CREATED', { actorType: 'USER', actorId: user._id, targetType: 'User', targetId: user._id, session });
       const claimedContext = await claimRegistrationContext(context, user._id, session);
       await recordDurableConversion(EVENTS.REGISTRATION_COMPLETED, `registration:${user._id}`, user._id, claimedContext, {}, session);

@@ -4,19 +4,21 @@ import { cn, formatMoney } from '../utils/format.js';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { backdrop, modalDesktop, modalMobile, reduced } from '../animations/motionPresets.js';
+import { useTranslation } from 'react-i18next';
 
 export function PageHeader({ eyebrow, title, description, actions }) {
   return <header className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div>{eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}<h1 className="font-display text-[27px] font-bold tracking-tight sm:text-[30px]">{title}</h1>{description && <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</header>;
 }
 
 export function Modal({ open, onClose, title, description, children, wide = false }) {
+  const { t } = useTranslation();
   const reduce = useOrbitReducedMotion();
   const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 639px)').matches);
   useEffect(() => { const media = window.matchMedia('(max-width: 639px)'); const change = () => setMobile(media.matches); media.addEventListener('change', change); return () => media.removeEventListener('change', change); }, []);
   useEffect(() => { if (!open) return undefined; const handle = (event) => { if (event.key === 'Escape') onClose(); }; window.addEventListener('keydown', handle); return () => window.removeEventListener('keydown', handle); }, [open, onClose]);
   return <div className="pointer-events-none fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-5"><AnimatePresence>{open && [
     <motion.div key="backdrop" {...(reduce ? reduced(backdrop) : backdrop)} className="pointer-events-auto absolute inset-0 bg-text/45" onMouseDown={onClose} />,
-    <motion.section key="dialog" {...(reduce ? reduced(modalDesktop) : mobile ? modalMobile : modalDesktop)} role="dialog" aria-modal="true" aria-label={title} className={cn('pointer-events-auto relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-5 shadow-lift sm:rounded-[var(--orbit-radius)] sm:p-6', wide ? 'max-w-2xl' : 'max-w-lg')}><header className="mb-5 flex items-start justify-between gap-4"><div><h2 className="font-display text-xl font-bold">{title}</h2>{description && <p className="mt-1 text-sm text-muted">{description}</p>}</div><button className="icon-btn -mr-1 -mt-1" onClick={onClose} aria-label="Close"><X size={19} /></button></header>{children}</motion.section>
+    <motion.section key="dialog" {...(reduce ? reduced(modalDesktop) : mobile ? modalMobile : modalDesktop)} role="dialog" aria-modal="true" aria-label={title} className={cn('pointer-events-auto relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-5 shadow-lift sm:rounded-[var(--orbit-radius)] sm:p-6', wide ? 'max-w-2xl' : 'max-w-lg')}><header className="mb-5 flex items-start justify-between gap-4"><div><h2 className="font-display text-xl font-bold">{title}</h2>{description && <p className="mt-1 text-sm text-muted">{description}</p>}</div><button className="icon-btn -mr-1 -mt-1" onClick={onClose} aria-label={t('close')}><X size={19} /></button></header>{children}</motion.section>
   ]}</AnimatePresence></div>;
 }
 
@@ -25,17 +27,20 @@ export function EmptyState({ icon: Icon, title, description, action }) {
 }
 
 export function StatusBadge({ children, tone = 'neutral' }) {
+  const { t, i18n } = useTranslation();
   const colors = { success: 'bg-success/10 text-success', danger: 'bg-danger/10 text-danger', warning: 'bg-warning/10 text-warning', info: 'bg-selected text-primary', neutral: 'bg-surface-alt text-muted' };
-  return <span className={cn('inline-flex rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize', colors[tone])}>{String(children).replaceAll('_', ' ')}</span>;
+  const value = String(children);
+  return <span className={cn('inline-flex rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize', colors[tone])}>{!window.location.pathname.startsWith('/admin') && i18n.exists(`status.${value}`) ? t(`status.${value}`) : value.replaceAll('_', ' ')}</span>;
 }
 
 export function Money({ value, currency, signed, className }) {
   const amount = Number(value) || 0; return <span className={cn(signed && amount > 0 && 'text-success ', signed && amount < 0 && 'text-danger ', className)}>{signed && amount > 0 ? '+' : ''}{formatMoney(amount, currency)}</span>;
 }
 
-export function Spinner({ label = 'Loading' }) { return <div className="flex min-h-52 items-center justify-center gap-3 text-sm text-muted"><LoaderCircle className="animate-spin" size={20} />{label}</div>; }
+export function Spinner({ label }) { const { t } = useTranslation(); return <div className="flex min-h-52 items-center justify-center gap-3 text-sm text-muted"><LoaderCircle className="animate-spin" size={20} />{label || t('loading')}</div>; }
 
 export function ConfirmButton({ onConfirm, children = 'Delete', className }) {
-  const handle = () => { if (window.confirm('This action cannot be reversed. Continue?')) onConfirm(); };
-  return <button className={className || 'text-xs font-semibold text-danger hover:text-danger'} onClick={handle}>{children}</button>;
+  const { t } = useTranslation();
+  const handle = () => { if (window.confirm(t('confirmDelete'))) onConfirm(); };
+  return <button className={className || 'text-xs font-semibold text-danger hover:text-danger'} onClick={handle}>{children === 'Delete' ? t('delete') : children}</button>;
 }

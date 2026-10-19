@@ -16,6 +16,8 @@ import { AnimatedPage } from '../animations/AnimatedPage.jsx';
 import { api } from '../api/client.js';
 import { useCapabilities } from '../context/CapabilitiesContext.js';
 import { TelegramControl, TelegramConnectionDialog } from './TelegramConnection.jsx';
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
 
 const primaryLinks = [
   ['Dashboard', '/panel', Gauge], ['Tasks', '/panel/tasks', CalendarCheck2],
@@ -40,6 +42,7 @@ function Brand() {
 }
 
 function SidebarLink({ label, path, Icon, close }) {
+  const { t } = useTranslation();
   const { decision } = useCapabilities();
   const access = path === '/panel/settings' ? null : decision(sectionForPath(path));
   if (access && !access.allowed && access.presentation?.visibleWhenLocked === false) return null;
@@ -47,39 +50,41 @@ function SidebarLink({ label, path, Icon, close }) {
     'flex min-h-10 items-center gap-3 rounded-[var(--orbit-control-radius)] px-3 text-[13px] font-medium transition-colors',
     isActive ? 'bg-sidebar-selected font-semibold text-primary' : 'text-sidebar-text hover:bg-sidebar-hover',
   )}>
-    {({ isActive }) => <><Icon size={18} strokeWidth={1.8} className={isActive ? 'text-primary' : 'text-sidebar-muted'} /><span className="flex-1">{label}</span>{access && !access.allowed && <LockKeyhole size={13} className="text-sidebar-muted" aria-label="Locked" />}</>}
+    {({ isActive }) => <><Icon size={18} strokeWidth={1.8} className={isActive ? 'text-primary' : 'text-sidebar-muted'} /><span className="flex-1">{t(label === 'Settings' ? 'settings' : `navigation:${label.toLowerCase()}`)}</span>{access && !access.allowed && <LockKeyhole size={13} className="text-sidebar-muted" aria-label={t('locked')} />}</>}
   </NavLink>;
 }
 
 function Sidebar({ open, close }) {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const initials = user?.fullName?.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'ME';
   return <aside className={cn(
-    'fixed inset-y-0 left-0 z-50 flex w-[236px] flex-col border-r border-border bg-sidebar text-sidebar-text transition-transform duration-200 lg:translate-x-0',
+    'orbit-sidebar fixed inset-y-0 left-0 z-50 flex w-[236px] flex-col border-r border-border bg-sidebar text-sidebar-text transition-transform duration-200 lg:translate-x-0',
     open ? 'translate-x-0' : '-translate-x-full',
-  )}>
+  )} data-open={open}>
     <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-border px-5">
       <Brand />
-      <button type="button" className="icon-btn lg:hidden" aria-label="Close menu" onClick={close}><X size={19} /></button>
+      <button type="button" className="icon-btn lg:hidden" aria-label={t('closeMenu')} onClick={close}><X size={19} /></button>
     </div>
-    <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
+    <nav aria-label={t('navigation:main')} className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
       {primaryLinks.map(([label, path, Icon]) => <SidebarLink key={path} label={label} path={path} Icon={Icon} close={close} />)}
       <div className="mx-3 my-4 border-t border-border" />
-      <p className="px-3 pb-2 text-xs font-semibold text-sidebar-muted">Workspace</p>
+      <p className="px-3 pb-2 text-xs font-semibold text-sidebar-muted">{t('workspace')}</p>
       {secondaryLinks.map(([label, path, Icon]) => <SidebarLink key={path} label={label} path={path} Icon={Icon} close={close} />)}
     </nav>
     <div className="shrink-0 border-t border-border p-3">
       <SidebarLink label="Settings" path="/panel/settings" Icon={Settings} close={close} />
       <div className="mt-2 flex items-center gap-2 border-t border-border px-2 pt-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text">{initials}</span>
-        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{user?.fullName || 'Orbit user'}</span><span className="block truncate text-[11px] text-sidebar-muted">{user?.email}</span></span>
-        <button type="button" className="icon-btn shrink-0" onClick={logout} aria-label="Log out" title="Log out"><LogOut size={16} /></button>
+        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{user?.fullName || 'Orbit user'}</span><span dir="ltr" className="block truncate text-[11px] text-sidebar-muted">{user?.email}</span></span>
+        <button type="button" className="icon-btn shrink-0" onClick={logout} aria-label={t('logout')} title={t('logout')}><LogOut size={16} /></button>
       </div>
     </div>
   </aside>;
 }
 
 function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,18 +99,19 @@ function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
   }, [profileOpen]);
   return <header className="sticky top-0 z-30 border-b border-border bg-surface">
     <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-8">
-      <button type="button" className="icon-btn lg:hidden" aria-label="Open menu" onClick={openMenu}><Menu size={20} /></button>
+      <button type="button" className="icon-btn lg:hidden" aria-label={t('openMenu')} onClick={openMenu}><Menu size={20} /></button>
       <button type="button" onClick={openSearch} className="flex h-11 min-w-0 max-w-[480px] flex-1 items-center gap-3 rounded-[var(--orbit-control-radius)] border border-border bg-surface px-3 text-left text-sm text-muted hover:border-primary/40">
-        <Search size={18} className="shrink-0" /><span className="truncate">Search anything...</span>
+        <Search size={18} className="shrink-0" /><span className="truncate">{t('search')}</span>
         <span className="ml-auto hidden shrink-0 items-center gap-1 rounded-md border border-border bg-surface-alt px-1.5 py-1 text-[11px] sm:flex"><Command size={11} /> K</span>
       </button>
-      <div className="ml-auto flex items-center gap-1 sm:gap-2">
-        <button type="button" className="icon-btn hidden sm:inline-flex" aria-label="Quick add" title="Quick add (N)" onClick={openQuickAdd}><Plus size={19} /></button>
-        <button type="button" className="icon-btn" aria-label="Reminders and notifications" title="Reminders and notifications" onClick={() => navigate('/panel/reminders')}><Bell size={19} /></button>
+      <div className="orbit-header-actions ml-auto flex items-center gap-1 sm:gap-2">
+        <LanguageSelector className="shrink-0" />
+        <button type="button" className="icon-btn hidden sm:inline-flex" aria-label={t('quickAdd')} title={t('quickAdd')} onClick={openQuickAdd}><Plus size={19} /></button>
+        <button type="button" className="icon-btn" aria-label={t('notifications')} title={t('notifications')} onClick={() => navigate('/panel/reminders')}><Bell size={19} /></button>
         <TelegramControl />
         <div className="relative">
           <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text" aria-label="Open account menu" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>{initials}</button>
-          {profileOpen && <div role="menu" className="absolute right-0 top-11 z-50 w-52 rounded-[var(--orbit-radius)] border border-border bg-surface p-1.5 shadow-lift">
+          {profileOpen && <div role="menu" className="orbit-profile-menu absolute right-0 top-11 z-50 w-52 rounded-[var(--orbit-radius)] border border-border bg-surface p-1.5 shadow-lift">
             <p className="truncate border-b border-border px-2 py-2 text-xs font-semibold">{user?.fullName || user?.email}</p>
             <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-hover" onClick={() => { navigate('/panel/settings'); setProfileOpen(false); }}><Settings size={16} /> Settings</button>
             <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-hover" onClick={() => { toggleTheme(); setProfileOpen(false); }}>{darkMode ? <Sun size={16} /> : <Moon size={16} />} {darkMode ? 'Light mode' : 'Dark mode'}</button>
@@ -117,14 +123,15 @@ function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
 }
 
 function MobileNav({ openMenu, openQuickAdd }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const items = [['Home', '/panel', Gauge], ['Tasks', '/panel/tasks', CalendarCheck2], ['Money', '/panel/money/transactions', WalletCards]];
   const moreActive = location.pathname !== '/panel' && location.pathname !== '/panel/tasks' && !location.pathname.startsWith('/panel/money/');
-  return <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid h-[68px] grid-cols-5 border-t border-border bg-surface px-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
-    {items.slice(0, 2).map(([label, path, Icon]) => <NavLink key={path} to={path} end={path === '/panel'} className={({ isActive }) => cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', isActive ? 'text-primary' : 'text-muted')}><Icon size={20} />{label}</NavLink>)}
-    <button type="button" className="flex flex-col items-center justify-center gap-1 text-[11px] font-medium text-primary" onClick={openQuickAdd} aria-label="Quick add"><span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-text"><Plus size={22} /></span>Add</button>
-    {items.slice(2).map(([label, path, Icon]) => <NavLink key={path} to={path} className={({ isActive }) => cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', isActive || location.pathname.startsWith('/panel/money/') ? 'text-primary' : 'text-muted')}><Icon size={20} />{label}</NavLink>)}
-    <button type="button" className={cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', moreActive ? 'text-primary' : 'text-muted')} onClick={openMenu}><Menu size={20} />More</button>
+  return <nav aria-label={t('navigation:mobile')} className="fixed inset-x-0 bottom-0 z-40 grid h-[68px] grid-cols-5 border-t border-border bg-surface px-2 pb-[env(safe-area-inset-bottom)] lg:hidden">
+    {items.slice(0, 2).map(([label, path, Icon]) => <NavLink key={path} to={path} end={path === '/panel'} className={({ isActive }) => cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', isActive ? 'text-primary' : 'text-muted')}><Icon size={20} />{t(`navigation:${label.toLowerCase()}`)}</NavLink>)}
+    <button type="button" className="flex flex-col items-center justify-center gap-1 text-[11px] font-medium text-primary" onClick={openQuickAdd} aria-label={t('quickAdd')}><span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-text"><Plus size={22} /></span>{t('add')}</button>
+    {items.slice(2).map(([label, path, Icon]) => <NavLink key={path} to={path} className={({ isActive }) => cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', isActive || location.pathname.startsWith('/panel/money/') ? 'text-primary' : 'text-muted')}><Icon size={20} />{t(`navigation:${label.toLowerCase()}`)}</NavLink>)}
+    <button type="button" className={cn('flex flex-col items-center justify-center gap-1 text-[11px] font-medium', moreActive ? 'text-primary' : 'text-muted')} onClick={openMenu}><Menu size={20} />{t('more')}</button>
   </nav>;
 }
 
@@ -156,7 +163,7 @@ export function Layout() {
   return <div data-orbit-panel-root className="min-h-screen bg-canvas">
     <Sidebar open={menu} close={() => setMenu(false)} />
     {menu && <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-text/40 lg:hidden" onClick={() => setMenu(false)} />}
-    <div className="min-w-0 lg:pl-[236px]">
+    <div className="orbit-panel-content min-w-0 lg:pl-[236px]">
       <Header openMenu={() => setMenu(true)} openSearch={() => { if (allowed('quick-access')) setSearch(true); }} openQuickAdd={() => { if (allowed('quick-access')) setQuickAddOpen(true); }} toggleTheme={toggleTheme} darkMode={darkMode} />
       <main className="mx-auto max-w-[1480px] px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
         <AnimatePresence mode="wait" initial={false}><AnimatedPage key={location.pathname}>{outlet}</AnimatedPage></AnimatePresence>

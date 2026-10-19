@@ -14,7 +14,7 @@ const schema = z.object({
   ORBIT_TELEGRAM_BOT_USERNAME: z.string().default(''),
   DZEVENT_API_KEY: z.string().default(''),
   ANALYTICS_REQUIRE_CONSENT: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
-  META_PIXEL_ID: z.string().regex(/^\d*$/).default('1432887715641697'),
+  META_PIXEL_ID: z.literal('1432887715641697').default('1432887715641697'),
   META_CAPI_ACCESS_TOKEN: z.string().default(''),
   META_CAPI_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
   META_CAPI_TEST_EVENT_CODE: z.string().default(''),

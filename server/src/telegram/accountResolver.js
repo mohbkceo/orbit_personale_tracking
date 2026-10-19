@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Account } from '../models/Account.js';
+import { telegramText } from '../i18n/telegram.js';
 
 export async function resolveTelegramAccount(userId, settings, direction, currency = settings.defaultCurrency) {
   const key = direction === 'out' ? 'defaultExpenseAccount' : 'defaultIncomeAccount';
@@ -10,5 +11,6 @@ export async function resolveTelegramAccount(userId, settings, direction, curren
   }
   const accounts = await Account.find({ user: userId, archived: false, currency }).select('_id');
   if (accounts.length === 1) return { accountId: accounts[0]._id };
-  return { error: `Set a default ${direction === 'out' ? 'expense' : 'income'} account in Settings before recording this action.` };
+  const accountType = telegramText(settings, direction === 'out' ? 'expense' : 'income');
+  return { error: telegramText(settings, 'accountRequired', { direction: settings.language === 'ar' ? accountType : accountType.toLowerCase() }) };
 }

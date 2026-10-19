@@ -25,7 +25,7 @@ export async function handleTaskReminderDigestCallback(callback, userId, token) 
   const settings = await getSettingsDocument(userId);
   const zone = automationTimezone(settings, rules);
   if (action === 'back') {
-    const view = renderTaskDigest(await collectTaskDigest(userId, rules, zone));
+    const view = renderTaskDigest(await collectTaskDigest(userId, rules, zone), settings);
     await edit(callback, token, view || { text: 'No tasks to remind you about.' });
     return answer('Updated');
   }
@@ -41,7 +41,7 @@ export async function handleTaskReminderDigestCallback(callback, userId, token) 
       if ([404, 409].includes(error.status)) return answer('This task is no longer available.');
       throw error;
     }
-    const view = renderTaskDigest(await collectTaskDigest(userId, rules, zone));
+    const view = renderTaskDigest(await collectTaskDigest(userId, rules, zone), settings);
     await edit(callback, token, view || { text: 'No tasks to remind you about.' });
     return answer(action === 'done' ? 'Task completed' : action === 'drop' ? 'Task removed' : 'Task reminders muted');
   }

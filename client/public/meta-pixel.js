@@ -3,7 +3,7 @@
 (() => {
   let initialized = false;
   let pixelId;
-  let allowed = true;
+  let allowed = false;
   const ids = new Set();
   window.addEventListener('message', (event) => {
     if (event.source !== parent || event.origin !== location.origin) return;
@@ -17,6 +17,8 @@
       fbq('set', 'autoConfig', false, pixelId);
       fbq('init', pixelId);
       const script = document.createElement('script'); script.async = true;
+      script.onload = () => parent.postMessage({ type: typeof window.fbq.callMethod === 'function' ? 'ready' : 'error', pixelId }, location.origin);
+      script.onerror = () => parent.postMessage({ type: 'error', pixelId }, location.origin);
       script.src = 'https://connect.facebook.net/en_US/fbevents.js'; document.head.appendChild(script);
     }
     if (!initialized) return;

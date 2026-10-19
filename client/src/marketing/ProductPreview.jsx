@@ -10,6 +10,8 @@ import {
   Search,
   Settings,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { marketingContent } from '../i18n/marketingContent.js';
 
 const menu = [
   ['Home', LayoutList],
@@ -19,14 +21,14 @@ const menu = [
   ['Debts', Landmark],
   ['Reminders', Bell],
 ];
-const tasks = ['Review weekly priorities', 'Plan next project step', 'Check monthly expenses'];
-
 export function ProductPreview() {
+  const { t, i18n } = useTranslation();
+  const copy = marketingContent[i18n.resolvedLanguage === 'ar' ? 'ar' : 'en'].preview;
   return (
     <div
       className="marketing-preview"
       role="img"
-      aria-label="Preview of the Orbit dashboard showing tasks, goals, expenses and reminders"
+      aria-label={copy.aria}
     >
       <aside className="marketing-preview-sidebar">
         <div className="marketing-preview-brand">
@@ -37,12 +39,12 @@ export function ProductPreview() {
           {menu.map(([label, Icon], index) => (
             <div key={label} className={index === 0 ? 'active' : ''}>
               <Icon size={14} />
-              <span>{label}</span>
+              <span>{t(`navigation:${label.toLowerCase()}`)}</span>
             </div>
           ))}
         </div>
         <div className="marketing-preview-settings">
-          <Settings size={14} /> Settings
+          <Settings size={14} /> {t('settings')}
         </div>
       </aside>
       <div className="marketing-preview-main">
@@ -50,7 +52,7 @@ export function ProductPreview() {
           <Menu size={15} className="marketing-preview-menu-icon" />
           <div className="marketing-preview-search">
             <Search size={14} />
-            Search anything...
+            {t('search')}
           </div>
           <Bell size={15} />
           <span className="marketing-preview-avatar">A</span>
@@ -59,11 +61,11 @@ export function ProductPreview() {
           <div className="marketing-preview-greeting">
             <div>
               <strong>
-                Good morning, Alex <span>☀</span>
+                {copy.greeting} <span>☀</span>
               </strong>
-              <small>Here is your day at a glance.</small>
+              <small>{copy.greetingDetail}</small>
             </div>
-            <small>Today</small>
+            <small>{t('today')}</small>
           </div>
           <div className="marketing-preview-stats">
             <div>
@@ -71,58 +73,54 @@ export function ProductPreview() {
                 <Check size={16} />
               </span>
               <strong>12</strong>
-              <small>Tasks</small>
-              <em>5 due today</em>
+              <small>{t('navigation:tasks')}</small>
+              <em>{copy.dueToday}</em>
             </div>
             <div>
               <span className="green">
                 <Goal size={16} />
               </span>
               <strong>3</strong>
-              <small>Goals</small>
-              <em>2 on track</em>
+              <small>{t('navigation:goals')}</small>
+              <em>{copy.onTrack}</em>
             </div>
             <div>
               <span className="blue">
                 <CircleDollarSign size={16} />
               </span>
               <strong>$892</strong>
-              <small>Expenses</small>
-              <em>This month</em>
+              <small>{t('navigation:expenses')}</small>
+              <em>{t('telegram:thisMonth')}</em>
             </div>
             <div>
               <span className="orange">
                 <Landmark size={16} />
               </span>
               <strong>$1,200</strong>
-              <small>Debt</small>
-              <em>Across 2 accounts</em>
+              <small>{copy.debt}</small>
+              <em>{copy.acrossAccounts}</em>
             </div>
           </div>
           <div className="marketing-preview-grid">
             <section>
               <h3>
-                Tasks <span>View all →</span>
+                {t('navigation:tasks')} <span>{copy.viewAll}</span>
               </h3>
-              {tasks.map((task, i) => (
+              {copy.tasks.map((task, i) => (
                 <div className="marketing-preview-task" key={task}>
                   <span className={i === 0 ? 'done' : ''}>{i === 0 && <Check size={10} />}</span>
                   <p>{task}</p>
-                  <small>{i === 2 ? 'Tomorrow' : 'Today'}</small>
+                  <small>{i === 2 ? copy.tomorrow : t('today')}</small>
                 </div>
               ))}
             </section>
             <section>
               <h3>
-                Goals <span>View all →</span>
+                {t('navigation:goals')} <span>{copy.viewAll}</span>
               </h3>
-              {[
-                ['Build a savings habit', 68],
-                ['Read more this year', 40],
-                ['Move every day', 25],
-              ].map(([label, amount]) => (
-                <div className="marketing-preview-goal" key={label}>
-                  <p>{label}</p>
+              {[68, 40, 25].map((amount, index) => (
+                <div className="marketing-preview-goal" key={index}>
+                  <p>{copy.goals[index]}</p>
                   <div>
                     <span style={{ width: `${amount}%` }} />
                   </div>
@@ -131,31 +129,23 @@ export function ProductPreview() {
             </section>
             <section>
               <h3>
-                Expenses <span>View all →</span>
+                {t('navigation:expenses')} <span>{copy.viewAll}</span>
               </h3>
-              {[
-                ['Food & Dining', '$320'],
-                ['Shopping', '$210'],
-                ['Bills & Utilities', '$180'],
-              ].map(([label, amount]) => (
-                <div className="marketing-preview-row" key={label}>
-                  <span>{label}</span>
+              {['$320', '$210', '$180'].map((amount, index) => (
+                <div className="marketing-preview-row" key={index}>
+                  <span>{copy.expenses[index]}</span>
                   <b>{amount}</b>
                 </div>
               ))}
             </section>
             <section>
               <h3>
-                Reminders <span>View all →</span>
+                {t('navigation:reminders')} <span>{copy.viewAll}</span>
               </h3>
-              {[
-                ['Pay utility bill', 'Today'],
-                ['Take vitamins', 'Today'],
-                ['Call Mom', 'Tomorrow'],
-              ].map(([label, when]) => (
-                <div className="marketing-preview-row" key={label}>
+              {copy.reminders.map((label, index) => (
+                <div className="marketing-preview-row" key={index}>
                   <span>{label}</span>
-                  <b>{when}</b>
+                  <b>{index === 2 ? copy.tomorrow : t('today')}</b>
                 </div>
               ))}
             </section>

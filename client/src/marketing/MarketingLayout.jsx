@@ -3,30 +3,17 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { MarketingHeader } from './MarketingHeader.jsx';
 import { GetStartedModal } from './GetStartedModal.jsx';
 import './marketing.css';
-
-const pageMeta = {
-  '/': [
-    'Orbit — Organize your work. Track your life.',
-    'Bring tasks, goals, money and reminders into one simple, beautiful space.',
-  ],
-  '/features': [
-    'Orbit Features — Tasks, Money, Goals and Reminders',
-    'Explore the tools Orbit provides for organizing your life.',
-  ],
-  '/about': [
-    'About Orbit',
-    'Learn how Orbit brings your plans, money and reminders into one organized workspace.',
-  ],
-  '/pricing': ['Orbit Pricing', 'Explore Orbit access plans and included features.'],
-};
+import { useTranslation } from 'react-i18next';
 
 export function MarketingLayout() {
+  const { t, i18n } = useTranslation();
   const [getStartedOpen, setGetStartedOpen] = useState(false);
   const openGetStarted = useCallback(() => setGetStartedOpen(true), []);
   const closeGetStarted = useCallback(() => setGetStartedOpen(false), []);
   const { pathname } = useLocation();
   useEffect(() => {
-    const [title, description] = pageMeta[pathname] || pageMeta['/'];
+    const key = ({ '/': 'home', '/features': 'features', '/about': 'about', '/pricing': 'pricing' })[pathname] || 'home';
+    const [title, description] = [t(`marketing:meta.${key}Title`), t(`marketing:meta.${key}Description`)];
     document.title = title;
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
@@ -35,7 +22,7 @@ export function MarketingLayout() {
       document.head.appendChild(meta);
     }
     meta.content = description;
-  }, [pathname]);
+  }, [pathname, i18n.resolvedLanguage, t]);
   return (
     <div className="marketing-shell">
       <MarketingHeader onGetStarted={openGetStarted} />

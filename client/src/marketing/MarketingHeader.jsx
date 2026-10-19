@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
 
 const links = [
   ['Features', '/features'],
@@ -9,6 +11,7 @@ const links = [
 ];
 
 export function MarketingHeader({ onGetStarted }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => {
@@ -25,33 +28,35 @@ export function MarketingHeader({ onGetStarted }) {
   return (
     <header className="marketing-header">
       <div className="marketing-header-inner">
-        <Link to="/" className="marketing-brand" aria-label="Orbit home">
+        <Link to="/" className="marketing-brand" aria-label={t('marketing:home')}>
           <img src="/logo-orbit.png" alt="" />
           <span>Orbit</span>
         </Link>
-        <nav aria-label="Public navigation" className="marketing-desktop-nav">
+        <nav aria-label={t('marketing:publicNavigation')} className="marketing-desktop-nav">
           {links.map(([label, to]) => (
             <NavLink key={to} to={to}>
-              {label}
+              {t(`marketing:${label.toLowerCase()}`)}
             </NavLink>
           ))}
         </nav>
         <div className="marketing-header-actions">
+          <LanguageSelector className="marketing-language-selector" />
           <Link to="/login" className="marketing-sign-in">
-            Sign in
+            {t('auth:signIn')}
           </Link>
           <button
             type="button"
             className="marketing-button marketing-button-primary"
             onClick={onGetStarted}
           >
-            Get Started
+            {t('marketing:getStarted')}
           </button>
         </div>
+        <LanguageSelector className="marketing-mobile-language" />
         <button
           type="button"
           className="marketing-menu-toggle"
-          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-label={t(open ? 'marketing:closeMenu' : 'marketing:openMenu')}
           aria-expanded={open}
           aria-controls="marketing-mobile-menu"
           onClick={() => setOpen((value) => !value)}
@@ -62,16 +67,16 @@ export function MarketingHeader({ onGetStarted }) {
       {open && (
         <nav
           id="marketing-mobile-menu"
-          aria-label="Mobile public navigation"
+          aria-label={t('marketing:mobileNavigation')}
           className="marketing-mobile-nav"
         >
           {links.map(([label, to]) => (
             <NavLink key={to} to={to} onClick={() => setOpen(false)}>
-              {label}
+              {t(`marketing:${label.toLowerCase()}`)}
             </NavLink>
           ))}
           <Link to="/login" onClick={() => setOpen(false)}>
-            Sign in
+            {t('auth:signIn')}
           </Link>
           <button
             type="button"
@@ -81,8 +86,9 @@ export function MarketingHeader({ onGetStarted }) {
               onGetStarted();
             }}
           >
-            Get Started
+            {t('marketing:getStarted')}
           </button>
+          <LanguageSelector />
         </nav>
       )}
     </header>

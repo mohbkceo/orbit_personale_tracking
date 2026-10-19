@@ -18,6 +18,7 @@ const loginInput = z.object({ email: z.email(), password: z.string().min(1) });
 export const authRoutes = Router();
 authRoutes.post('/register', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(z.strictObject({
   fullName: z.string().trim().min(2).max(120), email: z.string().trim().toLowerCase().max(254).pipe(z.email()), password: z.string().min(12).max(200),
+  language: z.enum(['en', 'ar']).optional(),
 })), asyncHandler(async (req, res) => {
   const user = await registerPublic(req.body, req, res);
   issueCookie(res, user, 'user');

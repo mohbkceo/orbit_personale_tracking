@@ -3,6 +3,7 @@ import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import { Task } from '../models/Task.js';
 import { escapeHtml } from '../telegram/formatters.js';
+import { telegramText as tr } from '../i18n/telegram.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -36,7 +37,7 @@ export async function collectTaskDigest(userId, rules, zone, now = new Date()) {
   return sortDigestTasks(tasks.filter((task) => policy.priorities[task.priority] !== false), zone, now).slice(0, policy.maxTasks);
 }
 
-export function renderTaskDigest(tasks) {
+export function renderTaskDigest(tasks, settings = { language: 'en' }) {
   if (!tasks.length) return null;
   let number = 0;
   const shown = [];
@@ -54,14 +55,15 @@ export function renderTaskDigest(tasks) {
       shown.push(task);
       lines.push(line);
     }
-    return lines.length ? `<b>${heading}</b>\n${lines.join('\n')}` : null;
+    const localizedHeading = settings.language === 'ar' ? ({ urgent: '🚨 عاجل', high: '🔴 مرتفع', medium: '🟠 متوسط', low: '🟢 منخفض' })[priority] : heading;
+    return lines.length ? `<b>${localizedHeading}</b>\n${lines.join('\n')}` : null;
   }).filter(Boolean);
   if (!shown.length) return null;
   const keyboard = [];
   for (let index = 0; index < shown.length; index += 4) {
     keyboard.push(shown.slice(index, index + 4).map((task, offset) => ({ text: String(index + offset + 1).padStart(2, '0'), callback_data: `taskdigest:select:${task._id}` })));
   }
-  return { text: `📋 <b>Tasks</b>\n\n${sections.join('\n\n')}`, markup: { inline_keyboard: keyboard } };
+  return { text: `📋 <b>${tr(settings, 'tasks')}</b>\n\n${sections.join('\n\n')}`, markup: { inline_keyboard: keyboard } };
 }
 
 export function digestNumber(tasks, id) {

@@ -4,6 +4,7 @@ import { APPEARANCE_VALUES } from '../config/appearance.js';
 const settingSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    language: { type: String, enum: ['en', 'ar'], default: 'en' },
     name: { type: String, default: 'My workspace' },
     timezone: { type: String, default: 'Africa/Algiers' },
     defaultCurrency: { type: String, default: 'DZD', uppercase: true },

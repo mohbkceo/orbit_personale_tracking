@@ -4,8 +4,12 @@ import { api } from '../api/client.js';
 import { whatsappUrl } from './whatsapp.js';
 import { analytics } from '../analytics/client.js';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { marketingContent } from '../i18n/marketingContent.js';
 
 export function GetStartedModal({ open, onClose }) {
+  const { t, i18n } = useTranslation();
+  const copy = marketingContent[i18n.resolvedLanguage === 'ar' ? 'ar' : 'en'].modal;
   const [sales, setSales] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +25,7 @@ export function GetStartedModal({ open, onClose }) {
         if (live) setSales(result.data?.sales || null);
       })
       .catch(() => {
-        if (live) setError('Contact options are unavailable right now. Please try again later.');
+        if (live) setError(true);
       })
       .finally(() => {
         if (live) setLoading(false);
@@ -64,17 +68,17 @@ export function GetStartedModal({ open, onClose }) {
           type="button"
           autoFocus
           className="marketing-modal-close"
-          aria-label="Close"
+          aria-label={t('close')}
           onClick={onClose}
         >
           <X size={20} />
         </button>
-        <span className="marketing-eyebrow">Start your Orbit</span>
-        <h2 id="get-started-title">Get started with Orbit</h2>
-        <p>Choose how you would like to arrange access to your workspace.</p>
+        <span className="marketing-eyebrow">{copy.eyebrow}</span>
+        <h2 id="get-started-title">{copy.title}</h2>
+        <p>{copy.intro}</p>
         <div className="marketing-choice-list">
-          <Link to="/pricing" onClick={onClose} className="marketing-choice"><span className="marketing-choice-icon"><CreditCard size={21} /></span><span><strong>Choose your plan</strong><small>See features, prices and available payment options</small></span><ArrowUpRight size={19} /></Link>
-          <Link to="/register" onClick={onClose} className="marketing-choice"><span><strong>Create an account</strong><small>Start with your name, email and password</small></span><ArrowUpRight size={19} /></Link>
+          <Link to="/pricing" onClick={onClose} className="marketing-choice"><span className="marketing-choice-icon"><CreditCard size={21} /></span><span><strong>{copy.plan}</strong><small>{copy.planDetail}</small></span><ArrowUpRight size={19} /></Link>
+          <Link to="/register" onClick={onClose} className="marketing-choice"><span><strong>{copy.register}</strong><small>{copy.registerDetail}</small></span><ArrowUpRight size={19} /></Link>
           <button
             type="button"
             disabled={loading || !available}
@@ -85,13 +89,13 @@ export function GetStartedModal({ open, onClose }) {
               <MessageCircle size={21} />
             </span>
             <span>
-              <strong>Contact us — COD</strong>
+              <strong>{copy.contact}</strong>
               <small>
                 {loading
-                  ? 'Checking availability…'
+                  ? copy.checking
                   : available
-                    ? 'Chat with us on WhatsApp'
-                    : 'Unavailable for now'}
+                    ? copy.whatsapp
+                    : copy.unavailable}
               </small>
             </span>
             <ArrowUpRight size={19} />
@@ -104,7 +108,7 @@ export function GetStartedModal({ open, onClose }) {
         </div>}
         {error && (
           <p className="marketing-modal-error" role="alert">
-            {error}
+            {copy.error}
           </p>
         )}
       </section>
