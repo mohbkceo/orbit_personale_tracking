@@ -7,6 +7,7 @@ import { executeTask } from '../../services/taskExecution.service.js';
 import { archiveTask, updateTask } from '../../services/taskService.js';
 import { escapeHtml, taskDue } from '../formatters.js';
 import { telegramRequest } from '../botClient.js';
+import { telegramText as tr } from '../../i18n/telegram.js';
 
 const eligible = { archived: false, status: { $in: ['todo', 'in_progress'] }, reminderMode: { $nin: ['custom', 'off'] }, taskReminderState: { $ne: 'muted' } };
 
@@ -26,35 +27,35 @@ export async function handleTaskReminderDigestCallback(callback, userId, token) 
   const zone = automationTimezone(settings, rules);
   if (action === 'back') {
     const view = renderTaskDigest(await collectTaskDigest(userId, rules, zone), settings);
-    await edit(callback, token, view || { text: 'No tasks to remind you about.' });
-    return answer('Updated');
+    await edit(callback, token, view || { text: tr(settings, 'noDigestTasks') });
+    return answer(tr(settings, 'updated'));
   }
-  if (!mongoose.isValidObjectId(id) || !['select', 'done', 'drop', 'mute'].includes(action)) return answer('This task is no longer available.');
+  if (!mongoose.isValidObjectId(id) || !['select', 'done', 'drop', 'mute'].includes(action)) return answer(tr(settings, 'taskUnavailable'));
   const task = await Task.findOne({ _id: id, user: userId, ...eligible });
-  if (!task) return answer('This task is no longer available.');
+  if (!task) return answer(tr(settings, 'taskUnavailable'));
   if (action !== 'select') {
     try {
       if (action === 'done') await executeTask(userId, id, 'done', { channel: 'telegram' });
       if (action === 'drop') { await executeTask(userId, id, 'drop', { channel: 'telegram' }); await archiveTask(userId, id); }
       if (action === 'mute') await updateTask(userId, id, { taskReminderState: 'muted' });
     } catch (error) {
-      if ([404, 409].includes(error.status)) return answer('This task is no longer available.');
+      if ([404, 409].includes(error.status)) return answer(tr(settings, 'taskUnavailable'));
       throw error;
     }
     const view = renderTaskDigest(await collectTaskDigest(userId, rules, zone), settings);
-    await edit(callback, token, view || { text: 'No tasks to remind you about.' });
-    return answer(action === 'done' ? 'Task completed' : action === 'drop' ? 'Task removed' : 'Task reminders muted');
+    await edit(callback, token, view || { text: tr(settings, 'noDigestTasks') });
+    return answer(tr(settings, action === 'done' ? 'taskCompleted' : action === 'drop' ? 'taskRemoved' : 'remindersMuted'));
   }
   const tasks = await collectTaskDigest(userId, rules, zone);
   const number = digestNumber(tasks, id);
-  if (!number) return answer('This task is no longer available.');
+  if (!number) return answer(tr(settings, 'taskUnavailable'));
   await edit(callback, token, {
-    text: `📌 <b>Task ${number}</b>\n\n${escapeHtml(task.title)}\n\nPriority: ${escapeHtml(task.priority[0].toUpperCase() + task.priority.slice(1))}\nDue: ${escapeHtml(taskDue(task, zone) || 'No deadline')}`,
+    text: `📌 <b>${tr(settings, 'digestTask', { number })}</b>\n\n${escapeHtml(task.title)}\n\n${tr(settings, 'digestPriority')}: ${tr(settings, `priority${task.priority[0].toUpperCase()}${task.priority.slice(1)}`)}\n${tr(settings, 'digestDue')}: ${escapeHtml(taskDue(task, zone, settings.language) || tr(settings, 'noDeadline'))}`,
     markup: { inline_keyboard: [
-      [{ text: '✅ Done', callback_data: `taskdigest:done:${id}` }],
-      [{ text: '🗑 Drop & Remove', callback_data: `taskdigest:drop:${id}` }, { text: "🔕 Don't remind me", callback_data: `taskdigest:mute:${id}` }],
-      [{ text: '‹ Back', callback_data: 'taskdigest:back' }],
+      [{ text: `✅ ${tr(settings, 'done')}`, callback_data: `taskdigest:done:${id}` }],
+      [{ text: `🗑 ${tr(settings, 'dropRemove')}`, callback_data: `taskdigest:drop:${id}` }, { text: `🔕 ${tr(settings, 'dontRemind')}`, callback_data: `taskdigest:mute:${id}` }],
+      [{ text: `‹ ${tr(settings, 'back')}`, callback_data: 'taskdigest:back' }],
     ] },
   });
-  return answer('Task selected');
+  return answer(tr(settings, 'taskSelected'));
 }

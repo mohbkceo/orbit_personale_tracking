@@ -1,36 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { Spinner } from '../components/ui.jsx';
-
-function money(amount, currency = 'USD') {
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(Number(amount || 0));
-  } catch {
-    return `${currency} ${Number(amount || 0)}`;
-  }
-}
-
-function featureText(feature) {
-  if (feature.type === 'LIMIT') {
-    return `${feature.limit} ${feature.name}`;
-  }
-
-  if (feature.type === 'UNLIMITED') {
-    return /^unlimited\b/i.test(feature.name) ? feature.name : `Unlimited ${feature.name}`;
-  }
-
-  if (feature.type === 'TEXT') {
-    return feature.value || feature.name;
-  }
-
-  return feature.name;
-}
+import { formatMoney } from '../utils/format.js';
+import { planBadge, planCta, planDescription, planDuration, planFeature, planName, planSuffix } from '../utils/planDisplay.js';
 
 function hexToRgb(hex) {
   if (!hex || typeof hex !== 'string') return null;
@@ -66,17 +41,8 @@ function rgba(hex, alpha = 1) {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
-function durationText(plan) {
-  if (plan?.kind === 'FREE' || plan?.durationUnit === 'PERMANENT' || plan?.slug === 'free') return 'Free forever';
-  if (!plan?.durationValue || !plan?.durationUnit) return '';
-
-  const unit = plan.durationUnit.toLowerCase();
-  const plural = Number(plan.durationValue) === 1 ? unit : `${unit}s`;
-
-  return `${plan.durationValue} ${plural} access`;
-}
-
 function PricingCard({ plan, onGetStarted, recommended = false }) {
+  const { t: _t } = useTranslation();
   const accent = plan.appearance?.color || '#c8ff00';
   const accentText = plan.appearance?.textColor || '#081000';
   const highlighted = Boolean(plan.appearance?.highlighted);
@@ -86,7 +52,7 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
   const primaryFeatures = features.slice(0, 3);
   const remainingFeatures = features.slice(3);
 
-  const ctaText = plan.public?.ctaText || `Get ${plan.name || 'Plan'}`;
+  const ctaText = planCta(plan, _t);
 
   const originalAmount = plan.price?.originalAmount;
   const currentAmount = plan.price?.amount ?? 0;
@@ -149,7 +115,7 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="font-display text-[25px] font-black uppercase tracking-[-0.04em] text-white">
-                  {plan.name}
+                  {planName(plan, _t)}
                 </h2>
 
                 {discount ? (
@@ -160,11 +126,10 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
                       color: accentText,
                     }}
                   >
-                    {discount}% off
-                  </span>
+                    {discount}{_t('pricing:ui.off')}</span>
                 ) : null}
 
-                {recommended ? <span className="rounded-md border border-white/30 px-2 py-1 text-[10px] font-black uppercase text-white">Recommended for you</span> : null}
+                {recommended ? <span className="rounded-md border border-white/30 px-2 py-1 text-[10px] font-black uppercase text-white">{_t('pricing:ui.recommendedForYou')}</span> : null}
                 {plan.appearance?.badge ? (
                   <span
                     className="rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wide"
@@ -174,13 +139,13 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
                       color: accent,
                     }}
                   >
-                    {plan.appearance.badge}
+                    {planBadge(plan, _t)}
                   </span>
                 ) : null}
               </div>
 
               <p className="mt-1.5 max-w-[300px] text-[13px] leading-5 text-white/60">
-                {plan.public?.shortDescription || 'Everything you need to get started.'}
+                {planDescription(plan, _t) || _t('pricing:ui.everythingYouNeedToGetStarted')}
               </p>
             </div>
 
@@ -223,26 +188,22 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
                       featureIndex === 0 ? 'font-bold text-white' : 'font-medium text-white/70',
                     ].join(' ')}
                   >
-                    {featureText(feature)}
+                    {planFeature(feature, _t)}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm text-white/60">
-              <Icon icon="solar:stars-bold-duotone" />
-              Plan access included
-            </div>
+              <Icon icon="solar:stars-bold-duotone" />{_t('pricing:ui.planAccessIncluded')}</div>
           )}
 
           <div className="mt-3 border-t border-white/[0.08] pt-3">
             <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-black/10 px-3 py-2.5">
               <div className="flex items-center gap-2 text-[11px] font-medium text-white/55">
-                <Icon icon="solar:clock-circle-bold-duotone" width="16" />
-                Access period
-              </div>
+                <Icon icon="solar:clock-circle-bold-duotone" width="16" />{_t('pricing:ui.accessPeriod')}</div>
 
-              <span className="text-[11px] font-bold text-white/80">{durationText(plan)}</span>
+              <span className="text-[11px] font-bold text-white/80">{planDuration(plan, _t)}</span>
             </div>
           </div>
         </div>
@@ -252,18 +213,18 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
           <div className="flex min-h-[58px] items-end gap-2">
             {originalAmount != null && Number(originalAmount) !== Number(currentAmount) ? (
               <span className="mb-1 text-[18px] font-black line-through" style={{ color: accent }}>
-                {money(originalAmount, currency)}
+                {formatMoney(originalAmount, currency)}
               </span>
             ) : null}
 
             <div className="flex items-end">
               <span className="font-display text-[35px] font-black leading-none tracking-[-0.06em] text-white">
-                {money(currentAmount, currency)}
+                {formatMoney(currentAmount, currency)}
               </span>
 
               {plan.price?.suffix ? (
-                <span className="mb-1 ml-1.5 text-[11px] font-medium text-white/55">
-                  {plan.price.suffix}
+                <span className="mb-1 ms-1.5 text-[11px] font-medium text-white/55">
+                  {planSuffix(plan, _t)}
                 </span>
               ) : null}
             </div>
@@ -297,9 +258,7 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
                 className="text-white/75"
               />
 
-              <span className="text-[11px] font-black uppercase tracking-[0.06em] text-white/85">
-                Included features
-              </span>
+              <span className="text-[11px] font-black uppercase tracking-[0.06em] text-white/85">{_t('pricing:ui.includedFeatures')}</span>
             </div>
 
             <Icon icon="solar:info-circle-linear" width="15" className="text-white/30" />
@@ -323,7 +282,7 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
                   </div>
 
                   <span className="min-w-0 flex-1 text-[12px] font-medium leading-4 text-white/75">
-                    {featureText(feature)}
+                    {planFeature(feature, _t)}
                   </span>
 
                   {feature.type === 'UNLIMITED' ? (
@@ -333,9 +292,7 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
                         backgroundColor: rgba(accent, 0.13),
                         color: accent,
                       }}
-                    >
-                      Unlimited
-                    </span>
+                    >{_t('pricing:ui.unlimited')}</span>
                   ) : null}
 
                   {feature.type === 'LIMIT' && feature.limit != null ? (
@@ -349,7 +306,7 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
           </div>
 
           {!features.length ? (
-            <div className="py-6 text-center text-xs text-white/35">Features will appear here.</div>
+            <div className="py-6 text-center text-xs text-white/35">{_t('pricing:ui.featuresWillAppearHere')}</div>
           ) : null}
         </div>
       </div>
@@ -358,6 +315,7 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
 }
 
 export default function Pricing() {
+  const { t: _t } = useTranslation();
   const { openGetStarted } = useOutletContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -382,7 +340,7 @@ export default function Pricing() {
       .catch((failure) => {
         if (live) {
           setError(
-            failure?.response?.data?.message || failure?.message || 'Unable to load pricing plans.',
+            failure?.response?.data?.message || failure?.message || 'loadUnavailable',
           );
         }
       })
@@ -429,18 +387,12 @@ export default function Pricing() {
         <section className="pt-14 sm:pt-16">
           <div className="max-w-3xl">
             <div className="mb-4 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/40">
-              <span className="h-px w-5 bg-white/25" />
-              Orbit pricing
-            </div>
+              <span className="h-px w-5 bg-white/25" />{_t('pricing:ui.orbitPricing')}</div>
 
-            <h1 className="font-display text-[38px] font-black leading-[1.02] tracking-[-0.055em] text-white sm:text-[48px]">
-              Plans for every workflow
-            </h1>
+            <h1 className="font-display text-[38px] font-black leading-[1.02] tracking-[-0.055em] text-white sm:text-[48px]">{_t('pricing:ui.plansForEveryWorkflow')}</h1>
 
-            <p className="mt-3 max-w-xl text-[14px] leading-6 text-white/50 sm:text-[15px]">
-              Choose the level of access and features that fits the way you work.
-            </p>
-            {originFeature && <p className="mt-3 text-sm font-semibold text-white/80">Explore plans for {originName}.</p>}
+            <p className="mt-3 max-w-xl text-[14px] leading-6 text-white/50 sm:text-[15px]">{_t('pricing:ui.chooseTheLevelOfAccessAndFeaturesThatFitsTheWayYouWork')}</p>
+            {originFeature && <p className="mt-3 text-sm font-semibold text-white/80">{_t('pricing:ui.explorePlansFor')}{' '}{originName}.</p>}
           </div>
 
           {/* CONTROL BAR */}
@@ -449,22 +401,17 @@ export default function Pricing() {
               <button
                 type="button"
                 className="rounded-lg border border-white/[0.09] bg-white/[0.09] px-6 py-2 text-[12px] font-black text-white shadow-sm"
-              >
-                Available plans
-              </button>
+              >{_t('pricing:ui.availablePlans')}</button>
 
               <span className="px-5 py-2 text-[12px] font-medium text-white/35">
-                {plans.length || 0} options
-              </span>
+                {plans.length || 0}{' '}{_t('pricing:ui.options')}</span>
             </div>
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 rounded-xl border border-white/[0.09] bg-black/20 px-3.5 py-2.5">
                 <Icon icon="solar:question-circle-linear" width="16" className="text-white/45" />
 
-                <span className="text-[11px] font-bold text-white/65">
-                  Choose based on the features you need
-                </span>
+                <span className="text-[11px] font-bold text-white/65">{_t('pricing:ui.chooseBasedOnTheFeaturesYouNeed')}</span>
               </div>
             </div>
           </div>
@@ -487,9 +434,9 @@ export default function Pricing() {
                 className="mx-auto text-red-400"
               />
 
-              <h2 className="mt-3 text-sm font-bold text-white">Unable to load plans</h2>
+              <h2 className="mt-3 text-sm font-bold text-white">{_t('pricing:ui.unableToLoadPlans')}</h2>
 
-              <p className="mt-1 text-xs text-white/45">{error}</p>
+              <p className="mt-1 text-xs text-white/45">{error === 'loadUnavailable' ? _t('pricing:ui.unableToLoadPlans') : error}</p>
             </div>
           ) : plans.length ? (
             <div
@@ -512,11 +459,9 @@ export default function Pricing() {
                 <Icon icon="solar:box-minimalistic-linear" width="24" />
               </div>
 
-              <h2 className="mt-4 font-display text-xl font-bold">No plans available</h2>
+              <h2 className="mt-4 font-display text-xl font-bold">{_t('pricing:ui.noPlansAvailable')}</h2>
 
-              <p className="mt-2 text-sm leading-6 text-white/40">
-                Pricing plans are currently unavailable.
-              </p>
+              <p className="mt-2 text-sm leading-6 text-white/40">{_t('pricing:ui.pricingPlansAreCurrentlyUnavailable')}</p>
             </div>
           )}
         </section>
@@ -525,18 +470,14 @@ export default function Pricing() {
         {plans.length > 0 && !loading ? (
           <footer className="mt-12 border-t border-white/[0.06] pt-6">
             <div className="flex flex-col gap-4 text-[11px] text-white/35 sm:flex-row sm:items-center sm:justify-between">
-              <p>Plan availability, limits and access periods are configured dynamically.</p>
+              <p>{_t('pricing:ui.planAvailabilityLimitsAndAccessPeriodsAreConfiguredDynamically')}</p>
 
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
-                  <Icon icon="solar:shield-check-linear" width="14" />
-                  Secure access
-                </span>
+                  <Icon icon="solar:shield-check-linear" width="14" />{_t('pricing:ui.secureAccess')}</span>
 
                 <span className="flex items-center gap-1.5">
-                  <Icon icon="solar:refresh-circle-linear" width="14" />
-                  Configurable plans
-                </span>
+                  <Icon icon="solar:refresh-circle-linear" width="14" />{_t('pricing:ui.configurablePlans')}</span>
               </div>
             </div>
           </footer>

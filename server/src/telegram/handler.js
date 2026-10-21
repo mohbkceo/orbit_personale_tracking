@@ -27,7 +27,7 @@ import { addFocusTask, finishFocusPlanning, getDailyFocus, reviewFocusTask } fro
 import { getAutomationSettings } from '../services/automationSettings.service.js';
 import { executeTask } from '../services/taskExecution.service.js';
 import { clearPending, getPending, pendingExpired, setPending } from './sessionService.js';
-import { escapeHtml as h } from './formatters.js';
+import { escapeHtml as h, localDate } from './formatters.js';
 import { DzEvent } from '../models/DzEvent.js';
 import { followEvent } from '../services/events/eventSubscriptionService.js';
 import { telegramText as tr } from '../i18n/telegram.js';
@@ -84,37 +84,37 @@ const safeError = (error, settings) => {
 
 async function pendingMessage(text, pending, userId, settings, identity) {
   if (pending.action === 'PAY_DEBT') {
-    if (!mongoose.isValidObjectId(pending.payload.id)) return { text: 'That action expired. Please try again.', complete: true };
+    if (!mongoose.isValidObjectId(pending.payload.id)) return { text: tr(settings, 'actionExpired'), complete: true };
     const debt = await Debt.findOne({ _id: pending.payload.id, user: userId, archived: false });
-    if (!debt) return { text: 'That debt is no longer available.', complete: true };
+    if (!debt) return { text: tr(settings, 'debtUnavailable'), complete: true };
     const amount = parseAmount(text);
-    if (!amount) return { text: 'Amount must be greater than 0.' };
+    if (!amount) return { text: tr(settings, 'amountPositive') };
     return { ...(await paymentReply(userId, debt, amount, settings)), complete: true };
   }
   if (pending.action === 'EDIT_TASK') {
-    if (!mongoose.isValidObjectId(pending.payload.id)) return { text: 'That action expired. Please try again.', complete: true };
+    if (!mongoose.isValidObjectId(pending.payload.id)) return { text: tr(settings, 'actionExpired'), complete: true };
     const parsed = parseTelegramMessage(/^(?:t|task|todo)\s+/i.test(text) ? text : `t ${text}`, { timezone: settings.timezone });
-    if (!parsed.data.title) return { text: 'Send the updated task title.' };
+    if (!parsed.data.title) return { text: tr(settings, 'updatedTaskTitle') };
     const input = { title: parsed.data.title };
     if (/\b(today|tomorrow|yesterday|next\s+\w+|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(text)) input.dueDate = parsed.data.dueDate;
     if (/\b(?:\d{1,2}:\d{2}|\d{1,2}\s*[ap]m)\b/i.test(text)) input.dueTime = parsed.data.dueTime;
     if (/\b(low|medium|high|urgent)\b/i.test(text)) input.priority = parsed.data.priority;
     const item = await updateTask(userId, pending.payload.id, input);
-    return { text: `✓ Task updated\n\n<b>${h(item.title)}</b>`, complete: true };
+    return { text: `✓ ${tr(settings, 'taskUpdated')}\n\n<b>${h(item.title)}</b>`, complete: true };
   }
   if (pending.action === 'EDIT_TX') {
-    if (!mongoose.isValidObjectId(pending.payload.id)) return { text: 'That action expired. Please try again.', complete: true };
+    if (!mongoose.isValidObjectId(pending.payload.id)) return { text: tr(settings, 'actionExpired'), complete: true };
     const tx = await Transaction.findOne({ _id: pending.payload.id, user: userId, createdVia: 'telegram', deletedAt: null, type: { $in: ['income', 'expense'] } });
-    if (!tx) return { text: 'That transaction is no longer available.', complete: true };
+    if (!tx) return { text: tr(settings, 'transactionUnavailable'), complete: true };
     await assertFeature(userId, tx.type === 'income' ? 'income' : 'expenses');
     const alias = tx.category === 'Sale' ? 's' : tx.type === 'expense' ? 'e' : 'i';
     const amountOnly = Boolean(parseAmount(text));
     const parsed = parseTelegramMessage(new RegExp(`^${alias}\\s`, 'i').test(text) ? text : `${alias} ${text}`);
-    if (!parsed.data.amount) return { text: 'Amount must be greater than 0.' };
+    if (!parsed.data.amount) return { text: tr(settings, 'amountPositive') };
     const input = { amount: parsed.data.amount, description: amountOnly ? tx.description : parsed.data.description || tx.description };
     if (alias === 's' && !amountOnly) input.saleDetails = parsed.data.saleDetails;
     const item = await updateTransaction(userId, tx._id, input);
-    return { text: `✓ ${tx.category === 'Sale' ? 'Sale' : 'Transaction'} updated\n\n<b>${h(item.description)}</b>`, complete: true };
+    return { text: `✓ ${tr(settings, tx.category === 'Sale' ? 'saleUpdated' : 'transactionUpdated')}\n\n<b>${h(item.description)}</b>`, complete: true };
   }
   if (aliases[pending.action]) {
     const prefix = aliases[pending.action];
@@ -127,7 +127,7 @@ async function pendingMessage(text, pending, userId, settings, identity) {
     const reply = await executeIntent(userId, parsed, settings, identity);
     return { ...reply, complete: !reply.pending };
   }
-  return { text: 'That action expired. Please try again.', complete: true };
+  return { text: tr(settings, 'actionExpired'), complete: true };
 }
 
 async function dispatchMessage(text, userId, settings, identity) {
@@ -135,34 +135,34 @@ async function dispatchMessage(text, userId, settings, identity) {
   const nextAction = text.match(/^\/nextaction\s+([a-f\d]{24})\s+(.+)$/i);
   if (nextAction) {
     const task = await updateTask(userId, nextAction[1], { nextAction: nextAction[2].trim().slice(0, 500) });
-    return { text: `✓ Next action saved for <b>${h(task.title)}</b>.` };
+    return { text: tr(settings, 'nextActionSaved', { title: task.title }) };
   }
   const focusDateCommand = text.match(/^\/focusdate\s+(\d{4}-\d{2}-\d{2})\s+([a-f\d]{24})\s+(\d{4}-\d{2}-\d{2})$/i);
   if (focusDateCommand) {
     await reviewFocusTask(userId, focusDateCommand[1], focusDateCommand[2], 'reschedule', 'telegram', new Date(`${focusDateCommand[3]}T00:00:00.000Z`));
-    return { text: '✓ Focus task rescheduled.' };
+    return { text: tr(settings, 'focusRescheduled') };
   }
   const taskDate = text.match(/^\/taskdate\s+([a-f\d]{24})\s+(\d{4}-\d{2}-\d{2})$/i);
   if (taskDate) {
     const date = dayjs.tz(`${taskDate[2]} 12:00`, 'YYYY-MM-DD HH:mm', settings.timezone);
-    if (date.format('YYYY-MM-DD') !== taskDate[2]) return { text: 'Choose a valid date.' };
+    if (date.format('YYYY-MM-DD') !== taskDate[2]) return { text: tr(settings, 'validDate') };
     await executeTask(userId, taskDate[1], 'reschedule', { channel: 'telegram', dueDate: new Date(`${taskDate[2]}T00:00:00.000Z`) });
-    return { text: '✓ Task rescheduled.' };
+    return { text: tr(settings, 'taskRescheduled') };
   }
   if (command === '/focus') {
     await assertFeature(userId, 'daily-focus');
     const content = text.slice(6).trim();
-    if (content.toLowerCase() === 'done') { const focus = await finishFocusPlanning(userId, 'telegram'); return { text: `✓ Focus plan saved: ${focus.items.length} task${focus.items.length === 1 ? '' : 's'}.` }; }
+    if (content.toLowerCase() === 'done') { const focus = await finishFocusPlanning(userId, 'telegram'); return { text: tr(settings, `focusPlanCount_${focus.items.length === 1 ? 'one' : 'other'}`, { count: focus.items.length }) }; }
     if (!content) {
       const focus = await getDailyFocus(userId);
       if (!focus.planningStartedAt && !focus.planningCompleted) { focus.planningStartedAt = new Date(); await focus.save(); }
-      return { text: focus.planningCompleted ? `Today's focus has ${focus.items.length} task${focus.items.length === 1 ? '' : 's'}.` : `What are your priorities today? ${focus.items.length} selected. Send a task or type done.` };
+      return { text: focus.planningCompleted ? tr(settings, `todaysFocusCount_${focus.items.length === 1 ? 'one' : 'other'}`, { count: focus.items.length }) : tr(settings, 'focusPriorities', { count: focus.items.length }) };
     }
     const focus = await addFocusTask(userId, { title: content }, 'telegram');
     const max = (await getAutomationSettings()).dailyFocus.maxTasks;
-    return { text: focus.planningCompleted ? `✓ ${focus.items.length}/${max} — focus plan saved.` : `${focus.items.length}/${max} — ${h(content)}. What's next? Type done if that's enough.` };
+    return { text: focus.planningCompleted ? tr(settings, 'focusPlanProgress', { count: focus.items.length, maximum: max }) : tr(settings, 'focusNext', { count: focus.items.length, maximum: max, title: content }) };
   }
-  if (['/cancel', 'cancel'].includes(text.toLowerCase())) { await clearPending(identity.userId, identity.chatId); return { text: 'Cancelled.' }; }
+  if (['/cancel', 'cancel'].includes(text.toLowerCase())) { await clearPending(identity.userId, identity.chatId); return { text: tr(settings, 'cancelledReply') }; }
   if (['/quick', '/add', 'add'].includes(command)) { await clearPending(identity.userId, identity.chatId); return quickMenu(settings); }
   if (command.startsWith('/')) {
     const active = await getPending(identity.userId, identity.chatId);
@@ -174,14 +174,14 @@ async function dispatchMessage(text, userId, settings, identity) {
   const snooze = text.match(/^\/snooze\s+([a-f\d]{24})\s+(\d{4}-\d{2}-\d{2})\s+([01]\d|2[0-3]):([0-5]\d)$/i);
   if (snooze) {
     const until = dayjs.tz(`${snooze[2]} ${snooze[3]}:${snooze[4]}`, 'YYYY-MM-DD HH:mm', settings.timezone);
-    if (until.format('YYYY-MM-DD HH:mm') !== `${snooze[2]} ${snooze[3]}:${snooze[4]}`) return { text: 'That local date or time does not exist. Choose another time.' };
+    if (until.format('YYYY-MM-DD HH:mm') !== `${snooze[2]} ${snooze[3]}:${snooze[4]}`) return { text: tr(settings, 'invalidLocalTime') };
     const reminder = await snoozeReminder(userId, snooze[1], until.toDate(), 'telegram');
-    return { text: `⏰ Snoozed <b>${h(reminder.title)}</b> until ${until.format('D MMM HH:mm')}` };
+    return { text: tr(settings, 'snoozedTitle', { title: reminder.title, date: localDate(until.toDate(), settings.timezone, 'D MMM HH:mm', settings.language) }) };
   }
   const debtPay = text.match(/^\/debtpay\s+([a-f\d]{24})\s+(.+)$/i);
   if (debtPay) {
     const debt = await Debt.findOne({ _id: debtPay[1], user: userId, archived: false });
-    return debt ? paymentReply(userId, debt, parseAmount(debtPay[2]), settings) : { text: 'Debt not found.' };
+    return debt ? paymentReply(userId, debt, parseAmount(debtPay[2]), settings) : { text: tr(settings, 'debtNotFound') };
   }
   const existing = await executeCommand(userId, command, settings);
   if (existing) return existing;
@@ -202,10 +202,10 @@ async function dispatchMessage(text, userId, settings, identity) {
     const focus = await getDailyFocus(userId);
     if (focus.planningStartedAt && !focus.planningCompleted) {
       await assertFeature(userId, 'daily-focus');
-      if (text.toLowerCase() === 'done') { const complete = await finishFocusPlanning(userId, 'telegram'); return { text: `✓ Focus plan saved: ${complete.items.length} tasks.` }; }
+      if (text.toLowerCase() === 'done') { const complete = await finishFocusPlanning(userId, 'telegram'); return { text: tr(settings, `focusPlanCount_${complete.items.length === 1 ? 'one' : 'other'}`, { count: complete.items.length }) }; }
       const updated = await addFocusTask(userId, { title: text }, 'telegram');
       const max = (await getAutomationSettings()).dailyFocus.maxTasks;
-      return { text: updated.planningCompleted ? `✓ ${updated.items.length}/${max} — focus plan saved.` : `${updated.items.length}/${max} — ${h(text)}. What's next? Type done if that's enough.` };
+      return { text: updated.planningCompleted ? tr(settings, 'focusPlanProgress', { count: updated.items.length, maximum: max }) : tr(settings, 'focusNext', { count: updated.items.length, maximum: max, title: text }) };
     }
   }
   const interruptsPending = ['CANCEL_REMINDER', 'UPDATE_REMINDER'].includes(direct.intent) || (!['EDIT_TASK', 'EDIT_TX'].includes(pending?.action) && /^(CREATE_|RECORD_)/.test(direct.intent));
@@ -221,7 +221,7 @@ async function dispatchMessage(text, userId, settings, identity) {
     if (reply.pending) await setPending(identity.userId, identity.chatId, reply.pending.action, reply.pending.payload);
     return reply;
   }
-  if (await pendingExpired(identity.userId, identity.chatId) && direct.intent === 'UNKNOWN') return { text: 'That action expired. Please try again.' };
+  if (await pendingExpired(identity.userId, identity.chatId) && direct.intent === 'UNKNOWN') return { text: tr(settings, 'actionExpired') };
   const reply = await executeIntent(userId, direct, settings, identity);
   if (reply.pending) await setPending(identity.userId, identity.chatId, reply.pending.action, reply.pending.payload);
   return reply;
@@ -293,13 +293,13 @@ export async function handleTelegramUpdate(update) {
         const result = await handleGuidedAddAction(callback, user._id, settings);
         const next = await getPending(identity.userId, identity.chatId);
         const reply = stampGuidedReply(result, next?.payload?.flowId);
-        await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: reply.stale ? 'Action expired' : 'OK' });
+        await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: tr(settings, reply.stale ? 'actionExpired' : 'done') });
         if (!reply.stale) await telegramRequest(token, 'editMessageText', { chat_id: chatId, message_id: callback.message.message_id, text: reply.text, parse_mode: 'HTML', reply_markup: reply.markup || { inline_keyboard: [] } });
         return;
       } catch (error) { console.error('Guided add callback failed:', error.message); await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true }); return; }
     }
     if (String(callback.data).startsWith('f:')) {
-      try { return await handleFocusCallback(callback, user._id, token); }
+      try { return await handleFocusCallback(callback, user._id, token, settings); }
       catch (error) { await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: safeError(error, settings), show_alert: true }); return; }
     }
     if (String(callback.data).startsWith('r:')) {
@@ -308,7 +308,7 @@ export async function handleTelegramUpdate(update) {
     }
     try {
       const reply = await handleCallbackAction(callback, user._id, settings);
-      await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: reply.answer || 'Done' });
+      await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: reply.answer || tr(settings, 'done') });
       if (reply.removeMarkup) await telegramRequest(token, 'editMessageReplyMarkup', { chat_id: chatId, message_id: callback.message.message_id, reply_markup: { inline_keyboard: [] } });
       if (reply.text) await sendMessage(token, chatId, reply.text, reply.markup);
     } catch (error) {

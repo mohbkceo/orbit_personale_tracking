@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -9,6 +10,7 @@ import { api, endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
 import { AnimatedList } from '../animations/AnimatedList.jsx';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
+import { formatDateTime, formatNumber } from '../utils/format.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -30,6 +32,7 @@ const resources = {
 };
 
 function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
+  const { t: _t } = useTranslation();
   const { toast } = useApp();
   const zone = settings.timezone || 'Africa/Algiers';
   const local = reminder ? dayjs(reminder.nextTriggerAt).tz(zone) : dayjs().tz(zone).add(1, 'hour');
@@ -121,7 +124,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
       };
       if (reminder) await endpoints.update('reminders', reminder._id, payload);
       else await endpoints.create('reminders', payload);
-      toast(reminder ? 'Reminder updated' : 'Reminder created');
+      toast(reminder ? _t('reminders:ui.reminderUpdated') : _t('reminders:ui.reminderCreated'));
       onSaved();
       onClose();
     } catch (error) {
@@ -135,11 +138,11 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
       open
       onClose={onClose}
       title={reminder ? 'Edit reminder' : 'New reminder'}
-      description="A cue for the right moment"
+      description={_t('reminders:ui.aCueForTheRightMoment')}
     >
       <form onSubmit={submit} className="space-y-4">
         <label>
-          <span className="label">What should I remind you about?</span>
+          <span className="label">{_t('reminders:ui.whatShouldIRemindYouAbout')}</span>
           <input
             required
             autoFocus
@@ -151,7 +154,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label>
-            <span className="label">Date</span>
+            <span className="label">{_t('reminders:ui.date')}</span>
             <input
               required
               type="date"
@@ -161,7 +164,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
             />
           </label>
           <label>
-            <span className="label">Time · {zone}</span>
+            <span className="label">{_t('reminders:ui.time')}{' '}{zone}</span>
             <input
               required
               type="time"
@@ -173,7 +176,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label>
-            <span className="label">Repeat</span>
+            <span className="label">{_t('reminders:ui.repeat')}</span>
             <select className="field" value={form.repeat} onChange={set('repeat')}>
               {['never', 'daily', 'weekly', 'monthly', 'yearly'].map((value) => (
                 <option key={value} value={value}>
@@ -183,7 +186,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
             </select>
           </label>
           <label>
-            <span className="label">Linked to</span>
+            <span className="label">{_t('reminders:ui.linkedTo')}</span>
             <select
               className="field"
               value={form.entityType}
@@ -191,7 +194,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                 setForm((value) => ({ ...value, entityType: event.target.value, entityId: '' }))
               }
             >
-              <option value="custom">Nothing</option>
+              <option value="custom">{_t('reminders:ui.nothing')}</option>
               {Object.keys(resources).map((value) => (
                 <option key={value} value={value}>
                   {value}
@@ -202,9 +205,9 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
         </div>
         {form.entityType !== 'custom' && (
           <label>
-            <span className="label">Item</span>
+            <span className="label">{_t('reminders:ui.item')}</span>
             <select required className="field" value={form.entityId} onChange={set('entityId')}>
-              <option value="">Choose item</option>
+              <option value="">{_t('reminders:ui.chooseItem')}</option>
               {entities.map((item) => (
                 <option key={item._id} value={item._id}>
                   {item.title || item.name || item.personName}
@@ -218,12 +221,11 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
           className="text-xs font-semibold text-primary"
           onClick={() => setAdvanced(!advanced)}
         >
-          {advanced ? 'Hide' : 'Show'} advanced settings
-        </button>
+          {advanced ? _t('reminders:ui.hide') : _t('reminders:ui.show')}{' '}{_t('reminders:ui.advancedSettings')}</button>
         {advanced && (
           <div className="space-y-3 rounded-xl border border-border p-4 ">
             <label>
-              <span className="label">Context</span>
+              <span className="label">{_t('reminders:ui.context')}</span>
               <textarea
                 className="field h-auto py-2"
                 rows="2"
@@ -232,7 +234,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
               />
             </label>
             <label>
-              <span className="label">Priority</span>
+              <span className="label">{_t('reminders:ui.priority')}</span>
               <select className="field" value={form.priority} onChange={set('priority')}>
                 {['low', 'medium', 'high', 'urgent'].map((value) => (
                   <option key={value}>{value}</option>
@@ -243,7 +245,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <label>
-                    <span className="label">Repeat every</span>
+                    <span className="label">{_t('reminders:ui.repeatEvery')}</span>
                     <input
                       className="field"
                       type="number"
@@ -254,7 +256,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                     />
                   </label>
                   <label>
-                    <span className="label">Last date · optional</span>
+                    <span className="label">{_t('reminders:ui.lastDateOptional')}</span>
                     <input
                       className="field"
                       type="date"
@@ -265,7 +267,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                 </div>
                 {form.repeat === 'weekly' && (
                   <div>
-                    <span className="label">Days of week</span>
+                    <span className="label">{_t('reminders:ui.daysOfWeek')}</span>
                     <div className="flex flex-wrap gap-2">
                       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
                         <label key={day} className="flex items-center gap-1 text-xs">
@@ -289,7 +291,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                 )}
                 {form.repeat === 'monthly' && (
                   <label>
-                    <span className="label">Day of month</span>
+                    <span className="label">{_t('reminders:ui.dayOfMonth')}</span>
                     <input
                       className="field"
                       type="number"
@@ -307,9 +309,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                 type="checkbox"
                 checked={form.requireAcknowledgement}
                 onChange={set('requireAcknowledgement')}
-              />
-              Require acknowledgement
-            </label>
+              />{_t('reminders:ui.requireAcknowledgement')}</label>
             {form.repeat === 'never' && (
               <>
                 <label className="flex items-center gap-2 text-sm">
@@ -317,13 +317,11 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                     type="checkbox"
                     checked={form.followUpEnabled}
                     onChange={set('followUpEnabled')}
-                  />
-                  Follow up if still open
-                </label>
+                  />{_t('reminders:ui.followUpIfStillOpen')}</label>
                 {form.followUpEnabled && (
                   <div className="grid grid-cols-2 gap-2">
                     <label>
-                      <span className="label">After · minutes</span>
+                      <span className="label">{_t('reminders:ui.afterMinutes')}</span>
                       <input
                         className="field"
                         type="number"
@@ -334,7 +332,7 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                       />
                     </label>
                     <label>
-                      <span className="label">Maximum follow-ups</span>
+                      <span className="label">{_t('reminders:ui.maximumFollowUps')}</span>
                       <input
                         className="field"
                         type="number"
@@ -358,20 +356,19 @@ function ReminderForm({ onClose, onSaved, reminder, settings, initialLink }) {
                     deliveryChannels: event.target.checked ? ['telegram', 'web'] : ['web'],
                   }))
                 }
-              />
-              Telegram delivery
-            </label>
+              />{_t('reminders:ui.telegramDelivery')}</label>
           </div>
         )}
         <button className="btn-primary w-full" disabled={busy}>
-          {busy ? 'Saving…' : reminder ? 'Save reminder' : 'Create reminder'}
+          {busy ? _t('common:saving') : reminder ? _t('reminders:ui.saveReminder') : _t('reminders:ui.createReminder')}
         </button>
       </form>
     </Modal>
   );
 }
 
-function ReminderCard({ item, onAction, onEdit, settings }) {
+function ReminderCard({ item, onAction, onEdit }) {
+  const { t: _t } = useTranslation();
   const [menu, setMenu] = useState('');
   const financial = ['debt', 'bill', 'subscription'].includes(item.entityType);
   const resolved = ['completed', 'cancelled', 'expired', 'suppressed'].includes(item.status);
@@ -382,8 +379,8 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
           <h3 className="font-display font-bold">{item.title}</h3>
           <p className="mt-1 text-xs text-muted">
             {item.message ||
-              (item.purpose === 'review' ? 'Review your progress' : 'Ready to handle')}{' '}
-            · {dayjs(item.nextTriggerAt).tz(settings.timezone).format('ddd, D MMM · HH:mm')}
+              (item.purpose === 'review' ? _t('reminders:ui.reviewYourProgress') : _t('reminders:ui.readyToHandle'))}{' '}
+            · {formatDateTime(item.nextTriggerAt)}
           </p>
         </div>
         <StatusBadge
@@ -396,12 +393,12 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted">
-          {item.metadata?.integration?.startsWith('dzevent') ? 'DZ Event · Event notification' : `${item.source === 'automatic' ? 'Automatic' : 'Custom'} · ${item.entityType}`}
+          {item.metadata?.integration?.startsWith('dzevent') ? _t('reminders:ui.dzEventEventNotification') : `${item.source === 'automatic' ? 'Automatic' : 'Custom'} · ${item.entityType}`}
         </span>
-        {item.metadata?.integration === 'dzevent' && <span className="text-muted">Event starts {dayjs(item.metadata.eventStartsAt).tz(settings.timezone).format('ddd, D MMM · HH:mm')} · {item.metadata.venueName || 'Venue to be confirmed'} · {item.metadata.offsetMinutes} min before</span>}
+        {item.metadata?.integration === 'dzevent' && <span className="text-muted">{_t('reminders:ui.eventStarts')}{' '}{formatDateTime(item.metadata.eventStartsAt)} · {item.metadata.venueName || _t('reminders:ui.venueToBeConfirmed')} · {formatNumber(item.metadata.offsetMinutes)}{' '}{_t('reminders:ui.minBefore')}</span>}
         {item.metadata?.explanation && (
           <details className="text-muted">
-            <summary className="cursor-pointer">Why this reminder?</summary>
+            <summary className="cursor-pointer">{_t('reminders:ui.whyThisReminder')}</summary>
             <p className="mt-1 max-w-md whitespace-pre-line">
               {item.metadata.explanation}
               {item.metadata.lastDecision ? `\n${item.metadata.lastDecision}` : ''}
@@ -410,44 +407,34 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
         )}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        {item.metadata?.eventUrl && <a className="btn-secondary h-8" href={item.metadata.eventUrl} target="_blank" rel="noopener noreferrer">View event</a>}
+        {item.metadata?.eventUrl && <a className="btn-secondary h-8" href={item.metadata.eventUrl} target="_blank" rel="noopener noreferrer">{_t('reminders:ui.viewEvent')}</a>}
         {!resolved && !financial && (
           <button className="btn-secondary h-8" onClick={() => onAction(item, 'complete')}>
-            {item.entityType === 'goal' ? 'Reviewed' : 'Done'}
+            {item.entityType === 'goal' ? _t('reminders:ui.reviewed') : _t('telegram:actionDone')}
           </button>
         )}
         {!resolved && financial && (
-          <Link className="btn-secondary h-8" to={links[item.entityType]}>
-            Open item
-          </Link>
+          <Link className="btn-secondary h-8" to={links[item.entityType]}>{_t('reminders:ui.openItem')}</Link>
         )}
         {!resolved && item.status === 'waiting' ? (
-          <button className="btn-secondary h-8" onClick={() => onAction(item, 'resume')}>
-            Resume
-          </button>
+          <button className="btn-secondary h-8" onClick={() => onAction(item, 'resume')}>{_t('reminders:ui.resume')}</button>
         ) : (
           !resolved && (
             <>
               <button
                 className="btn-secondary h-8"
                 onClick={() => setMenu(menu === 'later' ? '' : 'later')}
-              >
-                Later
-              </button>
+              >{_t('reminders:ui.later')}</button>
               <button
                 className="btn-secondary h-8"
                 onClick={() => setMenu(menu === 'block' ? '' : 'block')}
-              >
-                Blocked
-              </button>
+              >{_t('common:status.blocked')}</button>
             </>
           )
         )}
-        {!item.metadata?.integration?.startsWith('dzevent') && <button className="btn-secondary h-8" onClick={() => onEdit(item)}>Edit</button>}
+        {!item.metadata?.integration?.startsWith('dzevent') && <button className="btn-secondary h-8" onClick={() => onEdit(item)}>{_t('reminders:ui.edit')}</button>}
         {!resolved && (
-          <button className="btn-secondary h-8" onClick={() => onAction(item, 'cancel')}>
-            Cancel
-          </button>
+          <button className="btn-secondary h-8" onClick={() => onAction(item, 'cancel')}>{_t('common:cancel')}</button>
         )}
       </div>
       {menu === 'later' && (
@@ -496,6 +483,7 @@ function ReminderCard({ item, onAction, onEdit, settings }) {
 }
 
 function EntityReminderControls({ entityType, entityId, count, onChanged }) {
+  const { t: _t } = useTranslation();
   const { toast } = useApp();
   const [entity, setEntity] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -512,7 +500,7 @@ function EntityReminderControls({ entityType, entityId, count, onChanged }) {
       const result = await api.patch(`${base}/mode`, { mode });
       setEntity(result.data);
       await onChanged();
-      toast('Reminder mode updated');
+      toast(_t('reminders:ui.reminderModeUpdated'));
     } catch (error) {
       toast(error.message, 'error');
     } finally {
@@ -524,7 +512,7 @@ function EntityReminderControls({ entityType, entityId, count, onChanged }) {
     try {
       await api.post(`${base}/regenerate`);
       await onChanged();
-      toast('Automatic defaults restored');
+      toast(_t('reminders:ui.automaticDefaultsRestored'));
     } catch (error) {
       toast(error.message, 'error');
     } finally {
@@ -536,31 +524,28 @@ function EntityReminderControls({ entityType, entityId, count, onChanged }) {
     <section className="panel mb-5 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">
-            Reminder plan · {entityType}
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">{_t('reminders:ui.reminderPlan')}{' '}{entityType}
           </p>
           <h2 className="mt-1 font-display font-bold">{entity.title}</h2>
           <p className="mt-1 text-xs text-muted">
-            {count} open reminder{count === 1 ? '' : 's'}
+            {count}{' '}{_t('reminders:ui.openReminder')}{count === 1 ? '' : 's'}
           </p>
-          {entityType === 'task' && <p className="mt-1 text-xs text-muted">Task Digest delivery is managed in Tasks. You can add a manual reminder here.</p>}
+          {entityType === 'task' && <p className="mt-1 text-xs text-muted">{_t('reminders:ui.taskDigestDeliveryIsManagedInTasksYouCanAddAManualReminderHere')}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            aria-label="Reminder mode"
+            aria-label={_t('reminders:ui.reminderMode')}
             disabled={busy}
             className="field w-36"
             value={entity.mode}
             onChange={(event) => changeMode(event.target.value)}
           >
-            <option value="automatic">{entityType === 'task' ? 'Task Digest' : 'Automatic'}</option>
-            <option value="custom">{entityType === 'task' ? 'Manual only' : 'Custom'}</option>
-            <option value="off">Off</option>
+            <option value="automatic">{entityType === 'task' ? _t('reminders:ui.taskDigest') : _t('reminders:ui.automatic')}</option>
+            <option value="custom">{entityType === 'task' ? _t('reminders:ui.manualOnly') : _t('reminders:ui.custom')}</option>
+            <option value="off">{_t('reminders:ui.off')}</option>
           </select>
           {entity.mode === 'automatic' && entityType !== 'task' && (
-            <button className="btn-secondary h-10" disabled={busy} onClick={restore}>
-              Restore defaults
-            </button>
+            <button className="btn-secondary h-10" disabled={busy} onClick={restore}>{_t('reminders:ui.restoreDefaults')}</button>
           )}
         </div>
       </div>
@@ -569,6 +554,7 @@ function EntityReminderControls({ entityType, entityId, count, onChanged }) {
 }
 
 export default function Reminders() {
+  const { t: _t } = useTranslation();
   const { settings, toast } = useApp();
   const [params] = useSearchParams();
   const entityType = params.get('entityType');
@@ -626,7 +612,7 @@ export default function Reminders() {
     try {
       if (kind === 'cancel') await endpoints.remove('reminders', item._id);
       else await api.post(`/reminders/${item._id}/${kind}`, body || {});
-      toast('Reminder updated');
+      toast(_t('reminders:ui.reminderUpdated'));
       load();
     } catch (error) {
       toast(error.message, 'error');
@@ -635,9 +621,9 @@ export default function Reminders() {
   return (
     <>
       <PageHeader
-        eyebrow="Focus"
-        title="Reminders"
-        description="Your attention schedule, ready when it matters."
+        eyebrow={_t('reminders:ui.focus')}
+        title={_t('reminders:title')}
+        description={_t('reminders:ui.yourAttentionScheduleReadyWhenItMatters')}
         actions={
           <button
             className="btn-primary"
@@ -646,9 +632,7 @@ export default function Reminders() {
               setFormOpen(true);
             }}
           >
-            <Plus size={17} />
-            New reminder
-          </button>
+            <Plus size={17} />{_t('reminders:ui.newReminder')}</button>
         }
       />
       {initialLink && (
@@ -680,12 +664,10 @@ export default function Reminders() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={Bell}
-          title="No reminders yet"
-          description="Create a standalone reminder, or add a dated task."
+          title={_t('reminders:ui.noRemindersYet')}
+          description={_t('reminders:ui.createAStandaloneReminderOrAddADatedTask')}
           action={
-            <button className="btn-primary" onClick={() => setFormOpen(true)}>
-              New reminder
-            </button>
+            <button className="btn-primary" onClick={() => setFormOpen(true)}>{_t('reminders:ui.newReminder')}</button>
           }
         />
       ) : (
@@ -713,7 +695,6 @@ export default function Reminders() {
                             setEditing(value);
                             setFormOpen(true);
                           }}
-                          settings={settings}
                         />
                       )} />
                   </section>

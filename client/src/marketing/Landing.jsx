@@ -50,7 +50,7 @@ export default function Landing() {
               className="marketing-button  marketing-button-primary marketing-hero-primary"
             >
               {t('marketing:startFree')}
-              <ArrowRight size={19} aria-hidden="true" />
+              <ArrowRight className="rtl-flip" size={19} aria-hidden="true" />
             </Link>
 
             <button
@@ -136,7 +136,7 @@ export default function Landing() {
               </li>
             </ol>
             <Link to="/pricing" className="marketing-button marketing-button-primary mt-6">
-              {t('marketing:choosePlan')} <ArrowRight size={18} />
+              {t('marketing:choosePlan')} <ArrowRight className="rtl-flip" size={18} />
             </Link>
           </section>
         </div>

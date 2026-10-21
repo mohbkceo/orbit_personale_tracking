@@ -22,16 +22,17 @@ import { useTelegram } from '../context/TelegramContext.js';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
+import { displayValue, formatDate, formatDateTime } from '../utils/format.js';
 
 const tabs = [
-  ['general', 'General', Globe2],
-  ['appearance', 'Appearance', Palette],
-  ['telegram', 'Telegram', Bot],
-  ['reminders', 'Reminders', Bell],
-  ['events', 'Events', CalendarDays],
-  ['account', 'Account & access', UserRound],
-  ['data', 'Data', Database],
-  ['security', 'Security', ShieldCheck],
+  ['general', Globe2],
+  ['appearance', Palette],
+  ['telegram', Bot],
+  ['reminders', Bell],
+  ['events', CalendarDays],
+  ['account', UserRound],
+  ['data', Database],
+  ['security', ShieldCheck],
 ];
 function Section({ title, description, children }) {
   return (
@@ -46,6 +47,7 @@ function Section({ title, description, children }) {
 }
 
 export default function Settings() {
+  const { t: _t } = useTranslation();
   const { t } = useTranslation();
   const { toast, setSettings } = useApp();
   const { user, access, refresh } = useAuth();
@@ -123,7 +125,7 @@ export default function Settings() {
   }
   async function saveGender() {
     setBusy(true);
-    try { await api.patch('/auth/me', { gender }); await refresh(); toast('Profile updated'); }
+    try { await api.patch('/auth/me', { gender }); await refresh(); toast(_t('settings:ui.profileUpdated')); }
     catch (error) { toast(error.message, 'error'); }
     finally { setBusy(false); }
   }
@@ -151,7 +153,7 @@ export default function Settings() {
       />
       <div className="grid gap-5 lg:grid-cols-[210px_1fr]">
         <nav className="panel-flat h-fit p-2">
-          {tabs.map(([id, , Icon]) => (
+          {tabs.map(([id, Icon]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -195,9 +197,9 @@ export default function Settings() {
                     value={form.dateFormat || 'DD MMM YYYY'}
                     onChange={set('dateFormat')}
                   >
-                    <option>DD MMM YYYY</option>
-                    <option>MM/DD/YYYY</option>
-                    <option>YYYY-MM-DD</option>
+                    <option value="DD MMM YYYY">{_t('settings:ui.ddMmmYyyy')}</option>
+                    <option value="MM/DD/YYYY">{_t('settings:ui.mmDdYyyy')}</option>
+                    <option value="YYYY-MM-DD">{_t('settings:ui.yyyyMmDd')}</option>
                   </select>
                 </label>
               </div>
@@ -205,64 +207,53 @@ export default function Settings() {
             </Section>
           )}
           {tab === 'appearance' && (
-            <Section title="Appearance" description="Preview your workspace now, then save your changes">
+            <Section title={_t('settings:appearance')} description={_t('settings:ui.previewYourWorkspaceNowThenSaveYourChanges')}>
               <AppearancePicker appearance={normalizeAppearance(form.appearance, form.theme)} gender={user?.gender} onChange={(appearance) => setForm((value) => ({ ...value, appearance }))} />
             </Section>
           )}
           {tab === 'telegram' && (
             <>
               <Section
-                title="Telegram"
-                description="One central Orbit bot, connected securely to your account"
+                title={_t('settings:telegram')}
+                description={_t('settings:ui.oneCentralOrbitBotConnectedSecurelyToYourAccount')}
               >
                 <div className="flex items-center gap-3">
                   <StatusBadge tone={telegram?.connected ? 'success' : 'neutral'}>
-                    {telegram?.connected ? 'Connected' : 'Not connected'}
+                    {telegram?.connected ? _t('common:connected') : _t('common:notConnected')}
                   </StatusBadge>
                   {telegram?.connected && (
                     <span className="text-sm">
-                      @{telegram.telegramUsername || 'Telegram user'} · linked{' '}
-                      {new Date(telegram.linkedAt).toLocaleDateString()}
+                      @{telegram.telegramUsername || _t('settings:ui.telegramUser')}{' '}{_t('settings:ui.linked2')}{' '}
+                      {formatDate(telegram.linkedAt)}
                     </span>
                   )}
                 </div>
                 <div className="mt-4 flex gap-2">
                   {telegram?.connected ? (
-                    <button disabled={busy} className="btn-secondary" onClick={() => openTelegram(true)}>
-                      Manage connection
-                    </button>
+                    <button disabled={busy} className="btn-secondary" onClick={() => openTelegram(true)}>{_t('settings:ui.manageConnection')}</button>
                   ) : (
-                    <button disabled={busy} className="btn-primary" onClick={() => openTelegram(true)}>
-                      Connect Telegram
-                    </button>
+                    <button disabled={busy} className="btn-primary" onClick={() => openTelegram(true)}>{_t('settings:ui.connectTelegram')}</button>
                   )}
-                  <button className="btn-secondary" onClick={refreshTelegram}>
-                    Refresh status
-                  </button>
+                  <button className="btn-secondary" onClick={refreshTelegram}>{_t('settings:ui.refreshStatus')}</button>
                 </div>
                 {link && (
-                  <p className="mt-3 break-all text-xs">
-                    If the chat did not open, use{' '}
+                  <p className="mt-3 break-all text-xs">{_t('settings:ui.ifTheChatDidNotOpenUse')}{' '}
                     <a
                       className="text-primary underline"
                       href={link.url}
                       target="_blank"
                       rel="noreferrer"
-                    >
-                      this connection link
-                    </a>
-                    . It expires in 15 minutes.
-                  </p>
+                    >{_t('settings:ui.thisConnectionLink')}</a>{_t('settings:ui.itExpiresIn15Minutes')}</p>
                 )}
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   <label>
-                    <span className="label">Default expense account</span>
+                    <span className="label">{_t('settings:ui.defaultExpenseAccount')}</span>
                     <select
                       className="field"
                       value={form.telegram?.defaultExpenseAccount || ''}
                       onChange={onTelegram('defaultExpenseAccount')}
                     >
-                      <option value="">Choose account</option>
+                      <option value="">{_t('settings:ui.chooseAccount')}</option>
                       {accounts.map((account) => (
                         <option key={account._id} value={account._id}>
                           {account.name}
@@ -271,13 +262,13 @@ export default function Settings() {
                     </select>
                   </label>
                   <label>
-                    <span className="label">Default income account</span>
+                    <span className="label">{_t('settings:ui.defaultIncomeAccount')}</span>
                     <select
                       className="field"
                       value={form.telegram?.defaultIncomeAccount || ''}
                       onChange={onTelegram('defaultIncomeAccount')}
                     >
-                      <option value="">Choose account</option>
+                      <option value="">{_t('settings:ui.chooseAccount')}</option>
                       {accounts.map((account) => (
                         <option key={account._id} value={account._id}>
                           {account.name}
@@ -288,17 +279,17 @@ export default function Settings() {
                 </div>
                 {(!form.telegram?.defaultExpenseAccount || !form.telegram?.defaultIncomeAccount) && (
                   <p className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-                    {!form.telegram?.defaultExpenseAccount && 'Choose a default expense account for Telegram expenses and outgoing debt payments. '}
-                    {!form.telegram?.defaultIncomeAccount && 'Choose a default income account for Telegram sales, income and incoming debt payments.'}
+                    {!form.telegram?.defaultExpenseAccount && _t('settings:ui.chooseADefaultExpenseAccountForTelegramExpensesAndOutgoingDebtPa')}
+                    {!form.telegram?.defaultIncomeAccount && _t('settings:ui.chooseADefaultIncomeAccountForTelegramSalesIncomeAndIncomingDebt')}
                   </p>
                 )}
                 <div className="mt-4 rounded-xl border border-border p-4 text-xs ">
-                  <p className="font-bold">Quick syntax</p>
-                  <p className="mt-2">t Task · din Incoming debt · dout Outgoing debt · s Sale · e Expense · i Income</p>
-                  <p className="mt-2 font-mono">t Call supplier tomorrow<br />din Ahmed 5000<br />s 12500 Stand x3</p>
+                  <p className="font-bold">{_t('settings:ui.quickSyntax')}</p>
+                  <p className="mt-2">{_t('settings:ui.tTaskDinIncomingDebtDoutOutgoingDebtSSaleEExpenseIIncome')}</p>
+                  <p className="mt-2 font-mono">{_t('settings:ui.tCallSupplierTomorrow')}<br />{_t('settings:ui.dinAhmed5000')}<br />{_t('settings:ui.s12500StandX3')}</p>
                 </div>
               </Section>
-              <Section title="Scheduled summaries" description="Sent in your configured timezone">
+              <Section title={_t('settings:ui.scheduledSummaries')} description={_t('settings:ui.sentInYourConfiguredTimezone')}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
                     ['morningSummaryEnabled', 'morningSummaryTime', 'Morning summary'],
@@ -329,48 +320,48 @@ export default function Settings() {
             </>
           )}
           {tab === 'reminders' && <>
-            <Section title="Automatic reminders" description="Choose whether scheduled reminders and Task Digests are sent."><div className="space-y-4"><label className="flex items-center justify-between text-sm font-semibold">Reminders enabled<input type="checkbox" checked={form.reminders?.enabled ?? true} onChange={onReminder('enabled')} /></label><label className="flex items-center justify-between text-sm font-semibold">Automatic reminders<input type="checkbox" checked={form.reminders?.automaticEnabled ?? true} onChange={onReminder('automaticEnabled')} /></label></div></Section>
-            <Section title="Active and quiet hours" description={`Scheduled in ${form.timezone}`}><div className="grid gap-4 sm:grid-cols-2"><label><span className="label">Active from</span><input className="field" type="time" value={form.reminders?.activeHours?.start || '08:00'} onChange={onReminder('start', 'activeHours')} /></label><label><span className="label">Active until</span><input className="field" type="time" value={form.reminders?.activeHours?.end || '22:00'} onChange={onReminder('end', 'activeHours')} /></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.reminders?.quietHours?.enabled ?? true} onChange={onReminder('enabled', 'quietHours')} />Quiet hours enabled</label><div className="grid grid-cols-2 gap-2"><input className="field" type="time" value={form.reminders?.quietHours?.start || '22:00'} onChange={onReminder('start', 'quietHours')} /><input className="field" type="time" value={form.reminders?.quietHours?.end || '08:00'} onChange={onReminder('end', 'quietHours')} /></div></div></Section>
-            <Section title="Follow-ups" description="Keep incomplete cues useful without repeated noise"><div className="grid gap-4 sm:grid-cols-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.reminders?.incompleteFollowUpsEnabled ?? true} onChange={onReminder('incompleteFollowUpsEnabled')} />Incomplete follow-ups</label><label><span className="label">Maximum automatic follow-ups</span><input className="field" type="number" min="0" max="5" value={form.reminders?.maxAutomaticFollowUps ?? 2} onChange={onReminder('maxAutomaticFollowUps')} /></label><label><span className="label">Minimum spacing · minutes</span><input className="field" type="number" min="0" max="1440" value={form.reminders?.minimumReminderSpacingMinutes ?? 120} onChange={onReminder('minimumReminderSpacingMinutes')} /></label></div></Section>
-            <Section title="Default entity behavior" description="Existing items may have their own reminder mode"><div className="grid gap-3 sm:grid-cols-2">{['task', 'debt', 'bill', 'subscription', 'goal'].map((type) => <label key={type}><span className="label capitalize">{type}</span><select className="field" value={form.reminders?.defaultEntityModes?.[type] || 'automatic'} onChange={onReminder(type, 'defaultEntityModes')}><option value="automatic">Automatic</option><option value="custom">Custom</option><option value="off">Off</option></select></label>)}</div></Section>
-            <Section title="Delivery" description="Choose where reminders may appear"><div className="flex flex-wrap gap-6 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={form.reminders?.deliveryChannels?.telegram ?? true} onChange={onReminder('telegram', 'deliveryChannels')} />Telegram</label><label className="flex items-center gap-2"><input type="checkbox" checked={form.reminders?.deliveryChannels?.web ?? true} onChange={onReminder('web', 'deliveryChannels')} />Web attention schedule</label></div></Section>
+            <Section title={_t('settings:ui.automaticReminders')} description={_t('settings:ui.chooseWhetherScheduledRemindersAndTaskDigestsAreSent')}><div className="space-y-4"><label className="flex items-center justify-between text-sm font-semibold">{_t('settings:ui.remindersEnabled')}<input type="checkbox" checked={form.reminders?.enabled ?? true} onChange={onReminder('enabled')} /></label><label className="flex items-center justify-between text-sm font-semibold">{_t('settings:ui.automaticReminders')}<input type="checkbox" checked={form.reminders?.automaticEnabled ?? true} onChange={onReminder('automaticEnabled')} /></label></div></Section>
+            <Section title={_t('settings:ui.activeAndQuietHours')} description={_t('common:dynamic.scheduledIn', { time: form.timezone })}><div className="grid gap-4 sm:grid-cols-2"><label><span className="label">{_t('settings:ui.activeFrom')}</span><input className="field" type="time" value={form.reminders?.activeHours?.start || '08:00'} onChange={onReminder('start', 'activeHours')} /></label><label><span className="label">{_t('settings:ui.activeUntil')}</span><input className="field" type="time" value={form.reminders?.activeHours?.end || '22:00'} onChange={onReminder('end', 'activeHours')} /></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.reminders?.quietHours?.enabled ?? true} onChange={onReminder('enabled', 'quietHours')} />{_t('settings:ui.quietHoursEnabled')}</label><div className="grid grid-cols-2 gap-2"><input className="field" type="time" value={form.reminders?.quietHours?.start || '22:00'} onChange={onReminder('start', 'quietHours')} /><input className="field" type="time" value={form.reminders?.quietHours?.end || '08:00'} onChange={onReminder('end', 'quietHours')} /></div></div></Section>
+            <Section title={_t('settings:ui.followUps')} description={_t('settings:ui.keepIncompleteCuesUsefulWithoutRepeatedNoise')}><div className="grid gap-4 sm:grid-cols-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.reminders?.incompleteFollowUpsEnabled ?? true} onChange={onReminder('incompleteFollowUpsEnabled')} />{_t('settings:ui.incompleteFollowUps')}</label><label><span className="label">{_t('settings:ui.maximumAutomaticFollowUps')}</span><input className="field" type="number" min="0" max="5" value={form.reminders?.maxAutomaticFollowUps ?? 2} onChange={onReminder('maxAutomaticFollowUps')} /></label><label><span className="label">{_t('settings:ui.minimumSpacingMinutes')}</span><input className="field" type="number" min="0" max="1440" value={form.reminders?.minimumReminderSpacingMinutes ?? 120} onChange={onReminder('minimumReminderSpacingMinutes')} /></label></div></Section>
+            <Section title={_t('settings:ui.defaultEntityBehavior')} description={_t('settings:ui.existingItemsMayHaveTheirOwnReminderMode')}><div className="grid gap-3 sm:grid-cols-2">{['task', 'debt', 'bill', 'subscription', 'goal'].map((type) => <label key={type}><span className="label capitalize">{type}</span><select className="field" value={form.reminders?.defaultEntityModes?.[type] || 'automatic'} onChange={onReminder(type, 'defaultEntityModes')}><option value="automatic">{_t('settings:ui.automatic')}</option><option value="custom">{_t('settings:ui.custom')}</option><option value="off">{_t('settings:ui.off')}</option></select></label>)}</div></Section>
+            <Section title={_t('settings:ui.delivery')} description={_t('settings:ui.chooseWhereRemindersMayAppear')}><div className="flex flex-wrap gap-6 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={form.reminders?.deliveryChannels?.telegram ?? true} onChange={onReminder('telegram', 'deliveryChannels')} />{_t('settings:telegram')}</label><label className="flex items-center gap-2"><input type="checkbox" checked={form.reminders?.deliveryChannels?.web ?? true} onChange={onReminder('web', 'deliveryChannels')} />{_t('settings:ui.webAttentionSchedule')}</label></div></Section>
           </>}
           {tab === 'account' && (
             <Section
-              title="Account & access"
-              description="Your identity and current time-based plan"
+              title={_t('settings:accountAccess')}
+              description={_t('settings:ui.yourIdentityAndCurrentTimeBasedPlan')}
             >
               <div className="space-y-3 text-sm">
-                <div className="max-w-xs pb-3"><label htmlFor="profile-gender" className="label">About you</label><select id="profile-gender" className="field" value={gender} onChange={(event) => setGender(event.target.value)}><option value="">Choose gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option></select><p className="mt-1 text-xs text-muted">Used only to order workspace style recommendations.</p><button type="button" className="btn-secondary mt-3" disabled={busy || !gender || gender === user?.gender} onClick={saveGender}>Save profile</button></div>
+                <div className="max-w-xs pb-3"><label htmlFor="profile-gender" className="label">{_t('settings:ui.aboutYou')}</label><select id="profile-gender" className="field" value={gender} onChange={(event) => setGender(event.target.value)}><option value="">{_t('settings:ui.chooseGender')}</option><option value="MALE">{_t('settings:ui.male')}</option><option value="FEMALE">{_t('settings:ui.female')}</option></select><p className="mt-1 text-xs text-muted">{_t('settings:ui.usedOnlyToOrderWorkspaceStyleRecommendations')}</p><button type="button" className="btn-secondary mt-3" disabled={busy || !gender || gender === user?.gender} onClick={saveGender}>{_t('settings:ui.saveProfile')}</button></div>
                 <p>
-                  <b>Name:</b> {user?.fullName}
+                  <b>{_t('settings:ui.name')}</b> {user?.fullName}
                 </p>
                 <p>
-                  <b>Email:</b> {user?.email}
+                  <b>{_t('settings:ui.email')}</b> {user?.email}
                 </p>
                 <p>
-                  <b>Status:</b> <StatusBadge tone="success">{user?.status}</StatusBadge>
+                  <b>{_t('settings:ui.status')}</b> <StatusBadge tone="success">{user?.status}</StatusBadge>
                 </p>
                 <p>
-                  <b>Access:</b> {access?.eligible ? 'ACTIVE' : access?.reason || 'NO_ACCESS'}
+                  <b>{_t('settings:ui.access')}</b> {displayValue(access?.eligible ? 'active' : access?.reason || 'no_access')}
                 </p>
                 <p>
-                  <b>Plan:</b> {access?.subscription?.planSnapshot?.name || 'Free'}
+                  <b>{_t('settings:ui.plan')}</b> {access?.subscription?.planSnapshot?.name || _t('settings:ui.free')}
                 </p>
                 <p>
-                  <b>Activated:</b>{' '}
+                  <b>{_t('settings:ui.activated')}</b>{' '}
                   {access?.subscription?.activatedAt
-                    ? new Date(access.subscription.activatedAt).toLocaleString()
-                    : 'Never'}
+                    ? formatDateTime(access.subscription.activatedAt)
+                    : _t('settings:ui.never')}
                 </p>
                 <p>
-                  <b>Expires:</b>{' '}
+                  <b>{_t('settings:ui.expires')}</b>{' '}
                   {access?.subscription?.expiresAt
-                    ? new Date(access.subscription.expiresAt).toLocaleString()
-                    : 'Never'}
+                    ? formatDateTime(access.subscription.expiresAt)
+                    : _t('settings:ui.never')}
                 </p>
                 <p>
-                  <b>Remaining:</b>{' '}
+                  <b>{_t('settings:ui.remaining')}</b>{' '}
                   {access?.subscription?.expiresAt
                     ? Math.max(
                         0,
@@ -379,13 +370,13 @@ export default function Settings() {
                             86400000,
                         ),
                       ) + ' days'
-                    : 'Unlimited'}
+                    : _t('settings:ui.unlimited')}
                 </p>
               </div>
             </Section>
           )}
           {tab === 'data' && (
-            <Section title="Export your data" description="Only your own records are included">
+            <Section title={_t('settings:ui.exportYourData')} description={_t('settings:ui.onlyYourOwnRecordsAreIncluded')}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
                   ['transactions', 'Transactions CSV'],
@@ -406,20 +397,11 @@ export default function Settings() {
             </Section>
           )}
           {tab === 'security' && (
-            <Section title="Account security" description="Authenticated, private access">
+            <Section title={_t('settings:ui.accountSecurity')} description={_t('settings:ui.authenticatedPrivateAccess')}>
               <div className="space-y-3 text-sm leading-6 text-muted ">
-                <p>
-                  Orbit uses a password-protected account and an HttpOnly session cookie. Your
-                  workspace data is private to your account.
-                </p>
-                <p>
-                  Access is checked on every protected API request. Expiration does not erase your
-                  data or disconnect Telegram.
-                </p>
-                <p>
-                  The Telegram bot token is managed by the platform and is never shown in user
-                  settings.
-                </p>
+                <p>{_t('settings:ui.orbitUsesAPasswordProtectedAccountAndAnHttponlySessionCookieYour')}</p>
+                <p>{_t('settings:ui.accessIsCheckedOnEveryProtectedApiRequestExpirationDoesNotEraseY')}</p>
+                <p>{_t('settings:ui.theTelegramBotTokenIsManagedByThePlatformAndIsNeverShownInUserSe')}</p>
               </div>
             </Section>
           )}

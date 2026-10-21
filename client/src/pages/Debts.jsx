@@ -1,16 +1,18 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowDownLeft, ArrowUpRight, HandCoins, Plus, UserRound } from 'lucide-react';
 import { endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
 import { useData } from '../hooks/useData.js';
-import { cn, formatDate, formatMoney, todayInput } from '../utils/format.js';
+import { cn, displayValue, formatDate, formatMoney, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 import { AnimatedList } from '../animations/AnimatedList.jsx';
 import { AnimatedNumber } from '../animations/AnimatedNumber.jsx';
 import { AnimatedProgress } from '../animations/AnimatedProgress.jsx';
 
 function DebtForm({ open, onClose, onSaved }) {
+  const { t: _t } = useTranslation();
   const { settings, toast, reward } = useApp();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -30,7 +32,7 @@ function DebtForm({ open, onClose, onSaved }) {
     setBusy(true);
     try {
       const result = await endpoints.create('debts', form);
-      toast('Debt created');
+      toast(_t('debts:ui.debtCreated'));
       reward('DEBT_CREATED');
       onSaved();
       onClose();
@@ -46,8 +48,8 @@ function DebtForm({ open, onClose, onSaved }) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Add debt"
-      description="Creating a debt does not change an account balance"
+      title={_t('debts:ui.addDebt')}
+      description={_t('debts:ui.creatingADebtDoesNotChangeAnAccountBalance')}
     >
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
@@ -55,41 +57,38 @@ function DebtForm({ open, onClose, onSaved }) {
             type="button"
             onClick={() => setForm((value) => ({ ...value, type: 'receivable' }))}
             className={cn(
-              'rounded-xl border p-3 text-left text-sm font-bold',
+              'rounded-xl border p-3 text-start text-sm font-bold',
               form.type === 'receivable'
                 ? 'border-success bg-success/10 text-success'
                 : 'border-border ',
             )}
           >
-            <ArrowDownLeft size={18} className="mb-2" />
-            They owe me
-          </button>
+            <ArrowDownLeft size={18} className="mb-2" />{_t('debts:ui.theyOweMe')}</button>
           <button
             type="button"
             onClick={() => setForm((value) => ({ ...value, type: 'payable' }))}
             className={cn(
-              'rounded-xl border p-3 text-left text-sm font-bold',
+              'rounded-xl border p-3 text-start text-sm font-bold',
               form.type === 'payable'
                 ? 'border-danger bg-danger/10 text-danger'
                 : 'border-border ',
             )}
           >
-            <ArrowUpRight size={18} className="mb-2" />I owe them
-          </button>
+            <ArrowUpRight size={18} className="mb-2" />{_t('debts:ui.iOweThem')}</button>
         </div>
         <label>
-          <span className="label">Person</span>
+          <span className="label">{_t('debts:ui.person')}</span>
           <input
             required
             autoFocus
             className="field"
             value={form.personName}
             onChange={set('personName')}
-            placeholder="Name"
+            placeholder={_t('common:name')}
           />
         </label>
         <label>
-          <span className="label">Amount</span>
+          <span className="label">{_t('debts:ui.amount')}</span>
           <input
             required
             type="number"
@@ -102,28 +101,28 @@ function DebtForm({ open, onClose, onSaved }) {
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label>
-            <span className="label">Created</span>
+            <span className="label">{_t('debts:ui.created')}</span>
             <input type="date" className="field" value={form.date} onChange={set('date')} />
           </label>
           <label>
-            <span className="label">Due date</span>
+            <span className="label">{_t('debts:ui.dueDate')}</span>
             <input type="date" className="field" value={form.dueDate} onChange={set('dueDate')} />
           </label>
         </div>
         <label>
-          <span className="label">What for?</span>
+          <span className="label">{_t('debts:ui.whatFor')}</span>
           <input className="field" value={form.description} onChange={set('description')} />
         </label>
         <label>
-          <span className="label">Reminders</span>
+          <span className="label">{_t('navigation:reminders')}</span>
           <select className="field" value={form.reminderMode} onChange={set('reminderMode')}>
-            <option value="automatic">Automatic</option>
-            <option value="custom">Custom</option>
-            <option value="off">Off</option>
+            <option value="automatic">{_t('debts:ui.automatic')}</option>
+            <option value="custom">{_t('debts:ui.custom')}</option>
+            <option value="off">{_t('debts:ui.off')}</option>
           </select>
         </label>
         <button disabled={busy} className="btn-primary w-full">
-          {busy ? 'Saving…' : 'Create debt'}
+          {busy ? _t('common:saving') : _t('debts:ui.createDebt')}
         </button>
       </form>
     </Modal>
@@ -131,6 +130,7 @@ function DebtForm({ open, onClose, onSaved }) {
 }
 
 function PaymentForm({ debt, onClose, onSaved }) {
+  const { t: _t } = useTranslation();
   const { toast, reward } = useApp();
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -153,7 +153,7 @@ function PaymentForm({ debt, onClose, onSaved }) {
     setBusy(true);
     try {
       const result = await endpoints.create(`debts/${debt._id}/payments`, form);
-      toast('Payment recorded in the ledger');
+      toast(_t('debts:ui.paymentRecordedInTheLedger'));
       if (result.data.remainingAmount === 0) reward('DEBT_PAID');
       onSaved();
       onClose();
@@ -167,12 +167,12 @@ function PaymentForm({ debt, onClose, onSaved }) {
     <Modal
       open={Boolean(debt)}
       onClose={onClose}
-      title="Record payment"
-      description={`${debt?.personName} · ${formatMoney(debt?.remainingAmount, debt?.currency)} remaining`}
+      title={_t('debts:ui.recordPayment')}
+      description={`${debt?.personName} · ${_t('debts:ui.remaining')}: ${formatMoney(debt?.remainingAmount, debt?.currency)}`}
     >
       <form onSubmit={submit} className="space-y-4">
         <label>
-          <span className="label">Amount</span>
+          <span className="label">{_t('debts:ui.amount')}</span>
           <input
             autoFocus
             required
@@ -185,7 +185,7 @@ function PaymentForm({ debt, onClose, onSaved }) {
           />
         </label>
         <label>
-          <span className="label">Account</span>
+          <span className="label">{_t('common:account')}</span>
           <select required className="field" value={form.accountId} onChange={set('accountId')}>
             {accounts.map((a) => (
               <option key={a._id} value={a._id}>
@@ -195,11 +195,11 @@ function PaymentForm({ debt, onClose, onSaved }) {
           </select>
         </label>
         <label>
-          <span className="label">Date</span>
+          <span className="label">{_t('debts:ui.date')}</span>
           <input type="date" className="field" value={form.date} onChange={set('date')} />
         </label>
         <button disabled={busy} className="btn-primary w-full">
-          {busy ? 'Recording…' : 'Record payment'}
+          {busy ? _t('debts:ui.recording') : _t('debts:ui.recordPayment')}
         </button>
       </form>
     </Modal>
@@ -207,6 +207,7 @@ function PaymentForm({ debt, onClose, onSaved }) {
 }
 
 export default function Debts() {
+  const { t: _t } = useTranslation();
   const { settings } = useApp();
   const [formOpen, setFormOpen] = useState(false);
   const [paying, setPaying] = useState(null);
@@ -224,14 +225,12 @@ export default function Debts() {
   return (
     <>
       <PageHeader
-        eyebrow="Money"
-        title="Debts"
-        description="Keep promises visible and payments connected to the right account."
+        eyebrow={_t('navigation:money')}
+        title={_t('debts:title')}
+        description={_t('debts:ui.keepPromisesVisibleAndPaymentsConnectedToTheRightAccount')}
         actions={
           <button className="btn-primary" onClick={() => setFormOpen(true)}>
-            <Plus size={17} />
-            Add debt
-          </button>
+            <Plus size={17} />{_t('debts:ui.addDebt')}</button>
         }
       />
       <div className="mb-5 grid gap-3 sm:grid-cols-2">
@@ -240,7 +239,7 @@ export default function Debts() {
             <ArrowDownLeft />
           </span>
           <div>
-            <p className="text-xs text-muted">Owed to you</p>
+            <p className="text-xs text-muted">{_t('debts:ui.owedToYou')}</p>
             <p className="font-display text-2xl font-bold text-success">
               {formatMoney(totals.receivable, currency)}
             </p>
@@ -251,7 +250,7 @@ export default function Debts() {
             <ArrowUpRight />
           </span>
           <div>
-            <p className="text-xs text-muted">You owe</p>
+            <p className="text-xs text-muted">{_t('debts:ui.youOwe')}</p>
             <p className="font-display text-2xl font-bold text-danger">
               {formatMoney(totals.payable, currency)}
             </p>
@@ -279,13 +278,13 @@ export default function Debts() {
       {loading ? (
         <Spinner />
       ) : error ? (
-        <EmptyState icon={HandCoins} title="Debts unavailable" description={error} />
+        <EmptyState icon={HandCoins} title={_t('debts:ui.debtsUnavailable')} description={error} />
       ) : (<>{debts.length === 0 && (
         <div className="panel">
           <EmptyState
             icon={HandCoins}
-            title="No open debts"
-            description="Add a receivable or payable to track it here."
+            title={_t('debts:ui.noOpenDebts')}
+            description={_t('debts:ui.addAReceivableOrPayableToTrackItHere')}
           />
         </div>
       )}
@@ -301,7 +300,7 @@ export default function Debts() {
                     <div>
                       <h3 className="font-display font-bold">{debt.personName}</h3>
                       <p className="mt-0.5 text-[11px] text-muted">
-                        {debt.description || (debt.type === 'receivable' ? 'Owes you' : 'You owe')}
+                        {debt.description || (debt.type === 'receivable' ? _t('debts:ui.owesYou') : _t('debts:ui.youOwe'))}
                       </p>
                     </div>
                   </div>
@@ -318,26 +317,20 @@ export default function Debts() {
                   </StatusBadge>
                 </div>
                 <div className="mt-6">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                    Remaining
-                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted">{_t('debts:ui.remaining')}</p>
                   <p className="mt-1 font-display text-2xl font-bold">
                     <AnimatedNumber value={debt.remainingAmount} format={(value) => formatMoney(value, debt.currency)} />
                   </p>
-                  <p className="mt-1 text-xs text-muted">
-                    of {formatMoney(debt.originalAmount, debt.currency)}
+                  <p className="mt-1 text-xs text-muted">{_t('debts:ui.of')}{' '}{formatMoney(debt.originalAmount, debt.currency)}
                   </p>
                 </div>
                 <AnimatedProgress value={progress} className="mt-4 h-2" />
                 <div className="mt-4 flex items-center justify-between">
-                  <p className="text-xs text-muted">Due {formatDate(debt.dueDate)}</p>
-                  <button onClick={() => setPaying(debt)} className="btn-secondary h-9">
-                    Add payment
-                  </button>
+                  <p className="text-xs text-muted">{_t('debts:ui.due')}{' '}{formatDate(debt.dueDate)}</p>
+                  <button onClick={() => setPaying(debt)} className="btn-secondary h-9">{_t('debts:ui.addPayment')}</button>
                 </div>
                 <Link className="mt-3 inline-block text-xs font-semibold text-primary" to={`/panel/reminders?entityType=debt&entityId=${debt._id}`}>
-                  🔔 {debt.reminderMode || 'automatic'} reminders
-                </Link>
+                  🔔 {displayValue(debt.reminderMode || 'automatic')}{' '}{_t('debts:ui.reminders')}</Link>
               </article>
             );
           }} /></>

@@ -37,6 +37,7 @@ html[dir='rtl'] .marketing-hero-primary svg { transform: rotate(180deg); }
 html[dir='rtl'] .orbit-header-actions { margin-left: 0; margin-inline-start: auto; }
 html[dir='rtl'] .orbit-profile-menu { right: auto; left: 0; }
 html[dir='rtl'] input[type='email'], html[dir='rtl'] input[type='tel'], html[dir='rtl'] input[type='url'] { direction: ltr; text-align: start; }
+html[dir='rtl'] .rtl-flip { transform: rotate(180deg); }
 button, input, select, textarea { font: inherit; }
 button { @apply transition duration-150; }
 button.btn-primary, button.btn-secondary, button.btn-ghost, button.icon-btn { transition: background-color var(--orbit-button-duration) ease, color var(--orbit-button-duration) ease, border-color var(--orbit-button-duration) ease; }

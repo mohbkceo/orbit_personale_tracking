@@ -35,7 +35,8 @@ const secondaryLinks = [
 const sectionForPath = (path) => path === '/panel' ? 'dashboard' : path.split('/').at(-1);
 
 function Brand() {
-  return <NavLink to="/panel" className="flex items-center gap-2.5 text-sidebar-text" aria-label="Orbit dashboard">
+  const { t: _t } = useTranslation();
+  return <NavLink to="/panel" className="flex items-center gap-2.5 text-sidebar-text" aria-label={_t('navigation:ui.orbitDashboard')}>
     <img src="/logo-orbit.png" alt="" className="h-9 w-9 object-contain" draggable={false} />
     <span className="font-display text-xl font-bold tracking-tight">Orbit</span>
   </NavLink>;
@@ -55,6 +56,7 @@ function SidebarLink({ label, path, Icon, close }) {
 }
 
 function Sidebar({ open, close }) {
+  const { t: _t } = useTranslation();
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const initials = user?.fullName?.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'ME';
@@ -76,7 +78,7 @@ function Sidebar({ open, close }) {
       <SidebarLink label="Settings" path="/panel/settings" Icon={Settings} close={close} />
       <div className="mt-2 flex items-center gap-2 border-t border-border px-2 pt-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text">{initials}</span>
-        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{user?.fullName || 'Orbit user'}</span><span dir="ltr" className="block truncate text-[11px] text-sidebar-muted">{user?.email}</span></span>
+        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{user?.fullName || _t('navigation:ui.orbitUser')}</span><span dir="ltr" className="block truncate text-[11px] text-sidebar-muted">{user?.email}</span></span>
         <button type="button" className="icon-btn shrink-0" onClick={logout} aria-label={t('logout')} title={t('logout')}><LogOut size={16} /></button>
       </div>
     </div>
@@ -84,6 +86,7 @@ function Sidebar({ open, close }) {
 }
 
 function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
+  const { t: _t } = useTranslation();
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -100,21 +103,21 @@ function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
   return <header className="sticky top-0 z-30 border-b border-border bg-surface">
     <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-8">
       <button type="button" className="icon-btn lg:hidden" aria-label={t('openMenu')} onClick={openMenu}><Menu size={20} /></button>
-      <button type="button" onClick={openSearch} className="flex h-11 min-w-0 max-w-[480px] flex-1 items-center gap-3 rounded-[var(--orbit-control-radius)] border border-border bg-surface px-3 text-left text-sm text-muted hover:border-primary/40">
+      <button type="button" onClick={openSearch} className="flex h-11 min-w-0 max-w-[480px] flex-1 items-center gap-3 rounded-[var(--orbit-control-radius)] border border-border bg-surface px-3 text-start text-sm text-muted hover:border-primary/40">
         <Search size={18} className="shrink-0" /><span className="truncate">{t('search')}</span>
-        <span className="ml-auto hidden shrink-0 items-center gap-1 rounded-md border border-border bg-surface-alt px-1.5 py-1 text-[11px] sm:flex"><Command size={11} /> K</span>
+        <span className="ms-auto hidden shrink-0 items-center gap-1 rounded-md border border-border bg-surface-alt px-1.5 py-1 text-[11px] sm:flex"><Command size={11} /> K</span>
       </button>
-      <div className="orbit-header-actions ml-auto flex items-center gap-1 sm:gap-2">
+      <div className="orbit-header-actions ms-auto flex items-center gap-1 sm:gap-2">
         <LanguageSelector className="shrink-0" />
         <button type="button" className="icon-btn hidden sm:inline-flex" aria-label={t('quickAdd')} title={t('quickAdd')} onClick={openQuickAdd}><Plus size={19} /></button>
         <button type="button" className="icon-btn" aria-label={t('notifications')} title={t('notifications')} onClick={() => navigate('/panel/reminders')}><Bell size={19} /></button>
         <TelegramControl />
         <div className="relative">
-          <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text" aria-label="Open account menu" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>{initials}</button>
+          <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text" aria-label={_t('navigation:ui.openAccountMenu')} aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>{initials}</button>
           {profileOpen && <div role="menu" className="orbit-profile-menu absolute right-0 top-11 z-50 w-52 rounded-[var(--orbit-radius)] border border-border bg-surface p-1.5 shadow-lift">
             <p className="truncate border-b border-border px-2 py-2 text-xs font-semibold">{user?.fullName || user?.email}</p>
-            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-hover" onClick={() => { navigate('/panel/settings'); setProfileOpen(false); }}><Settings size={16} /> Settings</button>
-            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-hover" onClick={() => { toggleTheme(); setProfileOpen(false); }}>{darkMode ? <Sun size={16} /> : <Moon size={16} />} {darkMode ? 'Light mode' : 'Dark mode'}</button>
+            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-start text-sm hover:bg-hover" onClick={() => { navigate('/panel/settings'); setProfileOpen(false); }}><Settings size={16} />{' '}{_t('common:settings')}</button>
+            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-start text-sm hover:bg-hover" onClick={() => { toggleTheme(); setProfileOpen(false); }}>{darkMode ? <Sun size={16} /> : <Moon size={16} />} {darkMode ? _t('navigation:ui.lightMode') : _t('navigation:ui.darkMode')}</button>
           </div>}
         </div>
       </div>
@@ -136,6 +139,7 @@ function MobileNav({ openMenu, openQuickAdd }) {
 }
 
 export function Layout() {
+  const { t: _t } = useTranslation();
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
   const { setQuickAddOpen, darkMode, setSettings } = useApp();
@@ -162,7 +166,7 @@ export function Layout() {
 
   return <div data-orbit-panel-root className="min-h-screen bg-canvas">
     <Sidebar open={menu} close={() => setMenu(false)} />
-    {menu && <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-text/40 lg:hidden" onClick={() => setMenu(false)} />}
+    {menu && <button type="button" aria-label={_t('common:closeMenu')} className="fixed inset-0 z-40 bg-text/40 lg:hidden" onClick={() => setMenu(false)} />}
     <div className="orbit-panel-content min-w-0 lg:pl-[236px]">
       <Header openMenu={() => setMenu(true)} openSearch={() => { if (allowed('quick-access')) setSearch(true); }} openQuickAdd={() => { if (allowed('quick-access')) setQuickAddOpen(true); }} toggleTheme={toggleTheme} darkMode={darkMode} />
       <main className="mx-auto max-w-[1480px] px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">

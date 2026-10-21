@@ -9,10 +9,10 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const priorities = [
-  ['urgent', '🚨 Urgent'],
-  ['high', '🔴 High'],
-  ['medium', '🟠 Medium'],
-  ['low', '🟢 Low'],
+  ['urgent', '🚨'],
+  ['high', '🔴'],
+  ['medium', '🟠'],
+  ['low', '🟢'],
 ];
 
 export function sortDigestTasks(tasks, zone, now = new Date()) {
@@ -55,7 +55,7 @@ export function renderTaskDigest(tasks, settings = { language: 'en' }) {
       shown.push(task);
       lines.push(line);
     }
-    const localizedHeading = settings.language === 'ar' ? ({ urgent: '🚨 عاجل', high: '🔴 مرتفع', medium: '🟠 متوسط', low: '🟢 منخفض' })[priority] : heading;
+    const localizedHeading = `${heading} ${tr(settings, `priority${priority[0].toUpperCase()}${priority.slice(1)}`)}`;
     return lines.length ? `<b>${localizedHeading}</b>\n${lines.join('\n')}` : null;
   }).filter(Boolean);
   if (!shown.length) return null;

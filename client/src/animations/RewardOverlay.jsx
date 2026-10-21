@@ -2,10 +2,12 @@ import { useOrbitReducedMotion } from './useOrbitReducedMotion.js';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, Sparkles } from 'lucide-react';
 import { timing, ease } from './motionPresets.js';
+import { useTranslation } from 'react-i18next';
 
 const duration = { small: timing.rewardSmall, medium: timing.rewardMedium, major: timing.rewardMajor };
 
 export function RewardOverlay({ reward }) {
+  const { t } = useTranslation();
   const reduce = useOrbitReducedMotion();
   return <div className="pointer-events-none fixed inset-x-0 bottom-28 z-[90] flex justify-center px-4 md:bottom-8" aria-live="polite" aria-atomic="true">
     <AnimatePresence mode="wait">
@@ -18,7 +20,7 @@ export function RewardOverlay({ reward }) {
             {(reward.effect === 'orbit' || reward.effect === 'celebration' || reward.effect === 'checkBurst') && [0, 1, 2, 3, 4, 5].map((n) => <motion.span key={n} className="absolute h-1 w-1 rounded-full bg-accent" initial={{ x: 0, y: 0, opacity: 1 }} animate={{ x: Math.cos(n * Math.PI / 3) * (reward.level === 'major' ? 31 : 22), y: Math.sin(n * Math.PI / 3) * (reward.level === 'major' ? 31 : 22), opacity: 0 }} transition={{ duration: duration[reward.level], ease }}/>) }
           </>}
         </span>
-        <span><span className="block text-sm font-semibold">{reward.message}</span>{reward.detail && <span className="block text-xs text-sidebar-muted">{reward.detail}</span>}</span>
+        <span><span className="block text-sm font-semibold">{t(reward.message)}</span>{reward.detail && <span className="block text-xs text-sidebar-muted">{reward.detail}</span>}</span>
       </motion.div>}
     </AnimatePresence>
   </div>;

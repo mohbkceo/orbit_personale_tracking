@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client.js';
 import { OnboardingExperience } from './OnboardingExperience.jsx';
 
 export function OnboardingGate() {
+  const { t: _t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [state, setState] = useState(null);
@@ -33,7 +35,7 @@ export function OnboardingGate() {
   if (loadedForManual !== manual) return null;
   if (!state && !manual) return null;
   if (!manual && !opened) return null;
-  if (error) return manual ? <div className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-w-sm rounded-2xl border border-border bg-surface p-4 shadow-lift" role="alert"><p className="text-sm">Could not open Getting Started: {error}</p><button type="button" className="btn-secondary mt-3" onClick={exit}>Return to dashboard</button></div> : null;
+  if (error) return manual ? <div className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-w-sm rounded-2xl border border-border bg-surface p-4 shadow-lift" role="alert"><p className="text-sm">{_t('onboarding:ui.couldNotOpenGettingStarted')}{' '}{error}</p><button type="button" className="btn-secondary mt-3" onClick={exit}>{_t('onboarding:ui.returnToDashboard')}</button></div> : null;
   if (!state) return null;
   return <OnboardingExperience state={state} update={update} onExit={exit} />;
 }

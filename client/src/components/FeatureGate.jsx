@@ -10,7 +10,7 @@ export function LockedFeatureView({ featureKey, decision }) {
   const unavailable = decision.reason === 'FEATURE_DISABLED';
   const title = i18n.resolvedLanguage === 'ar' ? t(`navigation:${featureKey}`, { defaultValue: details.sectionTitle || featureKey }) : details.sectionTitle || featureKey;
   const preview = details.presentation || 'BLUR';
-  return <section aria-label={`${title} access`} className="relative min-h-[480px]">
+  return <section aria-label={t('errors:featureAccess', { title })} className="relative min-h-[480px]">
     <header className="mb-6"><p className="eyebrow">{t('workspace')}</p><h1 className="font-display text-[30px] font-bold">{title}</h1></header>
     {preview !== 'INFORMATION' && <div aria-hidden="true" className={`pointer-events-none grid gap-4 opacity-50 sm:grid-cols-3 ${preview === 'BLUR' ? 'blur-[5px]' : ''}`}>
       {[0, 1, 2].map((item) => <div key={item} className="panel h-32 p-5"><div className="h-3 w-24 rounded bg-surface-alt" /><div className="mt-5 h-6 w-2/3 rounded bg-surface-alt" /><div className="mt-4 h-2 w-full rounded bg-surface-alt" /></div>)}

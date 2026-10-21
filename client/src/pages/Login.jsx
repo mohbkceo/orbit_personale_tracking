@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '../i18n/LanguageSelector.jsx';
 
 export default function Login() {
+  const { t: _t } = useTranslation();
   const { t } = useTranslation();
   const { loading, user, access, login } = useAuth();
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  if (loading) return <Spinner label="Opening Orbit…" />;
+  if (loading) return <Spinner label={_t('auth:ui.openingOrbit')} />;
   if (user) return <Navigate to={loginDestination(params.get('next'), access?.eligible)} replace />;
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError('');

@@ -4,14 +4,14 @@ export const tokenNames = ['canvas','surface','surface-alt','text','muted','prim
 
 // Presets share neutral surfaces and change the accent, selection and data colors.
 const presets = {
-  orbit: { name: 'Orbit', description: 'Clear neutrals with Orbit orange', light: '#bd4d16', dark: '#ff945f', accent: '#ff6b25' },
-  graphite: { name: 'Graphite', description: 'Quiet slate accents', light: '#465b6b', dark: '#adc4d2' },
-  ocean: { name: 'Ocean', description: 'Calm blue accents', light: '#176d9a', dark: '#78c6eb' },
-  sage: { name: 'Sage', description: 'Soft botanical accents', light: '#39704f', dark: '#9bd4ac' },
-  sand: { name: 'Sand', description: 'Warm brass accents', light: '#93652e', dark: '#e3be83' },
-  'rose-quartz': { name: 'Rose Quartz', description: 'Muted rose accents', light: '#a25472', dark: '#e8a9c2' },
-  lavender: { name: 'Lavender', description: 'Gentle violet accents', light: '#6c5caa', dark: '#bab0f2' },
-  peach: { name: 'Peach', description: 'Warm coral accents', light: '#a95136', dark: '#f1ae94' },
+  orbit: { light: '#bd4d16', dark: '#ff945f', accent: '#ff6b25' },
+  graphite: { light: '#465b6b', dark: '#adc4d2' },
+  ocean: { light: '#176d9a', dark: '#78c6eb' },
+  sage: { light: '#39704f', dark: '#9bd4ac' },
+  sand: { light: '#93652e', dark: '#e3be83' },
+  'rose-quartz': { light: '#a25472', dark: '#e8a9c2' },
+  lavender: { light: '#6c5caa', dark: '#bab0f2' },
+  peach: { light: '#a95136', dark: '#f1ae94' },
 };
 
 function mix(first, second, portion) {
@@ -37,7 +37,6 @@ function palette(primary, dark, accent = primary) {
 }
 
 export const themes = Object.freeze(Object.fromEntries(Object.entries(presets).map(([key, preset]) => [key, {
-  name: preset.name, description: preset.description,
   light: palette(preset.light, false, preset.accent), dark: palette(preset.dark, true),
 }])));
 

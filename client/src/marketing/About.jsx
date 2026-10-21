@@ -23,7 +23,7 @@ export default function About() {
             className="marketing-button marketing-button-primary"
             onClick={openGetStarted}
           >
-            {t('marketing:getStarted')} <ArrowRight size={18} />
+            {t('marketing:getStarted')} <ArrowRight className="rtl-flip" size={18} />
           </button>
         </section>
         <div className="marketing-about-list">

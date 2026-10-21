@@ -18,7 +18,7 @@ export function Modal({ open, onClose, title, description, children, wide = fals
   useEffect(() => { if (!open) return undefined; const handle = (event) => { if (event.key === 'Escape') onClose(); }; window.addEventListener('keydown', handle); return () => window.removeEventListener('keydown', handle); }, [open, onClose]);
   return <div className="pointer-events-none fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-5"><AnimatePresence>{open && [
     <motion.div key="backdrop" {...(reduce ? reduced(backdrop) : backdrop)} className="pointer-events-auto absolute inset-0 bg-text/45" onMouseDown={onClose} />,
-    <motion.section key="dialog" {...(reduce ? reduced(modalDesktop) : mobile ? modalMobile : modalDesktop)} role="dialog" aria-modal="true" aria-label={title} className={cn('pointer-events-auto relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-5 shadow-lift sm:rounded-[var(--orbit-radius)] sm:p-6', wide ? 'max-w-2xl' : 'max-w-lg')}><header className="mb-5 flex items-start justify-between gap-4"><div><h2 className="font-display text-xl font-bold">{title}</h2>{description && <p className="mt-1 text-sm text-muted">{description}</p>}</div><button className="icon-btn -mr-1 -mt-1" onClick={onClose} aria-label={t('close')}><X size={19} /></button></header>{children}</motion.section>
+    <motion.section key="dialog" {...(reduce ? reduced(modalDesktop) : mobile ? modalMobile : modalDesktop)} role="dialog" aria-modal="true" aria-label={title} className={cn('pointer-events-auto relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-5 shadow-lift sm:rounded-[var(--orbit-radius)] sm:p-6', wide ? 'max-w-2xl' : 'max-w-lg')}><header className="mb-5 flex items-start justify-between gap-4"><div><h2 className="font-display text-xl font-bold">{title}</h2>{description && <p className="mt-1 text-sm text-muted">{description}</p>}</div><button className="icon-btn -me-1 -mt-1" onClick={onClose} aria-label={t('close')}><X size={19} /></button></header>{children}</motion.section>
   ]}</AnimatePresence></div>;
 }
 
@@ -30,7 +30,7 @@ export function StatusBadge({ children, tone = 'neutral' }) {
   const { t, i18n } = useTranslation();
   const colors = { success: 'bg-success/10 text-success', danger: 'bg-danger/10 text-danger', warning: 'bg-warning/10 text-warning', info: 'bg-selected text-primary', neutral: 'bg-surface-alt text-muted' };
   const value = String(children);
-  return <span className={cn('inline-flex rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize', colors[tone])}>{!window.location.pathname.startsWith('/admin') && i18n.exists(`status.${value}`) ? t(`status.${value}`) : value.replaceAll('_', ' ')}</span>;
+  return <span className={cn('inline-flex rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize', colors[tone])}>{!window.location.pathname.startsWith('/admin') && i18n.exists(`common:values.${value}`) ? t(`common:values.${value}`) : !window.location.pathname.startsWith('/admin') && i18n.exists(`common:status.${value}`) ? t(`common:status.${value}`) : value.replaceAll('_', ' ')}</span>;
 }
 
 export function Money({ value, currency, signed, className }) {

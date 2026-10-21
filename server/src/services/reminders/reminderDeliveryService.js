@@ -2,6 +2,7 @@ import { sendTelegramNotification } from '../../telegram/notifier.js';
 import { getSettingsDocument } from '../settingsService.js';
 import { env } from '../../config/env.js';
 import { getEventSettings } from '../events/eventSettingsService.js';
+import { telegramText as tr } from '../../i18n/telegram.js';
 
 function rawActions(reminder) {
   const id = reminder._id;
@@ -9,71 +10,70 @@ function rawActions(reminder) {
     const eventIds = reminder.metadata.eventIds || [];
     const viewUrl = eventIds.length === 1 ? reminder.metadata.eventUrl : `${env.CLIENT_URL.replace(/\/$/, '')}/panel/events`;
     return [
-      ...(typeof viewUrl === 'string' && /^https:\/\//i.test(viewUrl) ? [[{ text: '📅 View events', url: viewUrl }]] : []),
-      ...(eventIds.length === 1 ? [[{ text: 'Notify me', callbackData: `e:follow:${eventIds[0]}` }, { text: 'Ignore', callbackData: `r:done:${id}` }]] : [[{ text: 'Dismiss', callbackData: `r:done:${id}` }]]),
+      ...(typeof viewUrl === 'string' && /^https:\/\//i.test(viewUrl) ? [[{ text: 'viewEvents', url: viewUrl }]] : []),
+      ...(eventIds.length === 1 ? [[{ text: 'notifyMe', callbackData: `e:follow:${eventIds[0]}` }, { text: 'ignore', callbackData: `r:done:${id}` }]] : [[{ text: 'dismiss', callbackData: `r:done:${id}` }]]),
     ];
   }
   if (reminder.metadata?.integration === 'dzevent-change') return [
-    ...(reminder.metadata.eventUrl ? [[{ text: '📅 View event', url: reminder.metadata.eventUrl }]] : []),
-    [{ text: 'Dismiss', callbackData: `r:done:${id}` }],
+    ...(reminder.metadata.eventUrl ? [[{ text: 'viewEvent', url: reminder.metadata.eventUrl }]] : []),
+    [{ text: 'dismiss', callbackData: `r:done:${id}` }],
   ];
   if (reminder.metadata?.integration === 'dzevent') {
     const url = reminder.metadata.eventUrl;
     return [
-      ...(typeof url === 'string' && /^https:\/\//i.test(url) ? [[{ text: '📅 View event', url }]] : []),
-      [{ text: '⏰ Later', callbackData: `r:later:${id}` }, { text: 'Dismiss', callbackData: `r:done:${id}` }],
+      ...(typeof url === 'string' && /^https:\/\//i.test(url) ? [[{ text: 'viewEvent', url }]] : []),
+      [{ text: 'laterIcon', callbackData: `r:later:${id}` }, { text: 'dismiss', callbackData: `r:done:${id}` }],
     ];
   }
   if (reminder.metadata?.automation === 'focus-evening') return (reminder.metadata.items || []).flatMap((item) => [
     [{ text: `↪ ${item.title.slice(0, 20)}`, callbackData: `f:tomorrow:${reminder.metadata.date}:${item.id}` }],
-    [{ text: 'Backlog', callbackData: `f:backlog:${reminder.metadata.date}:${item.id}` }, { text: 'Choose date', callbackData: `f:reschedule:${reminder.metadata.date}:${item.id}` }, { text: 'Drop', callbackData: `f:drop:${reminder.metadata.date}:${item.id}` }],
+    [{ text: 'backlog', callbackData: `f:backlog:${reminder.metadata.date}:${item.id}` }, { text: 'chooseDate', callbackData: `f:reschedule:${reminder.metadata.date}:${item.id}` }, { text: 'drop', callbackData: `f:drop:${reminder.metadata.date}:${item.id}` }],
   ]);
-  if (reminder.metadata?.automation === 'focus-morning') return [[{ text: 'Finish planning', callbackData: 'f:done' }]];
+  if (reminder.metadata?.automation === 'focus-morning') return [[{ text: 'finishPlanning', callbackData: 'f:done' }]];
   if (reminder.entityType === 'debt')
     return [
       [
-        { text: 'Paid', callbackData: `r:paid:${id}` },
-        { text: 'Partial', callbackData: `r:partial:${id}` },
-        { text: 'Later', callbackData: `r:later:${id}` },
+        { text: 'paid', callbackData: `r:paid:${id}` },
+        { text: 'partial', callbackData: `r:partial:${id}` },
+        { text: 'later', callbackData: `r:later:${id}` },
       ],
     ];
   if (reminder.entityType === 'bill')
     return [
       [
-        { text: 'Paid', callbackData: `r:paid:${id}` },
-        { text: 'Later', callbackData: `r:later:${id}` },
+        { text: 'paid', callbackData: `r:paid:${id}` },
+        { text: 'later', callbackData: `r:later:${id}` },
       ],
     ];
   if (reminder.entityType === 'subscription')
     return [
       [
-        { text: 'Later', callbackData: `r:later:${id}` },
-        { text: 'Blocked', callbackData: `r:block:${id}` },
+        { text: 'later', callbackData: `r:later:${id}` },
+        { text: 'blocked', callbackData: `r:block:${id}` },
       ],
     ];
   if (reminder.entityType === 'goal')
     return [
       [
-        { text: 'Add progress', callbackData: `r:progress:${id}` },
-        { text: 'Create next task', callbackData: `r:nexttask:${id}` },
+        { text: 'addProgress', callbackData: `r:progress:${id}` },
+        { text: 'createNextTask', callbackData: `r:nexttask:${id}` },
       ],
       [
-        { text: 'Skip review', callbackData: `r:done:${id}` },
-        { text: 'Later', callbackData: `r:later:${id}` },
+        { text: 'skipReview', callbackData: `r:done:${id}` },
+        { text: 'later', callbackData: `r:later:${id}` },
       ],
     ];
   return [
     [
-      { text: '✓ Done', callbackData: `r:done:${id}` },
-      { text: '⏰ Later', callbackData: `r:later:${id}` },
-      { text: '⛔ Blocked', callbackData: `r:block:${id}` },
+      { text: 'doneIcon', callbackData: `r:done:${id}` },
+      { text: 'laterIcon', callbackData: `r:later:${id}` },
+      { text: 'blockedIcon', callbackData: `r:block:${id}` },
     ],
   ];
 }
-const arabicButtons = { '📅 View events': '📅 عرض الفعاليات', '📅 View event': '📅 عرض الفعالية', 'Notify me': 'أعلمني', Ignore: 'تجاهل', Dismiss: 'إغلاق', '⏰ Later': '⏰ لاحقًا', Later: 'لاحقًا', Backlog: 'قائمة الانتظار', 'Choose date': 'اختر تاريخًا', Drop: 'إزالة', 'Finish planning': 'إنهاء التخطيط', Paid: 'مدفوع', Partial: 'جزئي', Blocked: 'معطّل', 'Add progress': 'أضف تقدمًا', 'Create next task': 'أنشئ المهمة التالية', 'Skip review': 'تخطَّ المراجعة', '✓ Done': '✓ تم', '⛔ Blocked': '⛔ معطّل' };
 function actions(reminder, settings) {
   const rows = rawActions(reminder);
-  return settings.language === 'ar' ? rows.map((row) => row.map((button) => ({ ...button, text: arabicButtons[button.text] || button.text }))) : rows;
+  return rows.map((row) => row.map((button) => ({ ...button, text: button.callbackData?.startsWith('f:tomorrow:') ? button.text : tr(settings, button.text) })));
 }
 
 export async function deliverReminder(reminder) {
@@ -89,12 +89,12 @@ export async function deliverReminder(reminder) {
   try {
     let message =
       reminder.followUpCount > 0 || (reminder.followUp?.enabled && reminder.triggerCount > 0)
-        ? `Still need to handle this?\n${reminder.message || reminder.title}`
-        : reminder.message || 'This is ready to handle.';
-    if (settings.language === 'ar' && reminder.autoGenerated && !reminder.customized) message = reminder.followUpCount > 0 ? 'هل ما زلت تحتاج إلى متابعة هذا الأمر؟' : ({ prepare: 'حان وقت الاستعداد لهذا الأمر.', act: 'حان وقت التعامل مع هذا الأمر.', follow_up: 'حان وقت المتابعة.', review: 'حان وقت المراجعة.' })[reminder.purpose] || 'حان وقت التعامل مع هذا الأمر.';
+        ? `${tr(settings, 'reminderFollowUp')}\n${reminder.message || reminder.title}`
+        : reminder.message || tr(settings, 'reminderReady');
+    if (reminder.autoGenerated && !reminder.customized) message = reminder.followUpCount > 0 ? tr(settings, 'reminderFollowUp') : tr(settings, 'reminderReady');
     const title =
       reminder.metadata?.integration?.startsWith('dzevent') ? `📅 ${reminder.title}` : reminder.entityType === 'goal'
-        ? `🎯 ${settings.language === 'ar' ? 'مراجعة الهدف الأسبوعية' : 'Weekly goal review'}: ${reminder.title}`
+        ? `🎯 ${tr(settings, 'weeklyGoalReview')}: ${reminder.title}`
         : `🔔 ${reminder.title}`;
     const result = await sendTelegramNotification(reminder.user, {
       title,
@@ -120,11 +120,11 @@ export async function deliverReminderBundle(reminders) {
     return { sent: 0, web };
   const buttons = reminders.map((item) => [
     { text: `✓ ${item.title.slice(0, 22)}`, callbackData: `r:done:${item._id}` },
-    { text: settings.language === 'ar' ? 'لاحقًا' : 'Later', callbackData: `r:later:${item._id}` },
+    { text: tr(settings, 'later'), callbackData: `r:later:${item._id}` },
   ]);
   try {
     const result = await sendTelegramNotification(reminders[0].user, {
-      title: settings.language === 'ar' ? `☀️ ${reminders.length} أمور تستحق المتابعة` : `☀️ ${reminders.length} things worth handling`,
+      title: tr(settings, 'bundleTitle', { count: reminders.length }),
       message: reminders.map((item) => `□ ${item.title}`).join('\n'),
       buttons,
     });

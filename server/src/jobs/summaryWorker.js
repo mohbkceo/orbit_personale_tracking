@@ -23,7 +23,7 @@ export async function sendSummaries(userId) {
     if (!enabled || at !== local.format('HH:mm') || sent.has(key)) continue;
     const summary = await dashboardSummary(userId);
     await sendTelegramNotification(userId, {
-      title: mode === 'morning' ? (settings.language === 'ar' ? 'صباح الخير' : 'Good morning') : (settings.language === 'ar' ? 'ملخص اليوم' : 'Daily wrap-up'),
+      title: tr(settings, mode === 'morning' ? 'morningGreeting' : 'dailyWrapUp'),
       message: `${summary.tasks.open} ${tr(settings, 'open')} ${tr(settings, 'tasks')} · ${summary.tasks.overdue} ${tr(settings, 'overdue')}\n${tr(settings, 'net')} ${tr(settings, 'thisMonth')}: ${new Intl.NumberFormat(settings.language === 'ar' ? 'ar-DZ' : 'en-DZ').format(summary.money.net)} ${settings.defaultCurrency}`,
     });
     sent.add(key);

@@ -20,6 +20,7 @@ const openDebt = { archived: false, status: { $ne: 'paid' }, remainingAmount: { 
 const valid = (amount) => Number.isFinite(amount) && amount > 0;
 const localizedMoney = (settings, amount, currency) => money(amount, currency, settings.language);
 const localizedDate = (settings, date, zone, format) => localDate(date, zone, format, settings.language);
+const localizedNumber = (settings, value) => new Intl.NumberFormat(settings.language === 'ar' ? 'ar-DZ' : 'en-DZ').format(value);
 const taskButtons = (id, settings) => rows([[`✓ ${tr(settings, 'done')}`, `task:done:${id}`], [tr(settings, 'edit'), `task:edit:${id}`]], [[tr(settings, 'delete'), `task:delete:${id}`]]);
 const debtButtons = (id, settings) => rows([[tr(settings, 'payment'), `debt:pay:${id}`], [tr(settings, 'paid'), `debt:paid:${id}`]], [[tr(settings, 'delete'), `debt:delete:${id}`]]);
 const txButtons = (id, settings) => rows([[tr(settings, 'edit'), `tx:edit:${id}`], [tr(settings, 'undo'), `tx:undo:${id}`]]);
@@ -29,14 +30,14 @@ export function quickMenu(settings) {
 }
 export function helpText(settings) {
   return `<b>${tr(settings, 'quickEntry')}</b>\n` +
-    't Call supplier tomorrow\ndin Ahmed 5000\ndout Karim 3000\ns 12500 Stand x3\ne 650 lunch\ni 15000 freelance\n\n' +
-    `<b>${tr(settings, 'payments')}</b>\ndpay Ahmed 2000\ndpaid Karim 1000\n\n` +
+    `${tr(settings, 'helpExamples')}\n\n` +
+    `<b>${tr(settings, 'payments')}</b>\n${tr(settings, 'paymentExamples')}\n\n` +
     `<b>${tr(settings, 'commands')}</b>\n/today /quick /tasks /debts /sales /money /last /language` +
-    (settings?.language === 'ar' ? '\n\nمهمة اتصل بأحمد غدوة\nصرفت 1200 دج\nدين عند أحمد 3000\nأنا مدين لكريم 2000' : '');
+    (settings?.language === 'ar' ? `\n\n${tr(settings, 'arabicExamples')}` : '');
 }
 function taskReply(item, settings) {
   const due = taskDue(item, settings.timezone, settings.language);
-  return { text: `✓ ${tr(settings, 'taskAdded')}\n\n<b>${h(item.title)}</b>${due ? `\n${due}` : ''}\n${tr(settings, 'priority', { priority: item.priority })}`, markup: taskButtons(item._id, settings) };
+  return { text: `✓ ${tr(settings, 'taskAdded')}\n\n<b>${h(item.title)}</b>${due ? `\n${due}` : ''}\n${tr(settings, 'priority', { priority: tr(settings, `priority${item.priority[0].toUpperCase()}${item.priority.slice(1)}`) })}`, markup: taskButtons(item._id, settings) };
 }
 function debtReply(item, settings) {
   return { text: `✓ ${tr(settings, item.type === 'receivable' ? 'incomingDebt' : 'outgoingDebt')}\n\n<b>${h(item.personName)}</b>\n${localizedMoney(settings, item.originalAmount, item.currency)}${item.description ? `\n${h(item.description)}` : ''}\n\n${tr(settings, 'remaining')}: ${localizedMoney(settings, item.remainingAmount, item.currency)}`, markup: debtButtons(item._id, settings) };
@@ -65,7 +66,7 @@ export async function executeIntent(userId, parsed, settings, session) {
   if (parsed.intent === 'SHOW_TODAY') {
     const [summary, finance] = await Promise.all([dashboardSummary(userId, { timezone: settings.timezone }), telegramFinancialSummary(userId, settings.timezone)]);
     const today = finance.today;
-    return { text: `<b>ORBIT — ${tr(settings, 'today')}</b>\n\n<b>${tr(settings, 'tasks')}</b>\n${summary.tasks.open} ${tr(settings, 'open')} · ${summary.tasks.overdue} ${tr(settings, 'overdue')}\n\n<b>${tr(settings, 'money')}</b>\n${tr(settings, 'sales')}: ${localizedMoney(settings, today.sales, settings.defaultCurrency)}\n${tr(settings, 'otherIncome')}: ${localizedMoney(settings, today.otherIncome, settings.defaultCurrency)}\n${tr(settings, 'expenses')}: ${localizedMoney(settings, today.expenses, settings.defaultCurrency)}\n${tr(settings, 'net')}: ${today.net >= 0 ? '+' : ''}${localizedMoney(settings, today.net, settings.defaultCurrency)}\n\n<b>${tr(settings, 'debts')}</b>\n${tr(settings, 'toReceive')}: ${localizedMoney(settings, summary.debts.receivable, settings.defaultCurrency)}\n${tr(settings, 'toPay')}: ${localizedMoney(settings, summary.debts.payable, settings.defaultCurrency)}`, markup: rows([[tr(settings, 'tasks'), 'nav:tasks'], [tr(settings, 'addTask'), 'quick:task']], [[tr(settings, 'debts'), 'nav:debts'], [tr(settings, 'addDebt'), 'quick:din']], [[tr(settings, 'sales'), 'nav:sales'], [tr(settings, 'addSale'), 'quick:sale']]) };
+    return { text: `<b>ORBIT — ${tr(settings, 'today')}</b>\n\n<b>${tr(settings, 'tasks')}</b>\n${localizedNumber(settings, summary.tasks.open)} ${tr(settings, 'open')} · ${localizedNumber(settings, summary.tasks.overdue)} ${tr(settings, 'overdue')}\n\n<b>${tr(settings, 'money')}</b>\n${tr(settings, 'sales')}: ${localizedMoney(settings, today.sales, settings.defaultCurrency)}\n${tr(settings, 'otherIncome')}: ${localizedMoney(settings, today.otherIncome, settings.defaultCurrency)}\n${tr(settings, 'expenses')}: ${localizedMoney(settings, today.expenses, settings.defaultCurrency)}\n${tr(settings, 'net')}: ${today.net >= 0 ? '+' : ''}${localizedMoney(settings, today.net, settings.defaultCurrency)}\n\n<b>${tr(settings, 'debts')}</b>\n${tr(settings, 'toReceive')}: ${localizedMoney(settings, summary.debts.receivable, settings.defaultCurrency)}\n${tr(settings, 'toPay')}: ${localizedMoney(settings, summary.debts.payable, settings.defaultCurrency)}`, markup: rows([[tr(settings, 'tasks'), 'nav:tasks'], [tr(settings, 'addTask'), 'quick:task']], [[tr(settings, 'debts'), 'nav:debts'], [tr(settings, 'addDebt'), 'quick:din']], [[tr(settings, 'sales'), 'nav:sales'], [tr(settings, 'addSale'), 'quick:sale']]) };
   }
   if (parsed.intent === 'SHOW_MONEY') {
     const summary = await dashboardSummary(userId);
@@ -80,7 +81,7 @@ export async function executeIntent(userId, parsed, settings, session) {
       Task.countDocuments({ user: userId, ...open, dueDate: { $lt: today, $ne: null } }),
     ]);
     const ordered = [...dated, ...undated].slice(0, 10);
-    return { text: `<b>${tr(settings, 'tasks')}</b>\n\n${ordered.map((task, index) => `${index + 1}. ${h(task.title.slice(0, 70))}${task.dueDate ? ` — ${taskDue(task, settings.timezone)}` : ''}`).join('\n') || tr(settings, 'noOpenTasks')}\n\n${count} ${tr(settings, 'open')} · ${overdue} ${tr(settings, 'overdue')}`, markup: { inline_keyboard: ordered.slice(0, 6).map((task) => [{ text: `✓ ${task.title}`.slice(0, 48), callback_data: `task:done:${task._id}` }]) } };
+    return { text: `<b>${tr(settings, 'tasks')}</b>\n\n${ordered.map((task, index) => `${localizedNumber(settings, index + 1)}. ${h(task.title.slice(0, 70))}${task.dueDate ? ` — ${taskDue(task, settings.timezone, settings.language)}` : ''}`).join('\n') || tr(settings, 'noOpenTasks')}\n\n${localizedNumber(settings, count)} ${tr(settings, 'open')} · ${localizedNumber(settings, overdue)} ${tr(settings, 'overdue')}`, markup: { inline_keyboard: ordered.slice(0, 6).map((task) => [{ text: `✓ ${task.title}`.slice(0, 48), callback_data: `task:done:${task._id}` }]) } };
   }
   if (parsed.intent === 'SHOW_DEBTS') {
     const [debts, totals] = await Promise.all([Debt.find({ user: userId, ...openDebt }).sort({ createdAt: -1 }).limit(20), Debt.aggregate([{ $match: { user: new mongoose.Types.ObjectId(userId), ...openDebt } }, { $group: { _id: '$type', total: { $sum: '$remainingAmount' } } }])]);
@@ -94,7 +95,7 @@ export async function executeIntent(userId, parsed, settings, session) {
   }
   if (parsed.intent === 'SHOW_REMINDERS') {
     const result = await listReminders(userId, { limit: 10 });
-    return { text: `<b>${tr(settings, 'reminder')}</b>\n\n${result.data.filter((row) => ['scheduled', 'active', 'snoozed', 'waiting'].includes(row.status)).map((row) => `${h(row.title)} · ${h(row.status)} · ${localizedDate(settings, row.nextTriggerAt, settings.timezone, 'D MMM HH:mm')}\n<code>${row._id}</code>`).join('\n\n') || tr(settings, 'noReminders')}` };
+    return { text: `<b>${tr(settings, 'reminder')}</b>\n\n${result.data.filter((row) => ['scheduled', 'active', 'snoozed', 'waiting'].includes(row.status)).map((row) => `${h(row.title)} · ${tr(settings, `status${row.status[0].toUpperCase()}${row.status.slice(1)}`)} · ${localizedDate(settings, row.nextTriggerAt, settings.timezone, 'D MMM HH:mm')}\n<code>${row._id}</code>`).join('\n\n') || tr(settings, 'noReminders')}` };
   }
   if (parsed.intent === 'CREATE_REMINDER') {
     const reminder = await createReminder(userId, { ...data, deliveryChannels: ['telegram'] }, 'telegram');

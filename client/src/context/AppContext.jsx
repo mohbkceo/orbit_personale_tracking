@@ -9,6 +9,7 @@ import { toastMotion, reduced, rewardHold } from '../animations/motionPresets.js
 import { useAuth } from './useAuth.js';
 import { applyAppearance, defaults, normalizeAppearance } from '../appearance/themes.js';
 import { useTranslation } from 'react-i18next';
+import { setFormatPreferences } from '../utils/format.js';
 
 export function AppProvider({ children }) {
   const { t } = useTranslation();
@@ -22,6 +23,7 @@ export function AppProvider({ children }) {
   const [activeReward, setActiveReward] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   const reduce = useReducedMotion() || settings.appearance?.motion === 'reduced';
+  setFormatPreferences(settings);
 
   const toast = useCallback((message, type = 'success') => {
     const id = crypto.randomUUID(); setToasts((items) => [...items, { id, message, type }]);

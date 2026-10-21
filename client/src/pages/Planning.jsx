@@ -1,10 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Check, CreditCard, Goal as GoalIcon, Plus, Sparkles } from 'lucide-react';
 import { endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
 import { useData } from '../hooks/useData.js';
-import { formatDate, formatMoney, todayInput } from '../utils/format.js';
+import { displayValue, formatDate, formatMoney, todayInput } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 import { AnimatedList } from '../animations/AnimatedList.jsx';
 import { AnimatedNumber } from '../animations/AnimatedNumber.jsx';
@@ -12,27 +13,13 @@ import { AnimatedProgress } from '../animations/AnimatedProgress.jsx';
 import { crossedGoalMilestone } from '../animations/rewardConfig.js';
 
 const config = {
-  bills: {
-    eyebrow: 'Planning',
-    title: 'Bills',
-    description: 'Know what is due before it becomes urgent.',
-    icon: CreditCard,
-  },
-  subscriptions: {
-    eyebrow: 'Planning',
-    title: 'Subscriptions',
-    description: 'Recurring costs, translated into their real monthly weight.',
-    icon: Bell,
-  },
-  goals: {
-    eyebrow: 'Growth',
-    title: 'Goals & savings',
-    description: 'Turn intent into measurable, visible progress.',
-    icon: GoalIcon,
-  },
+  bills: { icon: CreditCard },
+  subscriptions: { icon: Bell },
+  goals: { icon: GoalIcon },
 };
 
 function ItemForm({ kind, open, onClose, onSaved }) {
+  const { t: _t } = useTranslation();
   const { settings, toast, reward } = useApp();
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
@@ -87,7 +74,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
     setBusy(true);
     try {
       const result = await endpoints.create(kind, form);
-      toast(`${config[kind].title.slice(0, -1)} created`);
+      toast(_t('common:dynamic.itemCreated', { item: _t(`goals:sections.${kind}.singular`) }));
       if (kind === 'goals') reward('GOAL_CREATED');
       onSaved();
       onClose();
@@ -102,12 +89,12 @@ function ItemForm({ kind, open, onClose, onSaved }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={`Add ${kind === 'goals' ? 'goal' : kind.slice(0, -1)}`}
-      description="A few details now, less mental load later"
+      title={_t('common:dynamic.addItem', { item: _t(`goals:sections.${kind}.singular`) })}
+      description={_t('goals:ui.aFewDetailsNowLessMentalLoadLater')}
     >
       <form onSubmit={submit} className="space-y-4">
         <label>
-          <span className="label">{kind === 'goals' ? 'Goal title' : 'Name'}</span>
+          <span className="label">{kind === 'goals' ? _t('goals:ui.goalTitle') : _t('common:name')}</span>
           <input
             required
             autoFocus
@@ -120,14 +107,14 @@ function ItemForm({ kind, open, onClose, onSaved }) {
           <>
             <div className="grid grid-cols-2 gap-3">
               <label>
-                <span className="label">Type</span>
+                <span className="label">{_t('goals:ui.type')}</span>
                 <select className="field" value={form.type} onChange={set('type')}>
-                  <option value="financial">Financial</option>
-                  <option value="personal">Personal</option>
+                  <option value="financial">{_t('goals:ui.financial')}</option>
+                  <option value="personal">{_t('goals:ui.personal')}</option>
                 </select>
               </label>
               <label>
-                <span className="label">Target date</span>
+                <span className="label">{_t('goals:ui.targetDate')}</span>
                 <input
                   type="date"
                   className="field"
@@ -138,7 +125,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <label>
-                <span className="label">Target amount</span>
+                <span className="label">{_t('goals:ui.targetAmount')}</span>
                 <input
                   type="number"
                   min="0"
@@ -148,7 +135,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
                 />
               </label>
               <label>
-                <span className="label">Already saved</span>
+                <span className="label">{_t('goals:ui.alreadySaved')}</span>
                 <input
                   type="number"
                   min="0"
@@ -159,7 +146,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
               </label>
             </div>
             <label>
-              <span className="label">Description</span>
+              <span className="label">{_t('goals:ui.description')}</span>
               <textarea
                 rows="2"
                 className="field h-auto py-3"
@@ -171,7 +158,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
         ) : (
           <>
             <label>
-              <span className="label">Amount</span>
+              <span className="label">{_t('goals:ui.amount')}</span>
               <input
                 required
                 type="number"
@@ -182,7 +169,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
               />
             </label>
             <label>
-              <span className="label">Account</span>
+              <span className="label">{_t('common:account')}</span>
               <select className="field" value={form.accountId} onChange={set('accountId')}>
                 {accounts.map((a) => (
                   <option key={a._id} value={a._id}>
@@ -194,7 +181,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
             {kind === 'bills' ? (
               <>
                 <label>
-                  <span className="label">Due date</span>
+                  <span className="label">{_t('goals:ui.dueDate')}</span>
                   <input
                     type="date"
                     className="field"
@@ -207,29 +194,27 @@ function ItemForm({ kind, open, onClose, onSaved }) {
                     type="checkbox"
                     checked={form.autoCreateExpense}
                     onChange={set('autoCreateExpense')}
-                  />
-                  Create an expense when marked paid
-                </label>
+                  />{_t('goals:ui.createAnExpenseWhenMarkedPaid')}</label>
               </>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <label>
-                    <span className="label">Billing cycle</span>
+                    <span className="label">{_t('goals:ui.billingCycle')}</span>
                     <select
                       className="field"
                       value={form.billingCycle}
                       onChange={set('billingCycle')}
                     >
-                      <option>weekly</option>
-                      <option>monthly</option>
-                      <option>quarterly</option>
-                      <option>yearly</option>
-                      <option>custom</option>
+                      <option value="weekly">{_t('goals:ui.weekly')}</option>
+                      <option value="monthly">{_t('goals:ui.monthly')}</option>
+                      <option value="quarterly">{_t('goals:ui.quarterly')}</option>
+                      <option value="yearly">{_t('goals:ui.yearly')}</option>
+                      <option value="custom">{_t('goals:ui.custom')}</option>
                     </select>
                   </label>
                   <label>
-                    <span className="label">Next renewal</span>
+                    <span className="label">{_t('goals:ui.nextRenewal')}</span>
                     <input
                       type="date"
                       className="field"
@@ -239,7 +224,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
                   </label>
                 </div>
                 <label>
-                  <span className="label">Website</span>
+                  <span className="label">{_t('goals:ui.website')}</span>
                   <input
                     type="url"
                     className="field"
@@ -252,9 +237,9 @@ function ItemForm({ kind, open, onClose, onSaved }) {
             )}
           </>
         )}
-        <label><span className="label">Reminders</span><select className="field" value={form.reminderMode} onChange={set('reminderMode')}><option value="automatic">Automatic</option><option value="custom">Custom</option><option value="off">Off</option></select><span className="mt-1 block text-xs text-muted">{form.reminderMode === 'automatic' ? 'Smart reminders are created after saving.' : form.reminderMode === 'custom' ? 'Add your own reminders after saving.' : 'No automatic reminders.'}</span></label>
+        <label><span className="label">{_t('navigation:reminders')}</span><select className="field" value={form.reminderMode} onChange={set('reminderMode')}><option value="automatic">{_t('goals:ui.automatic')}</option><option value="custom">{_t('goals:ui.custom')}</option><option value="off">{_t('goals:ui.off')}</option></select><span className="mt-1 block text-xs text-muted">{form.reminderMode === 'automatic' ? _t('goals:ui.smartRemindersAreCreatedAfterSaving') : form.reminderMode === 'custom' ? _t('goals:ui.addYourOwnRemindersAfterSaving') : _t('goals:ui.noAutomaticReminders')}</span></label>
         <button disabled={busy} className="btn-primary w-full">
-          {busy ? 'Saving…' : 'Save'}
+          {busy ? _t('common:saving') : _t('goals:ui.save')}
         </button>
       </form>
     </Modal>
@@ -262,6 +247,7 @@ function ItemForm({ kind, open, onClose, onSaved }) {
 }
 
 function GoalCard({ item, currency, onManage }) {
+  const { t: _t } = useTranslation();
   const progress = item.targetAmount
     ? Math.min((item.currentAmount / item.targetAmount) * 100, 100)
     : 0;
@@ -276,23 +262,21 @@ function GoalCard({ item, currency, onManage }) {
         </StatusBadge>
       </div>
       <h3 className="mt-5 font-display text-lg font-bold">{item.title}</h3>
-      <Link className="mt-2 inline-block text-xs font-semibold text-primary" to={`/panel/reminders?entityType=goal&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
+      <Link className="mt-2 inline-block text-xs font-semibold text-primary" to={`/panel/reminders?entityType=goal&entityId=${item._id}`}>🔔 {displayValue(item.reminderMode || 'automatic')}{' '}{_t('goals:ui.reminders')}</Link>
       <p className="mt-1 line-clamp-2 text-xs text-muted">
-        {item.description || `Target ${formatDate(item.targetDate)}`}
+        {item.description || _t('common:dynamic.targetDate', { date: formatDate(item.targetDate) })}
       </p>
       <div className="mt-6 flex items-end justify-between">
         <p className="font-display text-xl font-bold">
           <AnimatedNumber value={item.currentAmount} format={(value) => formatMoney(value, currency)} />
         </p>
-        <p className="text-xs text-muted">of {formatMoney(item.targetAmount, currency)}</p>
+        <p className="text-xs text-muted">{_t('goals:ui.of')}{' '}{formatMoney(item.targetAmount, currency)}</p>
       </div>
       <AnimatedProgress value={progress} className="mt-3 h-2.5" />
       <div className="mt-3 flex items-center justify-between">
         <p className="text-[11px] font-bold text-muted"><AnimatedNumber value={progress} />%</p>
         {item.type === 'financial' && (
-          <button className="btn-secondary h-8 px-3 text-xs" onClick={onManage}>
-            Manage savings
-          </button>
+          <button className="btn-secondary h-8 px-3 text-xs" onClick={onManage}>{_t('goals:ui.manageSavings')}</button>
         )}
       </div>
     </article>
@@ -300,6 +284,7 @@ function GoalCard({ item, currency, onManage }) {
 }
 
 function SavingsForm({ goal, onClose, onSaved }) {
+  const { t: _t } = useTranslation();
   const { toast, reward } = useApp();
   const [accounts, setAccounts] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -332,8 +317,8 @@ function SavingsForm({ goal, onClose, onSaved }) {
       });
       toast(
         form.action === 'contribute'
-          ? 'Savings contribution recorded'
-          : 'Savings withdrawal recorded',
+          ? _t('goals:ui.savingsContributionRecorded')
+          : _t('goals:ui.savingsWithdrawalRecorded'),
       );
       if (form.action === 'contribute') {
         const before = goal.targetAmount ? goal.currentAmount / goal.targetAmount * 100 : 0;
@@ -353,8 +338,8 @@ function SavingsForm({ goal, onClose, onSaved }) {
     <Modal
       open={Boolean(goal)}
       onClose={onClose}
-      title="Manage savings"
-      description={`${goal?.title} · ${formatMoney(goal?.currentAmount, goal?.currency || 'DZD')} saved`}
+      title={_t('goals:ui.manageSavings')}
+      description={_t('goals:savedAmount', { title: goal?.title, amount: formatMoney(goal?.currentAmount, goal?.currency || 'DZD') })}
     >
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
@@ -362,19 +347,15 @@ function SavingsForm({ goal, onClose, onSaved }) {
             type="button"
             onClick={() => setForm((v) => ({ ...v, action: 'contribute' }))}
             className={`rounded-xl border p-3 text-sm font-semibold ${contributing ? 'border-primary bg-selected text-primary' : 'border-border bg-surface hover:bg-hover'}`}
-          >
-            Contribute
-          </button>
+          >{_t('goals:ui.contribute')}</button>
           <button
             type="button"
             onClick={() => setForm((v) => ({ ...v, action: 'withdraw' }))}
             className={`rounded-xl border p-3 text-sm font-semibold ${!contributing ? 'border-primary bg-selected text-primary' : 'border-border bg-surface hover:bg-hover'}`}
-          >
-            Withdraw
-          </button>
+          >{_t('goals:ui.withdraw')}</button>
         </div>
         <label>
-          <span className="label">Amount</span>
+          <span className="label">{_t('goals:ui.amount')}</span>
           <input
             required
             autoFocus
@@ -387,7 +368,7 @@ function SavingsForm({ goal, onClose, onSaved }) {
           />
         </label>
         <label>
-          <span className="label">{contributing ? 'From account' : 'Savings account'}</span>
+          <span className="label">{contributing ? _t('goals:ui.fromAccount') : _t('goals:ui.savingsAccount')}</span>
           <select required className="field" value={form.accountId} onChange={set('accountId')}>
             {accounts.map((account) => (
               <option key={account._id} value={account._id}>
@@ -397,7 +378,7 @@ function SavingsForm({ goal, onClose, onSaved }) {
           </select>
         </label>
         <label>
-          <span className="label">{contributing ? 'Savings account' : 'To account'}</span>
+          <span className="label">{contributing ? _t('goals:ui.savingsAccount') : _t('goals:ui.toAccount')}</span>
           <select
             required
             className="field"
@@ -411,12 +392,9 @@ function SavingsForm({ goal, onClose, onSaved }) {
             ))}
           </select>
         </label>
-        <p className="text-xs leading-5 text-muted">
-          This is recorded as a transfer between owned accounts, so it does not inflate income or
-          expenses.
-        </p>
+        <p className="text-xs leading-5 text-muted">{_t('goals:ui.thisIsRecordedAsATransferBetweenOwnedAccountsSoItDoesNotInflateI')}</p>
         <button disabled={busy || accounts.length < 2} className="btn-primary w-full">
-          {busy ? 'Recording…' : contributing ? 'Add contribution' : 'Record withdrawal'}
+          {busy ? _t('goals:ui.recording') : contributing ? _t('goals:ui.addContribution') : _t('goals:ui.recordWithdrawal')}
         </button>
       </form>
     </Modal>
@@ -424,6 +402,7 @@ function SavingsForm({ goal, onClose, onSaved }) {
 }
 
 export default function Planning({ kind }) {
+  const { t: _t } = useTranslation();
   const { settings, toast } = useApp();
   const [open, setOpen] = useState(false);
   const [managing, setManaging] = useState(null);
@@ -446,7 +425,7 @@ export default function Planning({ kind }) {
   async function markPaid(item) {
     try {
       await endpoints.create(`bills/${item._id}/pay`, {});
-      toast('Bill paid and ledger updated');
+      toast(_t('goals:ui.billPaidAndLedgerUpdated'));
       reload();
     } catch (err) {
       toast(err.message, 'error');
@@ -455,26 +434,25 @@ export default function Planning({ kind }) {
   return (
     <>
       <PageHeader
-        eyebrow={details.eyebrow}
-        title={details.title}
-        description={details.description}
+        eyebrow={_t(`goals:sections.${kind}.eyebrow`)}
+        title={_t(`goals:sections.${kind}.title`)}
+        description={_t(`goals:sections.${kind}.description`)}
         actions={
           <button className="btn-primary" onClick={() => setOpen(true)}>
-            <Plus size={17} />
-            Add {kind === 'goals' ? 'goal' : kind.slice(0, -1)}
+            <Plus size={17} />{_t('common:dynamic.addItem', { item: _t(`goals:sections.${kind}.singular`) })}
           </button>
         }
       />
       {kind === 'subscriptions' && (
         <div className="mb-5 grid gap-3 sm:grid-cols-2">
           <article className="panel-flat p-5">
-            <p className="text-xs text-muted">Monthly equivalent</p>
+            <p className="text-xs text-muted">{_t('goals:ui.monthlyEquivalent')}</p>
             <p className="mt-1 font-display text-2xl font-bold">
               {formatMoney(monthly, settings.defaultCurrency)}
             </p>
           </article>
           <article className="panel-flat p-5">
-            <p className="text-xs text-muted">Annual run rate</p>
+            <p className="text-xs text-muted">{_t('goals:ui.annualRunRate')}</p>
             <p className="mt-1 font-display text-2xl font-bold">
               {formatMoney(monthly * 12, settings.defaultCurrency)}
             </p>
@@ -484,17 +462,15 @@ export default function Planning({ kind }) {
       {loading ? (
         <Spinner />
       ) : error ? (
-        <EmptyState icon={Icon} title={`${details.title} unavailable`} description={error} />
+        <EmptyState icon={Icon} title={_t('common:dynamic.itemUnavailable', { item: _t(`goals:sections.${kind}.title`) })} description={error} />
       ) : (<>{items.length === 0 && (
         <div className="panel">
           <EmptyState
             icon={Icon}
-            title={`No ${kind} yet`}
-            description="Add the first one when you are ready."
+            title={_t('common:dynamic.noItemsYet', { item: _t(`goals:sections.${kind}.title`) })}
+            description={_t('goals:ui.addTheFirstOneWhenYouAreReady')}
             action={
-              <button className="btn-primary" onClick={() => setOpen(true)}>
-                Add one
-              </button>
+              <button className="btn-primary" onClick={() => setOpen(true)}>{_t('goals:ui.addOne')}</button>
             }
           />
         </div>
@@ -511,14 +487,14 @@ export default function Planning({ kind }) {
               </span>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-bold">{item.name}</h3>
-                <Link className="text-xs font-semibold text-primary" to={`/panel/reminders?entityType=${kind.slice(0, -1)}&entityId=${item._id}`}>🔔 {item.reminderMode || 'automatic'} reminders</Link>
+                <Link className="text-xs font-semibold text-primary" to={`/panel/reminders?entityType=${kind.slice(0, -1)}&entityId=${item._id}`}>🔔 {displayValue(item.reminderMode || 'automatic')}{' '}{_t('goals:ui.reminders')}</Link>
                 <p className="mt-1 text-xs text-muted">
                   {kind === 'bills'
-                    ? `Due ${formatDate(item.dueDate)}`
-                    : `${item.billingCycle} · renews ${formatDate(item.nextBillingDate)}`}
+                    ? _t('goals:dueOn', { date: formatDate(item.dueDate) })
+                    : _t('goals:renewsOn', { cycle: displayValue(item.billingCycle), date: formatDate(item.nextBillingDate) })}
                 </p>
               </div>
-              <div className="sm:text-right">
+              <div className="sm:text-end">
                 <p className="font-display text-lg font-bold">
                   {formatMoney(item.amount, item.currency || settings.defaultCurrency)}
                 </p>
@@ -536,9 +512,7 @@ export default function Planning({ kind }) {
               </div>
               {kind === 'bills' && item.status !== 'paid' && (
                 <button className="btn-secondary h-9" onClick={() => markPaid(item)}>
-                  <Check size={15} />
-                  Mark paid
-                </button>
+                  <Check size={15} />{_t('goals:ui.markPaid')}</button>
               )}
             </article>
           )} />
