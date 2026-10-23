@@ -2,7 +2,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import { securityMiddleware, rejectUnsafeKeys, verifyBrowserOrigin, advertisingFramePolicy } from './middleware/security.js';
+import {
+  securityMiddleware,
+  rejectUnsafeKeys,
+  verifyBrowserOrigin,
+  advertisingFramePolicy,
+} from './middleware/security.js';
 import { userAuth, accessGuard, requireFeature } from './middleware/auth.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { accountRoutes } from './routes/accounts.js';
@@ -54,7 +59,9 @@ app.use(cookieParser());
 app.use(verifyBrowserOrigin);
 app.use(rejectUnsafeKeys);
 
-app.get('/api/health', (_req, res) => res.json({ success: true, data: { status: 'ok', timestamp: new Date() } }));
+app.get('/api/health', (_req, res) =>
+  res.json({ success: true, data: { status: 'ok', timestamp: new Date() } }),
+);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/payments', paymentRoutes);
@@ -82,16 +89,50 @@ app.use('/api/admin/events', adminEventsRoutes);
 app.use('/api/admin', adminOperationRoutes);
 app.use('/api/telegram-link', userAuth, accessGuard, telegramLinkRoutes);
 app.use('/api/accounts', userAuth, accessGuard, requireFeature('accounts'), accountRoutes);
-app.use('/api/transactions', userAuth, accessGuard, requireFeature('transactions'), transactionRoutes);
-app.use('/api/expenses', userAuth, accessGuard, requireFeature('expenses'), (req, _res, next) => { req.query.type = 'expense'; if (req.method === 'POST') req.body.type = 'expense'; next(); }, transactionRoutes);
-app.use('/api/income', userAuth, accessGuard, requireFeature('income'), (req, _res, next) => { req.query.type = 'income'; if (req.method === 'POST') req.body.type = 'income'; next(); }, transactionRoutes);
+app.use(
+  '/api/transactions',
+  userAuth,
+  accessGuard,
+  requireFeature('transactions'),
+  transactionRoutes,
+);
+app.use(
+  '/api/expenses',
+  userAuth,
+  accessGuard,
+  requireFeature('expenses'),
+  (req, _res, next) => {
+    req.query.type = 'expense';
+    if (req.method === 'POST') req.body.type = 'expense';
+    next();
+  },
+  transactionRoutes,
+);
+app.use(
+  '/api/income',
+  userAuth,
+  accessGuard,
+  requireFeature('income'),
+  (req, _res, next) => {
+    req.query.type = 'income';
+    if (req.method === 'POST') req.body.type = 'income';
+    next();
+  },
+  transactionRoutes,
+);
 app.use('/api/debts', userAuth, accessGuard, requireFeature('debts'), debtRoutes);
 app.use('/api/tasks', userAuth, accessGuard, requireFeature('tasks'), taskRoutes);
 app.use('/api/daily-focus', userAuth, accessGuard, requireFeature('daily-focus'), dailyFocusRoutes);
 app.use('/api/reminders', userAuth, accessGuard, requireFeature('reminders'), reminderRoutes);
 app.use('/api/events', userAuth, accessGuard, requireFeature('events'), eventRoutes);
 app.use('/api/bills', userAuth, accessGuard, requireFeature('bills'), billRoutes);
-app.use('/api/subscriptions', userAuth, accessGuard, requireFeature('subscriptions'), subscriptionRoutes);
+app.use(
+  '/api/subscriptions',
+  userAuth,
+  accessGuard,
+  requireFeature('subscriptions'),
+  subscriptionRoutes,
+);
 app.use('/api/goals', userAuth, accessGuard, requireFeature('goals'), goalRoutes);
 app.use('/api/settings', userAuth, accessGuard, settingsRoutes);
 app.use('/api/dashboard', userAuth, accessGuard, requireFeature('dashboard'), dashboardRoutes);
@@ -103,6 +144,8 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(directory));
   app.get('/{*splat}', (_req, res) => res.sendFile(path.join(directory, 'index.html')));
 }
+
+// pushing
 
 app.use(notFound);
 app.use(errorHandler);

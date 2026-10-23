@@ -39,11 +39,8 @@ export default function Landing() {
           </h1>
 
           {/* Value proposition */}
-          <p>
-            {t('marketing:heroDescription')}
-          </p>
+          <p>{t('marketing:heroDescription')}</p>
 
-          {/* Primary and secondary actions */}
           <div className="marketing-hero-actions">
             <Link
               to="/register"
@@ -64,9 +61,7 @@ export default function Landing() {
           </div>
 
           {/* Registration reassurance */}
-          <p className="text-xs pt-3 p-hero mt-6">
-            {t('marketing:reassurance')}
-          </p>
+          <p className="text-xs pt-3 p-hero mt-6">{t('marketing:reassurance')}</p>
 
           {/* Key benefits */}
           <div className="marketing-values">
@@ -125,15 +120,9 @@ export default function Landing() {
             <span className="marketing-eyebrow">{t('marketing:demo')}</span>
             <h2 id="demo-title">{t('marketing:demoTitle')}</h2>
             <ol className="mt-4 space-y-4">
-              <li>
-                {t('marketing:demoStepOne')}
-              </li>
-              <li>
-                {t('marketing:demoStepTwo')}
-              </li>
-              <li>
-                {t('marketing:demoStepThree')}
-              </li>
+              <li>{t('marketing:demoStepOne')}</li>
+              <li>{t('marketing:demoStepTwo')}</li>
+              <li>{t('marketing:demoStepThree')}</li>
             </ol>
             <Link to="/pricing" className="marketing-button marketing-button-primary mt-6">
               {t('marketing:choosePlan')} <ArrowRight className="rtl-flip" size={18} />
