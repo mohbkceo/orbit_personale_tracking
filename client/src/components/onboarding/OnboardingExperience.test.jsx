@@ -19,7 +19,7 @@ describe('three-step onboarding', () => {
   it.each(['welcome', 'first-action', 'telegram'])('Skip at %s saves SKIPPED and exits', async (step) => {
     const { update, onExit } = mount(step, step === 'welcome' ? 'NOT_STARTED' : 'IN_PROGRESS');
     const skip = screen.getByRole('button', { name: 'Skip' });
-    expect(skip.className).toContain('min-h-12');
+    expect(skip.className).toContain('min-h-[49px]');
     fireEvent.click(skip);
     await waitFor(() => expect(update).toHaveBeenCalledWith('SKIPPED', undefined, false));
     expect(onExit).toHaveBeenCalledOnce();
@@ -28,7 +28,7 @@ describe('three-step onboarding', () => {
   it.each([['welcome', 'first-action'], ['first-action', 'telegram']])('Next at %s saves %s', async (step, next) => {
     const { update, onExit } = mount(step);
     const button = screen.getByRole('button', { name: /Next/ });
-    expect(button.className).toContain('min-h-12');
+    expect(button.className).toContain('min-h-[54px]');
     fireEvent.click(button);
     await waitFor(() => expect(update).toHaveBeenCalledWith('IN_PROGRESS', next, false));
     expect(onExit).not.toHaveBeenCalled();

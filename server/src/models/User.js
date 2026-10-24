@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
   lastLoginAt: Date,
   planSelectionSkippedAt: Date,
   accessVersion: { type: Number, default: 0 },
+  authVersion: { type: Number, default: 0 },
   advertisingAllowed: { type: Boolean, default: undefined },
 }, { timestamps: true });
 

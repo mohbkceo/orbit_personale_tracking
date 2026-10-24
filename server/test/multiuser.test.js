@@ -10,6 +10,7 @@ import { Plan } from '../src/models/Plan.js';
 import { ActivationLink } from '../src/models/ActivationLink.js';
 import { AccessSubscription } from '../src/models/AccessSubscription.js';
 import { TelegramConnection } from '../src/models/TelegramConnection.js';
+import { TelegramInteraction } from '../src/models/TelegramInteraction.js';
 import { TelegramLinkToken } from '../src/models/TelegramLinkToken.js';
 import { Account } from '../src/models/Account.js';
 import { Transaction } from '../src/models/Transaction.js';
@@ -159,11 +160,12 @@ describe('multi-user access', () => {
     await agent.get('/api/tasks').expect(200);
     expect((await agent.get('/api/auth/me').expect(200)).body.data.access).toMatchObject({ eligible: true, planType: 'FREE', subscription: null });
     await agent.get('/api/contacts').expect(403);
-    await superAgent.patch(`/api/admin/users/${user._id}/status`).send({ status: 'SUSPENDED' }).expect(200);
-    expect((await agent.get('/api/auth/me').expect(200)).body.data.access.reason).toBe('SUSPENDED');
+    await superAgent.patch(`/api/admin/users/${user._id}/status`).set('X-Orbit-Admin-Action', '1').send({ status: 'SUSPENDED', reason: 'Account access paused for support', adminPassword: 'very-long-root-password' }).expect(200);
+    await agent.get('/api/auth/me').expect(401);
     expect((await agent.post('/api/auth/login').send({ email: 'renew@example.com', password: 'very-long-user-password' }).expect(200)).body.data.access.reason).toBe('SUSPENDED');
     await agent.get('/api/tasks').expect(403);
-    await superAgent.patch(`/api/admin/users/${user._id}/status`).send({ status: 'ACTIVE' }).expect(200);
+    await superAgent.patch(`/api/admin/users/${user._id}/status`).set('X-Orbit-Admin-Action', '1').send({ status: 'ACTIVE', reason: 'Account access restored after review', adminPassword: 'very-long-root-password' }).expect(200);
+    await agent.post('/api/auth/login').send({ email: 'renew@example.com', password: 'very-long-user-password' }).expect(200);
     const newLink = await makeLink();
     await agent.post(`/api/activation/${newLink.key}/activate`).expect(200);
     expect((await agent.get('/api/tasks').expect(200)).body.data).toHaveLength(1);
@@ -172,7 +174,7 @@ describe('multi-user access', () => {
   it('binds user-detail renewal links to the intended account', async () => {
     const a = await onboard('bound-a@example.com');
     const b = await onboard('bound-b@example.com');
-    const response = await superAgent.post(`/api/admin/users/${a.user._id}/renewal-link`).send({ planId: String(plan._id) }).expect(201);
+    const response = await superAgent.post(`/api/admin/users/${a.user._id}/renewal-link`).set('X-Orbit-Admin-Action', '1').send({ planId: String(plan._id), reason: 'Requested paid renewal link', adminPassword: 'very-long-root-password' }).expect(201);
     const key = response.body.data.url.split('/').pop();
     expect(response.body.data.link.intendedUser).toBe(String(a.user._id));
     expect((await request(app).get(`/api/activation/${key}`).expect(200)).body.data.requiresExistingAccount).toBe(true);
@@ -215,6 +217,8 @@ describe('multi-user access', () => {
     await a.agent.patch('/api/settings').send({ telegram: { defaultExpenseAccount: account._id } }).expect(200);
     await handleTelegramUpdate({ message: { from: { id: 12345 }, chat: { id: 12345 }, text: 'spent 500 coffee' } });
     expect(await Transaction.countDocuments({ user: a.user._id, type: 'expense', amount: 500 })).toBe(1);
+    expect((await TelegramInteraction.findOne({ user: a.user._id })).category).toBe('MESSAGE');
+    expect(JSON.stringify(await TelegramInteraction.find({ user: a.user._id }).lean())).not.toContain('coffee');
     expect(await Transaction.countDocuments({ user: b.user._id })).toBe(0);
     await AccessSubscription.updateMany({ user: a.user._id }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
     await handleTelegramUpdate({ message: { from: { id: 12345 }, chat: { id: 12345 }, text: 'spent 500 coffee' } });

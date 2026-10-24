@@ -3,7 +3,11 @@ import { meta } from '../analytics/meta.js';
 import i18n from '../i18n/index.js';
 
 export const api = axios.create({ baseURL: '/api', timeout: 15000, withCredentials: true, headers: { 'Content-Type': 'application/json' } });
-api.interceptors.request.use((config) => { Object.assign(config.headers, meta.headers()); return config; });
+api.interceptors.request.use((config) => {
+  Object.assign(config.headers, meta.headers());
+  if (String(config.url || '').startsWith('/admin/') && !['get', 'head'].includes(String(config.method || 'get').toLowerCase())) config.headers['X-Orbit-Admin-Action'] = '1';
+  return config;
+});
 api.interceptors.response.use((response) => response.data, (error) => {
   const failure = new Error(error.response?.data?.message || error.message || 'Something went wrong');
   failure.code = error.response?.data?.code;

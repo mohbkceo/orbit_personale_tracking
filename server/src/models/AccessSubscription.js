@@ -7,14 +7,20 @@ const accessSubscriptionSchema = new mongoose.Schema(
     activationLink: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ActivationLink',
-      required() { return this.source !== 'SLICKPAY'; },
+      required() { return this.source === 'ACTIVATION_LINK'; },
     },
-    source: { type: String, enum: ['ACTIVATION_LINK', 'SLICKPAY'], default: 'ACTIVATION_LINK' },
+    source: { type: String, enum: ['ACTIVATION_LINK', 'SLICKPAY', 'ADMIN_GRANT'], default: 'ACTIVATION_LINK' },
+    grantKind: { type: String, enum: ['PAYMENT_CONFIRMED', 'COMPLIMENTARY', 'SUPPORT_COMPENSATION'] },
+    paymentReference: String,
+    grantReason: String,
+    grantedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    idempotencyKey: String,
+    requestFingerprint: String,
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentOrder', required() { return this.source === 'SLICKPAY'; } },
     startedAt: { type: Date, required: true },
     activatedAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true, index: true },
-    status: { type: String, enum: ['ACTIVE', 'EXPIRED'], default: 'ACTIVE', index: true },
+    status: { type: String, enum: ['ACTIVE', 'EXPIRED', 'REVOKED'], default: 'ACTIVE', index: true },
     entitlementVersion: { type: Number, default: undefined },
     planSnapshot: {
       name: String,
@@ -29,5 +35,6 @@ const accessSubscriptionSchema = new mongoose.Schema(
 accessSubscriptionSchema.index({ user: 1, expiresAt: -1 });
 accessSubscriptionSchema.index({ activationLink: 1 }, { name: 'activationLink_partial_unique', unique: true, partialFilterExpression: { activationLink: { $type: 'objectId' } } });
 accessSubscriptionSchema.index({ order: 1 }, { unique: true, partialFilterExpression: { order: { $type: 'objectId' } } });
+accessSubscriptionSchema.index({ idempotencyKey: 1 }, { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } });
 
 export const AccessSubscription = mongoose.model('AccessSubscription', accessSubscriptionSchema);

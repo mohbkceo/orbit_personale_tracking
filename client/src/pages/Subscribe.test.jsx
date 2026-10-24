@@ -22,14 +22,14 @@ function mount() { render(<MemoryRouter initialEntries={['/subscribe']}><Routes>
 describe('optional plan selection', () => {
   it('Skip for now persists choice and goes directly to Free dashboard', async () => {
     mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Skip for now' }))[0]);
     await waitFor(() => expect(mocks.patch).toHaveBeenCalledWith('/me/plan-selection', { status: 'SKIPPED' }));
     expect(await screen.findByText('Dashboard ready')).toBeTruthy();
   });
 
   it('offers a paid plan with CCP, WhatsApp and Slickpay without activating it', async () => {
     mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose plan' }));
+    expect(await screen.findByRole('heading', { name: 'Choose how to pay' })).toBeTruthy();
     expect(screen.queryByText('CCP 12345')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Pay by CCP' }));
     expect(screen.getByText('CCP 12345')).toBeTruthy();
@@ -42,12 +42,12 @@ describe('optional plan selection', () => {
     expect(mocks.patch).not.toHaveBeenCalled();
   });
 
-  it('disables CCP and Slickpay when their configuration is unavailable', async () => {
+  it('hides unavailable CCP and Slickpay methods', async () => {
     mocks.get.mockImplementation(async (path) => ({ data: path === '/public/plans' ? [free, plus] : { payments: { enabled: false }, sales: { ccpInstructions: '  ', whatsappNumber: '213555123456', whatsappMessage: 'Orbit sales' } } }));
     mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose plan' }));
-    expect(screen.getByRole('button', { name: 'Pay by CCP' }).disabled).toBe(true);
-    expect(screen.getByRole('button', { name: 'Pay securely with Slickpay' }).disabled).toBe(true);
+    expect(await screen.findByRole('heading', { name: 'Choose how to pay' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Pay by CCP' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Pay securely with Slickpay/ })).toBeNull();
     expect(screen.queryByText('CCP 12345')).toBeNull();
     expect(screen.getByRole('link', { name: /Contact Team on WhatsApp/ })).toBeTruthy();
   });
@@ -55,7 +55,7 @@ describe('optional plan selection', () => {
   it('localizes the account email line in the WhatsApp message', async () => {
     await i18n.changeLanguage('ar');
     mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'اختر الخطة' }));
+    expect(await screen.findByRole('heading', { name: /الدفع|الطريقة/ })).toBeTruthy();
     const url = new URL(screen.getByRole('link', { name: /واتساب/ }).getAttribute('href'));
     expect(url.searchParams.get('text')).toBe('Orbit sales\nالبريد الإلكتروني للحساب: buyer@example.com');
   });
@@ -64,15 +64,15 @@ describe('optional plan selection', () => {
     mocks.get.mockRejectedValue(new Error('Offline'));
     mount();
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Offline');
-    fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Skip for now' })[0]);
     expect(await screen.findByText('Dashboard ready')).toBeTruthy();
   });
 
   it('preselects a safe checkout deep link after onboarding', async () => {
     sessionStorage.setItem('orbit:registration-next', '/checkout?plan=plus');
     mount();
-    expect(await screen.findByText('Pay for Plus')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Choose plan' }).getAttribute('aria-pressed')).toBe('true');
+    expect(await screen.findByRole('link', { name: /Pay securely with Slickpay/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Continue to payment: Plus/ }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('keeps an activation deep link available after onboarding', async () => {

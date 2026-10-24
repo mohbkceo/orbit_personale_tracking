@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
+import { useAdminAuth } from '../context/useAuth.js';
+import { BulkUserActions } from './admin/BulkUserActions.jsx';
+export { AdminUserDetail } from './admin/UserDetail.jsx';
 
 const date = (value) => (value ? new Date(value).toLocaleString() : '—');
-const remainingTime = (value) => {
-  if (!value) return '—';
-  const milliseconds = new Date(value).getTime() - Date.now();
-  if (milliseconds <= 0) return 'Expired';
-  if (milliseconds >= 86400000) {
-    const days = Math.floor(milliseconds / 86400000);
-    return `${days} day${days === 1 ? '' : 's'}`;
-  }
-  const hours = Math.ceil(milliseconds / 3600000);
-  return `${hours} hour${hours === 1 ? '' : 's'}`;
-};
 function ErrorText({ error }) {
   return error ? (
     <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
@@ -110,17 +102,28 @@ function ListPanel({ title, rows = [], render }) {
 }
 
 export function AdminUsers() {
+  const { admin } = useAdminAuth();
+  const superAdmin = admin?.role === 'SUPER_ADMIN';
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(new Set());
+  const [bulkUsers, setBulkUsers] = useState(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  useEffect(() => {
+    const timer = setTimeout(() => { setQuery(search); setPage(1); }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
   useEffect(() => {
     let live = true;
+    setSelected(new Set());
     setLoading(true);
     api
-      .get('/admin/users', { params: { search, filter, page } })
+      .get('/admin/users', { params: { search: query, filter, page } })
       .then((response) => {
         if (live) {
           setResult(response);
@@ -136,13 +139,27 @@ export function AdminUsers() {
     return () => {
       live = false;
     };
-  }, [search, filter, page]);
+  }, [query, filter, page, refreshVersion]);
+  const rows = result?.data || [];
+  const selectedRows = rows.filter((row) => selected.has(row._id));
+  const allVisibleSelected = rows.length > 0 && selectedRows.length === rows.length;
+  function toggleUser(id) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleVisible() {
+    setSelected(allVisibleSelected ? new Set() : new Set(rows.map((row) => row._id)));
+  }
   return (
     <>
       <PageHeader
         eyebrow="Accounts"
         title="Users"
-        description="Account status and access history, without private workspace content."
+        description="Find an account, review its access, and open its management profile."
       />
       <div className="mb-5 flex flex-wrap gap-3">
         <input
@@ -152,7 +169,6 @@ export function AdminUsers() {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setPage(1);
           }}
         />
         <select
@@ -170,13 +186,27 @@ export function AdminUsers() {
         </select>
       </div>
       <ErrorText error={error} />
+      {superAdmin && !loading && rows.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-muted">{selectedRows.length} selected on this page</span>
+          <button className="underline" onClick={toggleVisible}>
+            {allVisibleSelected ? 'Deselect all on this page' : 'Select all on this page'}
+          </button>
+          <button className="btn-secondary" disabled={!selectedRows.length} onClick={() => setBulkUsers(selectedRows)}>
+            Apply action
+          </button>
+          {selectedRows.length > 0 && <button className="underline" onClick={() => setSelected(new Set())}>Clear selection</button>}
+        </div>
+      )}
       {loading ? (
         <Spinner />
       ) : (
-        <div className="panel">
+        <div className="panel overflow-hidden border border-border bg-white shadow-xs">
+          <p className="border-b border-border px-4 py-3 text-xs text-muted">{result?.pagination?.total || 0} users</p>
           <table className="admin-records w-full text-left text-sm">
             <thead>
               <tr className="border-b border-black/10 dark:border-white/10">
+                {superAdmin && <th className="p-4"><input type="checkbox" aria-label="Select all users on this page" checked={allVisibleSelected} onChange={toggleVisible} /></th>}
                 {['User', 'Access', 'Plan', 'Expires', 'Telegram'].map((label) => (
                   <th key={label} className="p-4">
                     {label}
@@ -185,23 +215,28 @@ export function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {result?.data?.map((row) => (
+              {rows.map((row) => (
                 <tr key={row._id} className="border-b border-black/5 dark:border-white/5">
-                  <td data-label="User" className="p-4">
-                    <Link
-                      className="font-bold text-primary hover:underline"
-                      to={`/admin/users/${row._id}`}
-                    >
-                      {row.fullName}
-                    </Link>
-                    <div className="text-xs text-muted">{row.email}</div>
+                  {superAdmin && <td data-label="Select" className="p-4"><input type="checkbox" aria-label={`Select ${row.fullName} (${row.email})`} checked={selected.has(row._id)} onChange={() => toggleUser(row._id)} /></td>}
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">{row.fullName?.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>
+                      <div className="min-w-0"><Link
+                        className="font-bold text-primary hover:underline"
+                        to={`/admin/users/${row._id}`}
+                      >
+                        {row.fullName}
+                      </Link>
+                      <div className="break-all text-xs text-muted">{row.email}</div>
+                      <div className="text-xs text-muted">Joined {date(row.createdAt)} · Last login {date(row.lastLoginAt)}</div></div>
+                    </div>
                   </td>
                   <td data-label="Status" className="p-4">
                     <StatusBadge tone={row.accessStatus === 'ACTIVE' ? 'success' : 'warning'}>
                       {row.accessStatus}
                     </StatusBadge>
                   </td>
-                  <td data-label="Plan" className="p-4">{row.access?.planSnapshot?.name || '—'}</td>
+                  <td data-label="Plan" className="p-4">{row.access?.planSnapshot?.name || 'Free'}</td>
                   <td data-label="Expires" className="p-4">{date(row.access?.expiresAt)}</td>
                   <td data-label="Telegram" className="p-4">{row.telegram ? 'Connected' : '—'}</td>
                 </tr>
@@ -226,136 +261,12 @@ export function AdminUsers() {
           Next
         </button>
       </div>
-    </>
-  );
-}
-
-export function AdminUserDetail() {
-  const { id } = useParams();
-  const { data, error, loading, refresh } = useResource(`/admin/users/${id}`);
-  const plans = useResource('/admin/plans');
-  const [planId, setPlanId] = useState('');
-  const [url, setUrl] = useState('');
-  const [actionError, setActionError] = useState('');
-  async function status(value) {
-    try {
-      await api.patch(`/admin/users/${id}/status`, { status: value });
-      setActionError('');
-      refresh();
-    } catch (failure) {
-      setActionError(failure.message);
-    }
-  }
-  async function renewal() {
-    try {
-      const response = await api.post(`/admin/users/${id}/renewal-link`, { planId });
-      setUrl(response.data.url);
-      setActionError('');
-    } catch (failure) {
-      setActionError(failure.message);
-    }
-  }
-  if (loading) return <Spinner />;
-  return (
-    <>
-      <PageHeader
-        eyebrow="User detail"
-        title={data?.user?.fullName || 'User'}
-        description={data?.user?.email}
-      />
-      <ErrorText error={error || actionError} />
-      {data && (
-        <div className="grid gap-5 lg:grid-cols-2">
-          <section className="panel admin-break space-y-3 p-5 text-sm">
-            <h2 className="font-display text-lg font-bold">Identity and access</h2>
-            <p>
-              Status:{' '}
-              <StatusBadge tone={data.user.status === 'ACTIVE' ? 'success' : 'danger'}>
-                {data.user.status}
-              </StatusBadge>
-            </p>
-            <p>Created: {date(data.user.createdAt)}</p>
-            <p>Last login: {date(data.user.lastLoginAt)}</p>
-            <p>Plan: {data.access?.planSnapshot?.name || 'None'}</p>
-            <p>
-              Access:{' '}
-              {data.user.status === 'SUSPENDED'
-                ? 'SUSPENDED'
-                : data.access
-                  ? data.access.status
-                  : 'FREE'}
-            </p>
-            <p>Started: {date(data.access?.startedAt)}</p>
-            <p>Expires: {date(data.access?.expiresAt)}</p>
-            <p>Remaining: {remainingTime(data.access?.expiresAt)}</p>
-            <p>
-              Telegram:{' '}
-              {data.telegram
-                ? `@${data.telegram.telegramUsername || data.telegram.telegramUserId} · linked ${date(data.telegram.linkedAt)}`
-                : 'Not connected'}
-            </p>
-            {data.telegram && (
-              <p>Last Telegram activity: {date(data.telegram.lastInteractionAt)}</p>
-            )}
-            <div className="flex gap-2">
-              <button
-                className="btn-secondary"
-                onClick={() => status(data.user.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')}
-              >
-                {data.user.status === 'ACTIVE' ? 'Suspend' : 'Unsuspend'}
-              </button>
-            </div>
-          </section>
-          <section className="panel p-5">
-            <h2 className="font-display text-lg font-bold">Generate renewal link</h2>
-            <select
-              className="field mt-4"
-              value={planId}
-              onChange={(e) => setPlanId(e.target.value)}
-            >
-              <option value="">Select plan</option>
-              {plans.data
-                ?.filter((plan) => plan.status === 'ACTIVE')
-                .map((plan) => (
-                  <option key={plan._id} value={plan._id}>
-                    {plan.name}
-                  </option>
-                ))}
-            </select>
-            <button disabled={!planId} className="btn-primary mt-3" onClick={renewal}>
-              Generate link
-            </button>
-            {url && (
-              <p className="mt-4 break-all rounded-lg bg-surface-alt p-3 text-xs">
-                {url}
-                <button
-                  className="ml-2 text-primary underline"
-                  onClick={() => navigator.clipboard.writeText(url)}
-                >
-                  Copy
-                </button>
-              </p>
-            )}
-          </section>
-          <section className="panel p-5 lg:col-span-2">
-            <h2 className="mb-4 font-display text-lg font-bold">Access history</h2>
-            <div className="space-y-3">
-              {data.history.map((row) => (
-                <div
-                  key={row._id}
-                  className="rounded-xl border border-black/10 p-3 text-sm dark:border-white/10"
-                >
-                  <b>{row.planSnapshot?.name}</b> · {row.planSnapshot?.durationValue}{' '}
-                  {row.planSnapshot?.durationUnit}
-                  <div className="text-xs text-muted">
-                    Activated {date(row.activatedAt)} · expires {date(row.expiresAt)} · link{' '}
-                    {row.activationLink}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+      {bulkUsers && (
+        <BulkUserActions
+          users={bulkUsers}
+          onClose={() => setBulkUsers(null)}
+          onApplied={async () => { setPage(1); setRefreshVersion((value) => value + 1); }}
+        />
       )}
     </>
   );

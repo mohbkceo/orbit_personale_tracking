@@ -47,6 +47,9 @@ import { paymentRoutes, adminPaymentRoutes } from './routes/payments.js';
 import { meCapabilityRoutes } from './routes/meCapabilities.js';
 import { meOnboardingRoutes } from './routes/meOnboarding.js';
 import { adminAccessControlRoutes } from './routes/adminAccessControl.js';
+import { adminSupportRoutes } from './routes/adminSupport.js';
+import { supportRequestGuard } from './middleware/supportRequestGuard.js';
+import { adminUserActionRoutes } from './routes/adminUserActions.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -56,6 +59,7 @@ app.use(advertisingFramePolicy);
 app.use(express.json({ limit: '256kb' }));
 app.use(express.urlencoded({ extended: false, limit: '64kb' }));
 app.use(cookieParser());
+app.use(supportRequestGuard);
 app.use(verifyBrowserOrigin);
 app.use(rejectUnsafeKeys);
 
@@ -82,6 +86,8 @@ app.use('/api/admin/activation-links', adminActivationLinkRoutes);
 app.use('/api/admin/qr-batches', adminQrBatchRoutes);
 app.use('/api/admin/qr-print-templates', adminQrPrintTemplateRoutes);
 app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/admin/users', adminUserActionRoutes);
+app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/admin/admins', adminAdminRoutes);
 app.use('/api/admin/settings/automation', adminAutomationSettingsRoutes);
 app.use('/api/admin/settings/events', adminEventSettingsRoutes);

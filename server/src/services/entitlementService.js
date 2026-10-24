@@ -5,6 +5,7 @@ import { AccessConfiguration } from '../models/AccessConfiguration.js';
 import { checkAccess } from './accessService.js';
 import { DEFAULTS, LEGACY_FEATURE_KEYS } from './entitlementCatalog.js';
 import { AppError } from '../utils/AppError.js';
+import { UserFeatureOverride } from '../models/UserFeatureOverride.js';
 
 let catalogCache;
 export function invalidateEntitlementCache() { catalogCache = undefined; }
@@ -39,10 +40,11 @@ function included(entries, key) {
   return (LEGACY_FEATURE_KEYS[key] || []).map((alias) => entries[alias]).find(Boolean);
 }
 
-export async function resolveUserEntitlements(userOrId, { now = new Date() } = {}) {
+export async function resolveUserEntitlements(userOrId, { now = new Date(), readOnly = false } = {}) {
   const user = typeof userOrId === 'object' && userOrId.status ? userOrId : await User.findById(userOrId);
   if (!user) throw new AppError('Account not found', 401, undefined, 'UNAUTHENTICATED');
-  const [access, data] = await Promise.all([checkAccess(user, { now }), catalog()]);
+  const [access, data, individualOverrides] = await Promise.all([checkAccess(user, { now, readOnly }), catalog(), UserFeatureOverride.find({ user: user._id }).lean()]);
+  const overrideByKey = Object.fromEntries(individualOverrides.map((item) => [item.key, item]));
   const featureIds = Object.fromEntries(Object.values(data.byKey).filter((item) => item._id).map((item) => [String(item._id), item.key]));
   const freePlan = data.plans.find((plan) => plan.kind === 'FREE' || plan.slug === 'free');
   const paidPlan = access.subscription && data.plans.find((plan) => String(plan._id) === String(access.subscription.plan));
@@ -67,7 +69,8 @@ export async function resolveUserEntitlements(userOrId, { now = new Date() } = {
     };
     let entry = included(freeEntries, key);
     if (access.subscription) entry = included(paidEntries, key) || included(planEntries, key) || (legacyUnscopedPaid && feature.type !== 'LIMIT' && key !== 'advanced-analytics' ? { enabled: true } : null) || entry;
-    let allowed = access.eligible && (feature.accessMode === 'FREE' || (feature.accessMode !== 'DISABLED' && feature.status !== 'INACTIVE' && (entry?.enabled ?? false)));
+    if (overrideByKey[key]) entry = overrideByKey[key];
+    let allowed = access.eligible && (overrideByKey[key] ? overrideByKey[key].enabled : feature.accessMode === 'FREE' || (feature.accessMode !== 'DISABLED' && feature.status !== 'INACTIVE' && (entry?.enabled ?? false)));
     if (feature.accessMode === 'DISABLED' || feature.status === 'INACTIVE') allowed = false;
     const reason = !access.eligible ? 'ACCOUNT_SUSPENDED' : feature.accessMode === 'DISABLED' || feature.status === 'INACTIVE' ? 'FEATURE_DISABLED' : allowed ? null : 'PLAN_REQUIRED';
     decisions[key] = { allowed, featureKey: key, reason, currentPlan: effectivePlan.slug,

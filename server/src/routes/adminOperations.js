@@ -22,7 +22,15 @@ adminOperationRoutes.get('/dashboard', asyncHandler(async (_req, res) => {
   await ActivationLink.updateMany({ status: 'ACTIVE', expiresAt: { $lte: now } }, { $set: { status: 'EXPIRED' } });
   const [totalUsers, suspendedUsers, telegramConnected, unusedActivationLinks, latest, suspended] = await Promise.all([
     User.countDocuments(), User.countDocuments({ status: 'SUSPENDED' }), TelegramConnection.countDocuments(), ActivationLink.countDocuments({ status: 'ACTIVE', expiresAt: { $gt: now } }),
-    AccessSubscription.aggregate([{ $sort: { expiresAt: -1 } }, { $group: { _id: '$user', latest: { $first: '$$ROOT' } } }, { $replaceRoot: { newRoot: '$latest' } }]),
+    AccessSubscription.aggregate([
+      { $match: { status: { $in: ['ACTIVE', null] } } },
+      { $sort: { expiresAt: -1 } },
+      { $group: { _id: '$user', latest: { $first: '$$ROOT' } } },
+      { $replaceRoot: { newRoot: '$latest' } },
+      { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'owner' } },
+      { $match: { 'owner.0': { $exists: true } } },
+      { $project: { owner: 0 } },
+    ]),
     User.find({ status: 'SUSPENDED' }).select('_id'),
   ]);
   const suspendedIds = new Set(suspended.map((item) => String(item._id)));

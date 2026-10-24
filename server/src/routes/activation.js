@@ -25,7 +25,7 @@ activationRoutes.get('/:key', validationLimit, asyncHandler(async (req, res) => 
 }));
 activationRoutes.post('/:key/register', validationLimit, validate(registrationInput), asyncHandler(async (req, res) => {
   const user = await registerWithLink(req.params.key, req.body, req, res);
-  issueCookie(res, user, 'user');
+  await issueCookie(res, user, 'user', req);
   return success(res, { user: safeIdentity(user), activationPending: true, conversion: { name: 'CompleteRegistration', eventId: `registration:${user._id}` } }, 201);
 }));
 activationRoutes.post('/:key/activate', userAuth, asyncHandler(async (req, res) => {

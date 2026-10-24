@@ -10,9 +10,11 @@ import { getAutomationSettings } from '../services/automationSettings.service.js
 import { runTaskReminderDigestForUser } from './taskReminderDigestWorker.js';
 import { backfillTaskReminderState, suppressLegacyTaskReminders } from '../services/migrateTaskReminders.service.js';
 import { runDzEventSync } from './dzEventSyncWorker.js';
+import { expireDueSupportSessions } from '../services/supportSessionService.js';
 
 export async function runJobsOnce() {
   const now = new Date();
+  await expireDueSupportSessions();
   const automation = await getAutomationSettings();
   await backfillTaskReminderState();
   await suppressLegacyTaskReminders();

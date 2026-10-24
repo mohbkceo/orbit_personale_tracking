@@ -67,6 +67,8 @@ const AdminEventSettings = lazy(() => import('./pages/admin/EventSettings.jsx'))
 const AdminEvents = lazy(() => import('./pages/admin/Events.jsx'));
 const AdminAnalytics = lazy(() => import('./pages/admin/analytics/Analytics.jsx'));
 const AdminAccessControl = lazy(() => import('./pages/AdminAccessControl.jsx'));
+const SupportWorkspace = lazy(() => import('./pages/admin/SupportWorkspace.jsx'));
+const AccountAction = lazy(() => import('./pages/AccountAction.jsx'));
 const gate = (featureKey, child) => <FeatureGate featureKey={featureKey}>{child}</FeatureGate>;
 
 function ProtectedRoute({ children }) {
@@ -124,6 +126,7 @@ export default function App() {
           <Route path="subscribe" element={<Subscribe />} />
           <Route path="activate/:key" element={<Activation />} />
           <Route path="access" element={<Access />} />
+          <Route path="account-action/:token" element={<AccountAction />} />
           <Route
             path="panel"
             element={
@@ -157,6 +160,7 @@ export default function App() {
           }
         >
           <Route path="admin/login" element={<AdminLogin />} />
+          <Route path="admin/users/:id/inside" element={<AdminProtectedRoute superOnly><SupportWorkspace /></AdminProtectedRoute>} />
           <Route
             path="admin"
             element={

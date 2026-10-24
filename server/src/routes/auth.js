@@ -5,7 +5,7 @@ import { validate } from '../middleware/validate.js';
 import { userAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/api.js';
-import { clearCookie, issueCookie, login, safeIdentity } from '../services/authService.js';
+import { clearCookie, issueCookie, login, safeIdentity, revokeCurrentSession } from '../services/authService.js';
 import { checkAccess } from '../services/accessService.js';
 import { audit } from '../services/auditService.js';
 import { User } from '../models/User.js';
@@ -13,20 +13,23 @@ import { ensureSession } from '../analytics/sessionService.js';
 import { clearAnalyticsIdentity } from '../analytics/identityService.js';
 import { analyticsAllowed } from '../analytics/consentService.js';
 import { registerPublic } from '../services/registrationService.js';
+import { completeAccountAction, inspectAccountAction } from '../services/accountRecoveryService.js';
 
 const loginInput = z.object({ email: z.email(), password: z.string().min(1) });
 export const authRoutes = Router();
+authRoutes.get('/account-action/:token', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 30 }), asyncHandler(async (req, res) => success(res, await inspectAccountAction(req.params.token))));
+authRoutes.post('/account-action/:token', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10 }), validate(z.strictObject({ password: z.string().min(12).max(200).optional() })), asyncHandler(async (req, res) => success(res, await completeAccountAction(req.params.token, req.body.password))));
 authRoutes.post('/register', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(z.strictObject({
   fullName: z.string().trim().min(2).max(120), email: z.string().trim().toLowerCase().max(254).pipe(z.email()), password: z.string().min(12).max(200),
   language: z.enum(['en', 'ar']).optional(),
 })), asyncHandler(async (req, res) => {
   const user = await registerPublic(req.body, req, res);
-  issueCookie(res, user, 'user');
+  await issueCookie(res, user, 'user', req);
   return success(res, { user: safeIdentity(user), access: await checkAccess(user), conversion: { name: 'CompleteRegistration', eventId: `registration:${user._id}` } }, 201);
 }));
 authRoutes.post('/login', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(loginInput), asyncHandler(async (req, res) => {
   const user = await login(req.body.email, req.body.password, 'user');
-  issueCookie(res, user, 'user');
+  await issueCookie(res, user, 'user', req);
   if (analyticsAllowed(req)) {
     try { await ensureSession(req, res, {}, user._id); }
     catch (error) { if (process.env.NODE_ENV !== 'test') console.error('Analytics identification failed', error); }
@@ -34,7 +37,7 @@ authRoutes.post('/login', rateLimit({ windowMs: 15 * 60_000, limit: process.env.
   await audit('USER_LOGIN', { actorType: 'USER', actorId: user._id, targetType: 'User', targetId: user._id, ip: req.ip });
   return success(res, { user: safeIdentity(user), access: await checkAccess(user) });
 }));
-authRoutes.post('/logout', (_req, res) => { clearCookie(res, 'user'); clearAnalyticsIdentity(res); return success(res, { loggedOut: true }); });
+authRoutes.post('/logout', asyncHandler(async (req, res) => { await revokeCurrentSession(req); clearCookie(res, 'user'); clearAnalyticsIdentity(res); return success(res, { loggedOut: true }); }));
 authRoutes.get('/me', userAuth, asyncHandler(async (req, res) => success(res, { user: safeIdentity(req.user), access: await checkAccess(req.user) })));
 authRoutes.patch('/me', userAuth, validate(z.object({ gender: z.enum(['MALE', 'FEMALE']) }).strict()), asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(req.user._id, { $set: { gender: req.body.gender } }, { new: true, runValidators: true });

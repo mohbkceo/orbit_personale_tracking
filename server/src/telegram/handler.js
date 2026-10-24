@@ -7,6 +7,7 @@ import { Debt } from '../models/Debt.js';
 import { Transaction } from '../models/Transaction.js';
 import { User } from '../models/User.js';
 import { TelegramConnection } from '../models/TelegramConnection.js';
+import { TelegramInteraction } from '../models/TelegramInteraction.js';
 import { updateTransaction } from '../services/financeService.js';
 import { updateTask } from '../services/taskService.js';
 import { checkAccess } from '../services/accessService.js';
@@ -254,6 +255,13 @@ export async function handleTelegramUpdate(update) {
   await connection.save();
   const user = await User.findById(connection.user);
   if (!user) return;
+  // Store only a bounded command category, never raw message/callback content.
+  const command = text.split(/\s+/)[0].toLowerCase();
+  const knownCommands = new Set(['/start', '/today', '/quick', '/tasks', '/debts', '/sales', '/money', '/expenses', '/income', '/accounts', '/month', '/bills', '/subscriptions', '/goals', '/last', '/reminders', '/help', '/cancel', '/language', '/focus', '/focusdate', '/nextaction', '/taskdate', '/snooze', '/debtpay']);
+  const callbackCategory = ({ task: 'TASK', debt: 'DEBT', tx: 'TRANSACTION', r: 'REMINDER', f: 'FOCUS', e: 'EVENT', add: 'QUICK_ADD', quick: 'QUICK_ADD', nav: 'NAVIGATION' })[String(callback?.data || '').split(':')[0]];
+  const category = callback ? callbackCategory || 'CALLBACK' : knownCommands.has(command) ? command : text.startsWith('/') ? 'COMMAND' : 'MESSAGE';
+  try { await TelegramInteraction.create({ user: user._id, kind: callback ? 'CALLBACK' : 'MESSAGE', category, ...(Number.isSafeInteger(update.update_id) ? { updateId: update.update_id } : {}) }); }
+  catch (error) { if (error.code !== 11000 && process.env.NODE_ENV !== 'test') console.error('Telegram interaction metadata unavailable'); }
   const settings = await getSettingsDocument(user._id);
   if (!(await checkAccess(user)).eligible) return sendMessage(token, chatId, tr(settings, 'suspended'));
   const identity = { userId: from.id, chatId };

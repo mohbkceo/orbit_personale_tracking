@@ -10,6 +10,8 @@ const schema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().min(8).default('development-webhook-secret'),
   APP_BASE_URL: z.string().default('http://localhost:5000'),
   AUTH_JWT_SECRET: z.string().min(32).default('development-auth-secret-change-this-before-production'),
+  RESEND_API_KEY: z.string().default(''),
+  EMAIL_FROM: z.string().default(''),
   ORBIT_TELEGRAM_BOT_TOKEN: z.string().default(''),
   ORBIT_TELEGRAM_BOT_USERNAME: z.string().default(''),
   DZEVENT_API_KEY: z.string().default(''),
