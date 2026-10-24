@@ -10,7 +10,7 @@ const links = [
   ['About', '/about'],
 ];
 
-export function MarketingHeader({ onGetStarted }) {
+export function MarketingHeader() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
@@ -44,13 +44,12 @@ export function MarketingHeader({ onGetStarted }) {
           <Link to="/login" className="marketing-sign-in">
             {t('auth:signIn')}
           </Link>
-          <button
-            type="button"
+          <Link
+            to="/register"
             className="marketing-button marketing-button-primary"
-            onClick={onGetStarted}
           >
             {t('marketing:getStarted')}
-          </button>
+          </Link>
         </div>
         <LanguageSelector className="marketing-mobile-language" />
         <button
@@ -78,16 +77,13 @@ export function MarketingHeader({ onGetStarted }) {
           <Link to="/login" onClick={() => setOpen(false)}>
             {t('auth:signIn')}
           </Link>
-          <button
-            type="button"
+          <Link
+            to="/register"
             className="marketing-button marketing-button-primary"
-            onClick={() => {
-              setOpen(false);
-              onGetStarted();
-            }}
+            onClick={() => setOpen(false)}
           >
             {t('marketing:getStarted')}
-          </button>
+          </Link>
           <LanguageSelector />
         </nav>
       )}

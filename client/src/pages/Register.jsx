@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { Spinner } from '../components/ui.jsx';
@@ -14,14 +14,22 @@ export default function Register() {
   const [params] = useSearchParams(); const navigate = useNavigate();
   const [form, setForm] = useState({ fullName: '', email: '', password: '' });
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const registering = useRef(false);
   const next = loginDestination(params.get('next'), access?.eligible);
   if (loading) return <Spinner />;
-  if (user) return <Navigate to={next} replace />;
+  if (user) return <Navigate to={registering.current ? '/onboarding' : next} replace />;
   async function submit(event) {
-    event.preventDefault(); if (busy) return; setBusy(true); setError('');
+    event.preventDefault(); if (registering.current) return; registering.current = true; setBusy(true); setError('');
     analytics.track(EVENTS.SIGNUP_STARTED);
-    try { await registerDirect(form); navigate(next, { replace: true }); }
-    catch (failure) { setError(failure.message); }
+    try {
+      await registerDirect(form);
+      try {
+        sessionStorage.removeItem('orbit:registration-next');
+        if (params.get('next') && next !== '/panel' && next !== '/access') sessionStorage.setItem('orbit:registration-next', next);
+      } catch { /* Registration succeeded even if browser storage is unavailable. */ }
+      navigate('/onboarding', { replace: true });
+    }
+    catch (failure) { registering.current = false; setError(failure.message); }
     finally { setBusy(false); }
   }
   return <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10"><section className="panel w-full max-w-md p-6 sm:p-8">

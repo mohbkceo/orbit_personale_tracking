@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { Spinner } from '../components/ui.jsx';
 import { formatMoney } from '../utils/format.js';
@@ -316,7 +316,6 @@ function PricingCard({ plan, onGetStarted, recommended = false }) {
 
 export default function Pricing() {
   const { t: _t } = useTranslation();
-  const { openGetStarted } = useOutletContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const originFeature = searchParams.get('feature');
@@ -450,7 +449,7 @@ export default function Pricing() {
               ].join(' ')}
             >
               {plans.map((plan, index) => (
-                <PricingCard key={plan.id || plan._id || index} plan={plan} recommended={plan.slug === recommendedSlug} onGetStarted={() => plan.kind === 'FREE' || plan.slug === 'free' ? navigate('/register?next=%2Fpanel') : plan.price?.currency === 'DZD' && plan.price.amount > 0 ? navigate(`/checkout?plan=${encodeURIComponent(plan.id)}${originFeature ? `&feature=${encodeURIComponent(originFeature)}` : ''}`) : openGetStarted()} />
+                <PricingCard key={plan.id || plan._id || index} plan={plan} recommended={plan.slug === recommendedSlug} onGetStarted={() => navigate(`/register${plan.kind === 'FREE' || plan.slug === 'free' ? '' : `?next=${encodeURIComponent(`/checkout?plan=${encodeURIComponent(plan.id)}`)}`}`)} />
               ))}
             </div>
           ) : (

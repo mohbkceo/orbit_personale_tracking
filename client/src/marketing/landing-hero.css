@@ -1,0 +1,320 @@
+/* Landing-only overrides. Keep marketing.css for the public header and modal. */
+.marketing-hero.orbit-showcase {
+  background: #fffdfb;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.orbit-showcase .marketing-hero-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 1440px;
+  min-height: 0;
+  margin: 0 auto;
+  padding: clamp(45px, 6.5vw, 90px) 24px 0;
+}
+
+.orbit-showcase .marketing-hero-copy {
+  width: 100%;
+  max-width: 1100px;
+  padding: 0;
+  text-align: center;
+}
+
+.orbit-showcase .marketing-hero-copy h1 {
+  margin: 0;
+  font-size: clamp(58px, 8vw, 120px);
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.065em;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+.orbit-showcase .orbit-showcase-title-line {
+  display: block;
+  color: #111821;
+}
+
+.orbit-showcase .orbit-showcase-title-accent {
+  color: #ff6422;
+}
+
+.orbit-showcase[dir='rtl'] .marketing-hero-copy h1 {
+  line-height: 1.27;
+  letter-spacing: -0.025em;
+}
+
+.orbit-showcase .marketing-hero-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: clamp(26px, 3vw, 42px);
+}
+
+.orbit-showcase .marketing-hero-actions .marketing-button {
+  display: inline-flex;
+  justify-content: center;
+  gap: 16px;
+  flex: 0 1 auto;
+  min-width: 220px;
+  min-height: 65px;
+  padding: 0 24px;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.orbit-showcase .marketing-hero-primary {
+  box-shadow: 0 8px 25px rgba(255, 100, 34, 0.13);
+}
+
+.orbit-showcase .marketing-hero-visual {
+  position: relative;
+  width: 100%;
+  height: 740px;
+  margin-top: 58px;
+  padding: 0;
+  isolation: isolate;
+}
+
+.orbit-showcase .marketing-orange-disc {
+  position: absolute;
+  z-index: -2;
+  width: min(1050px, 110%);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 230px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 20%, #ff9f53 0%, #ff792d 44%, #f45c1d 100%);
+}
+
+.orbit-showcase .marketing-orbit-ring {
+  position: absolute;
+  z-index: -1;
+  width: 1050px;
+  height: 1050px;
+  top: 8px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid #ffdac6;
+  opacity: 1;
+}
+
+.orbit-showcase .marketing-orbit-ring::after { display: none; }
+
+.orbit-showcase-phone-position {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: min(460px, 78vw);
+  transform: translateX(-50%) rotate(8deg);
+  transform-origin: center 18%;
+  filter: drop-shadow(0 24px 34px rgba(21, 25, 35, 0.20));
+}
+
+/* The demo preview is a portrait phone, not the old desktop dashboard. */
+.orbit-phone {
+  position: relative;
+  width: 100%;
+  padding: 11px;
+  border: 4px solid #242424;
+  border-radius: 54px;
+  background: #141414;
+  box-shadow: 0 0 0 3px #ff8b40, inset 0 0 0 2px #515151;
+}
+
+.orbit-phone-screen {
+  min-height: 865px;
+  overflow: hidden;
+  border-radius: 40px;
+  background: #fcfcfc;
+  color: #15181d;
+}
+
+.orbit-phone-island {
+  position: absolute;
+  z-index: 4;
+  top: 21px;
+  left: 50%;
+  width: 105px;
+  height: 29px;
+  border-radius: 99px;
+  transform: translateX(-50%);
+  background: #0c0c0e;
+}
+
+.orbit-phone-status {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px 0;
+  font-size: 14px;
+}
+
+.orbit-phone-status-icons { display: flex; align-items: center; gap: 5px; }
+.orbit-phone-battery { width: 23px; height: 11px; border: 2px solid #101820; border-radius: 4px; background: #101820; box-shadow: inset -3px 0 #fff; }
+
+.orbit-phone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 59px;
+  padding: 0 22px;
+  border-bottom: 1px solid #edf0f2;
+}
+
+.orbit-phone-brand { display: flex; align-items: center; gap: 7px; font-size: 27px; letter-spacing: -0.06em; }
+.orbit-phone-brand img { width: 29px; height: 29px; object-fit: contain; }
+
+.orbit-phone-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 58px;
+  padding: 0 14px;
+  border-bottom: 1px solid #e9edf0;
+}
+
+.orbit-phone-search {
+  display: grid;
+  place-items: center;
+  width: 43px;
+  height: 39px;
+  border: 1px solid #e4e7eb;
+  border-radius: 11px;
+  color: #647485;
+}
+
+.orbit-phone-language {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid #e4e7eb;
+  border-radius: 11px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+.orbit-phone-language span { padding: 6px 8px; color: #667182; font-size: 11px; font-weight: 700; }
+.orbit-phone-language span.active { color: #fff; background: #c94d0f; border-radius: 7px; }
+.orbit-phone-bell { flex-shrink: 0; color: #6f7d8b; }
+.orbit-phone-ready { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #e8f5ed; color: #25815b; }
+.orbit-phone-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #c95314; color: white; font-size: 11px; font-weight: 800; }
+
+.orbit-phone-content { padding: 31px 18px 0; }
+.orbit-phone-welcome h2 { margin: 0; font-size: clamp(19px, 3vw, 27px); line-height: 1.25; letter-spacing: -0.035em; font-weight: 800; }
+.orbit-phone-welcome h2 span { font-size: 22px; }
+.orbit-phone-welcome p { margin: 12px 0 21px; color: #778492; font-size: 13px; }
+.orbit-phone-welcome small { display: block; margin-bottom: 23px; color: #778492; font-size: 12px; }
+
+.orbit-phone-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.orbit-phone-metric {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 195px;
+  padding: 17px;
+  border: 1px solid #e2e5e9;
+  border-radius: 19px;
+  background: #fff;
+}
+
+.orbit-phone-metric-icon { display: grid; place-items: center; width: 41px; height: 41px; border-radius: 50%; }
+.orbit-phone-metric-icon.orange { background: #fff0e8; color: #c85716; }
+.orbit-phone-metric-icon.green { background: #e8f6ee; color: #22855d; }
+.orbit-phone-metric-icon.rose { background: #fcecee; color: #bc5266; }
+.orbit-phone-metric strong { margin-top: auto; padding-top: 13px; font-size: clamp(23px, 3.1vw, 32px); letter-spacing: -0.045em; line-height: 1.1; white-space: nowrap; }
+.orbit-phone-metric-label { margin-top: 8px; font-size: 15px; color: #71808c; }
+.orbit-phone-metric small { margin-top: 6px; font-size: 11px; color: #89939c; }
+
+.orbit-phone-bottomnav {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 2px;
+  margin-top: 32px;
+  padding: 15px 8px 22px;
+  border-top: 1px solid #e2e6eb;
+  background: #fff;
+}
+
+.orbit-phone-tab { flex: 1; display: grid; justify-items: center; gap: 6px; color: #758391; }
+.orbit-phone-tab > span { display: grid; place-items: center; height: 36px; }
+.orbit-phone-tab small { font-size: 11px; }
+.orbit-phone-tab.is-active { color: #c95314; }
+.orbit-phone-tab.is-add > span { width: 44px; height: 44px; margin-top: -8px; border-radius: 50%; background: #ff6422; color: white; }
+.orbit-phone-tab.is-add { color: #c95314; }
+
+@media (max-width: 900px) {
+  .orbit-showcase .marketing-hero-inner { padding-top: 54px; padding-bottom: 0; }
+  .orbit-showcase .marketing-hero-copy h1 { font-size: clamp(54px, 9.8vw, 86px); }
+  .orbit-showcase .marketing-hero-visual { height: 700px; margin-top: 48px; }
+}
+
+@media (max-width: 680px) {
+  .orbit-showcase .marketing-hero-inner { padding: 52px 16px 0; }
+  .orbit-showcase .marketing-hero-copy h1 { font-size: clamp(38px, 9.8vw, 61px); line-height: 1.11; }
+  .orbit-showcase[dir='rtl'] .marketing-hero-copy h1 { line-height: 1.33; }
+  .orbit-showcase .marketing-hero-actions { flex-wrap: nowrap; gap: 10px; margin-top: 28px; }
+  .orbit-showcase .marketing-hero-actions .marketing-button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 53px;
+    gap: 7px;
+    padding: 0 9px;
+    border-radius: 12px;
+    font-size: clamp(12px, 3.65vw, 15px);
+  }
+  .orbit-showcase .marketing-hero-actions .marketing-button svg { width: 19px; flex-shrink: 0; }
+  .orbit-showcase .marketing-hero-visual { height: 530px; margin-top: 40px; }
+  .orbit-showcase .marketing-orange-disc { width: 180%; top: 200px; }
+  .orbit-showcase .marketing-orbit-ring { width: 700px; height: 700px; top: 0; }
+  .orbit-showcase-phone-position { top: 10px; width: min(87vw, 380px); transform: translateX(-50%) rotate(8deg); }
+  .orbit-phone { padding: 7px; border-width: 3px; border-radius: 39px; }
+  .orbit-phone-screen { min-height: 705px; border-radius: 31px; }
+  .orbit-phone-island { top: 17px; width: 84px; height: 23px; }
+  .orbit-phone-status { height: 39px; padding: 10px 16px 0; font-size: 12px; }
+  .orbit-phone-header { height: 49px; padding: 0 14px; }
+  .orbit-phone-brand { font-size: 20px; }
+  .orbit-phone-brand img { width: 23px; height: 23px; }
+  .orbit-phone-toolbar { height: 51px; gap: 4px; padding: 0 8px; }
+  .orbit-phone-search { width: 34px; height: 32px; }
+  .orbit-phone-language span { padding: 5px 6px; font-size: 9px; }
+  .orbit-phone-avatar { width: 28px; height: 28px; font-size: 9px; }
+  .orbit-phone-ready { width: 25px; height: 25px; }
+  .orbit-phone-content { padding: 23px 13px 0; }
+  .orbit-phone-welcome h2 { font-size: clamp(17px, 4.65vw, 23px); }
+  .orbit-phone-welcome p { margin: 9px 0 14px; font-size: 11px; }
+  .orbit-phone-welcome small { margin-bottom: 17px; font-size: 10px; }
+  .orbit-phone-metrics { gap: 8px; }
+  .orbit-phone-metric { min-height: 151px; padding: 11px; border-radius: 14px; }
+  .orbit-phone-metric-icon { width: 34px; height: 34px; }
+  .orbit-phone-metric-icon svg { width: 19px; }
+  .orbit-phone-metric strong { font-size: clamp(19px, 5.5vw, 25px); }
+  .orbit-phone-metric-label { margin-top: 7px; font-size: 12px; }
+  .orbit-phone-metric small { margin-top: 4px; font-size: 9px; }
+}
+
+@media (max-width: 360px) {
+  .orbit-showcase .marketing-hero-inner { padding-right: 12px; padding-left: 12px; }
+  .orbit-showcase .marketing-hero-copy h1 { font-size: 36px; }
+  .orbit-showcase .marketing-hero-actions .marketing-button { font-size: 12px; }
+  .orbit-phone-toolbar { gap: 2px; }
+  .orbit-phone-language span { padding-inline: 4px; }
+  .orbit-phone-metric { padding: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-showcase .marketing-button { transition: none; }
+}

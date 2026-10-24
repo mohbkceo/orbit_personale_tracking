@@ -8,7 +8,6 @@ vi.mock('../api/client.js', () => ({ api: { get: mocks.get, post: mocks.post } }
 vi.mock('../context/useAuth.js', () => ({ useAuth: () => ({ loading: false, user: mocks.user, refresh: mocks.refresh }) }));
 vi.mock('../analytics/meta.js', () => ({ meta: { event: mocks.event } }));
 vi.mock('../analytics/client.js', () => ({ analytics: { session: vi.fn() } }));
-vi.mock('../marketing/GetStartedModal.jsx', () => ({ GetStartedModal: () => null }));
 const plan = { name: 'Orbit month', durationValue: 1, durationUnit: 'MONTH', features: [{ key: 'tasks', name: 'Tasks', type: 'LIMIT', limit: 50 }] };
 const order = { id: 'order1', plan, state: 'PROCESSING', invoiceId: '123', amount: 2500, currency: 'DZD' };
 beforeEach(() => {
@@ -32,7 +31,7 @@ describe('checkout return and recovery', () => {
     render(<MemoryRouter initialEntries={['/checkout/return?order=order1']}><Checkout /></MemoryRouter>);
     expect(await screen.findByText('Payment verified. Your subscription is ready.')).toBeTruthy();
     expect(mocks.event).toHaveBeenCalledWith(conversion); expect(mocks.refresh).toHaveBeenCalled();
-    expect(screen.getByRole('link', { name: 'Continue to Orbit' }).getAttribute('href')).toBe('/onboarding');
+    expect(screen.getByRole('link', { name: 'Continue to Orbit' }).getAttribute('href')).toBe('/panel');
   });
   it('leaves a recoverable pending order on verification failure', async () => {
     mocks.post.mockRejectedValue(new Error('Could not verify payment. Check again.'));

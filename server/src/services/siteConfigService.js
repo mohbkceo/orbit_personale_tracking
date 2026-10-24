@@ -18,6 +18,7 @@ function formatSales(sales) {
     salesEmail: sales?.salesEmail || '',
     supportEmail: sales?.supportEmail || '',
     phoneNumber: sales?.phoneNumber || '',
+    ccpInstructions: sales?.ccpInstructions || '',
     whatsappEnabled: sales?.whatsappEnabled ?? true,
     contactVisible: sales?.contactVisible ?? false,
   };
@@ -28,7 +29,7 @@ export async function getSalesConfig() {
   return formatSales(config?.sales);
 }
 
-export async function updateSalesConfig({ whatsappNumber, whatsappMessage, salesEmail, supportEmail, phoneNumber, whatsappEnabled, contactVisible }) {
+export async function updateSalesConfig({ whatsappNumber, whatsappMessage, salesEmail, supportEmail, phoneNumber, ccpInstructions, whatsappEnabled, contactVisible }) {
   const sales = {
     whatsappNumber: normalizeWhatsAppNumber(whatsappNumber),
     whatsappMessage: whatsappMessage.trim(),
@@ -36,6 +37,7 @@ export async function updateSalesConfig({ whatsappNumber, whatsappMessage, sales
   if (salesEmail !== undefined) sales.salesEmail = salesEmail.trim().toLowerCase();
   if (supportEmail !== undefined) sales.supportEmail = supportEmail.trim().toLowerCase();
   if (phoneNumber !== undefined) sales.phoneNumber = phoneNumber.trim();
+  if (ccpInstructions !== undefined) sales.ccpInstructions = ccpInstructions.trim();
   if (whatsappEnabled !== undefined) sales.whatsappEnabled = whatsappEnabled;
   if (contactVisible !== undefined) sales.contactVisible = contactVisible;
   const config = await SiteConfig.findOneAndUpdate(

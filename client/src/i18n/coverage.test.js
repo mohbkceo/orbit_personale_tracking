@@ -11,7 +11,7 @@ const signature = (value) => [...value.matchAll(/{{\s*([\w.]+)\s*}}/g)].map((mat
 
 describe('locale resources', () => {
   it('has every required namespace in both languages', () => {
-    expect(Object.keys(en).sort()).toEqual(['common', 'navigation', 'auth', 'marketing', 'onboarding', 'dashboard', 'tasks', 'finance', 'debts', 'goals', 'reminders', 'events', 'settings', 'pricing', 'checkout', 'telegram', 'errors', 'notifications'].sort());
+    expect(Object.keys(en).sort()).toEqual(['common', 'navigation', 'auth', 'marketing', 'onboarding', 'subscribe', 'dashboard', 'tasks', 'finance', 'debts', 'goals', 'reminders', 'events', 'settings', 'pricing', 'checkout', 'telegram', 'errors', 'notifications'].sort());
     expect(Object.keys(ar).sort()).toEqual(Object.keys(en).sort());
   });
   it('has matching keys and interpolation signatures', () => {

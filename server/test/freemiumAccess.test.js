@@ -74,6 +74,18 @@ describe('Freemium access control', () => {
     expect(await AccessSubscription.countDocuments({ user: account._id })).toBe(0);
   });
 
+  it('persists plan selection skip while retaining Free access', async () => {
+    await member.patch('/api/me/plan-selection').send({ status: 'SKIPPED' }).expect(200);
+    const first = (await User.findById(account._id)).planSelectionSkippedAt;
+    expect(first).toBeInstanceOf(Date);
+    await member.patch('/api/me/plan-selection').send({ status: 'SKIPPED' }).expect(200);
+    expect((await User.findById(account._id)).planSelectionSkippedAt).toEqual(first);
+    await member.post('/api/auth/logout').expect(200);
+    await member.post('/api/auth/login').send({ email: signup.email, password: signup.password }).expect(200);
+    expect((await member.get('/api/auth/me').expect(200)).body.data.access.planType).toBe('FREE');
+    expect(await AccessSubscription.countDocuments({ user: account._id })).toBe(0);
+  });
+
   it('reports real first actions while the existing feature guards remain authoritative', async () => {
     await member.post('/api/tasks').send({ title: 'My first task' }).expect(201);
     await member.post('/api/accounts').send({ name: 'Everyday', type: 'bank', currency: 'DZD' }).expect(201);

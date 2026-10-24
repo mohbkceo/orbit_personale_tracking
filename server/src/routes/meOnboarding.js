@@ -60,3 +60,9 @@ meOnboardingRoutes.patch('/onboarding', validate(input), asyncHandler(async (req
   const user = await User.findOneAndUpdate(filter, { $set: update }, { new: true, runValidators: true });
   return success(res, state(user || await User.findById(req.user._id)));
 }));
+
+meOnboardingRoutes.patch('/plan-selection', validate(z.strictObject({ status: z.literal('SKIPPED') })), asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  await User.updateOne({ _id: req.user._id, planSelectionSkippedAt: { $exists: false } }, { $set: { planSelectionSkippedAt: new Date() } });
+  return success(res, { status: 'SKIPPED' });
+}));

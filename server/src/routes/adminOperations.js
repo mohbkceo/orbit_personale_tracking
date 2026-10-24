@@ -48,6 +48,7 @@ const salesInput = z.strictObject({
   salesEmail: z.union([z.email().max(254), z.literal('')]).optional(),
   supportEmail: z.union([z.email().max(254), z.literal('')]).optional(),
   phoneNumber: z.string().trim().max(40).refine((value) => !value || (/^\+?[\d\s().-]+$/.test(value) && /^\d{7,15}$/.test(value.replace(/\D/g, ''))), 'Enter 7 to 15 phone digits, or leave blank.').optional(),
+  ccpInstructions: z.string().trim().max(1000).optional(),
   whatsappEnabled: z.boolean().optional(),
   contactVisible: z.boolean().optional(),
 });

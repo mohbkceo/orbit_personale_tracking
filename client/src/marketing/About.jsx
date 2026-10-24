@@ -1,10 +1,9 @@
 import { ArrowRight, Check } from 'lucide-react';
-import { useOutletContext } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { marketingContent } from '../i18n/marketingContent.js';
 
 export default function About() {
-  const { openGetStarted } = useOutletContext();
   const { t, i18n } = useTranslation();
   const copy = marketingContent[i18n.resolvedLanguage === 'ar' ? 'ar' : 'en'].about;
   return (
@@ -18,13 +17,12 @@ export default function About() {
         <section>
           <h2>{copy.sectionTitle}</h2>
           <p>{copy.sectionBody}</p>
-          <button
-            type="button"
+          <Link
+            to="/register"
             className="marketing-button marketing-button-primary"
-            onClick={openGetStarted}
           >
             {t('marketing:getStarted')} <ArrowRight className="rtl-flip" size={18} />
-          </button>
+          </Link>
         </section>
         <div className="marketing-about-list">
           {copy.points.map((item) => (

@@ -31,6 +31,7 @@ const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const Checkout = lazy(() => import('./pages/Checkout.jsx'));
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'));
+const Subscribe = lazy(() => import('./pages/Subscribe.jsx'));
 const AdminPayments = lazy(() => import('./pages/AdminPayments.jsx'));
 const Activation = lazy(() => import('./pages/Activation.jsx'));
 const Access = lazy(() => import('./pages/Access.jsx'));
@@ -120,6 +121,7 @@ export default function App() {
           <Route path="checkout" element={<Checkout />} />
           <Route path="checkout/return" element={<Checkout />} />
           <Route path="onboarding" element={<Onboarding />} />
+          <Route path="subscribe" element={<Subscribe />} />
           <Route path="activate/:key" element={<Activation />} />
           <Route path="access" element={<Access />} />
           <Route

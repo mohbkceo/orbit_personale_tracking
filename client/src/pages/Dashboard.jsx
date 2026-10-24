@@ -69,7 +69,7 @@ function GoalRow({ goal }) {
 export default function Dashboard() {
   const { t: _t } = useTranslation();
   const { settings, darkMode, setQuickAddOpen } = useApp();
-  const { user } = useAuth();
+  const { user, access } = useAuth();
   const { data, loading, error, reload } = useData(loadDashboard, 'dashboard');
   const currency = settings.defaultCurrency || 'DZD';
   const preset = settings.appearance?.preset || 'orbit';
@@ -86,7 +86,7 @@ export default function Dashboard() {
   return <>
     <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div><h1 className="font-display text-[27px] font-bold tracking-tight sm:text-[30px]">{greeting}, {name} <span aria-hidden="true" className="text-primary">☀</span></h1><p className="mt-1 text-sm text-muted">{_t('dashboard:ui.heresYourDayAtAGlance')}</p></div>
-      <div className="flex items-center gap-3"><time className="pt-2 text-sm text-muted" dateTime={dayjs().format('YYYY-MM-DD')}>{formatDate(new Date())}</time><button type="button" className="btn-primary hidden sm:inline-flex" onClick={() => setQuickAddOpen(true)}>{_t('dashboard:ui.addNew')}</button></div>
+      <div className="flex flex-wrap items-center gap-3"><time className="text-sm text-muted" dateTime={dayjs().format('YYYY-MM-DD')}>{formatDate(new Date())}</time>{access?.planType === 'FREE' && <Link to="/subscribe" className="btn-secondary min-h-12">{_t('subscribe:explorePlans')}</Link>}<button type="button" className="btn-primary hidden sm:inline-flex" onClick={() => setQuickAddOpen(true)}>{_t('dashboard:ui.addNew')}</button></div>
     </header>
 
     <section aria-label={_t('dashboard:ui.summary')} className="grid grid-cols-2 gap-3 xl:grid-cols-4">

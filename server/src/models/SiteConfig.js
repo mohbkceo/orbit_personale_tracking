@@ -9,6 +9,7 @@ const siteConfigSchema = new mongoose.Schema(
       salesEmail: { type: String, default: '' },
       supportEmail: { type: String, default: '' },
       phoneNumber: { type: String, default: '' },
+      ccpInstructions: { type: String, default: '' },
       whatsappEnabled: { type: Boolean, default: true },
       contactVisible: { type: Boolean, default: false },
     },

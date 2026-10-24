@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { meta } from './meta.js';
 import { AnalyticsConsent } from './AnalyticsConsent.jsx';
@@ -7,9 +7,17 @@ import { useTranslation } from 'react-i18next';
 export function AdvertisingConsent() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(() => !meta.choice());
+  const [open, setOpen] = useState(() => {
+    if (meta.choice()) return false;
+    try { return localStorage.getItem('orbit-privacy-prompt-seen') !== '1'; }
+    catch { return true; }
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => {
+    if (!open || pathname.startsWith('/admin')) return;
+    try { localStorage.setItem('orbit-privacy-prompt-seen', '1'); } catch { /* Storage may be unavailable. */ }
+  }, [open, pathname]);
   if (pathname.startsWith('/admin')) return null;
   async function decide(granted) {
     setBusy(true); setError('');
@@ -17,7 +25,7 @@ export function AdvertisingConsent() {
     catch (failure) { setError(failure.message); }
     finally { setBusy(false); }
   }
-  if (!open) return <button className="fixed bottom-2 end-2 z-40 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted shadow" onClick={() => setOpen(true)}>{t('notifications:privacyChoices')}</button>;
+  if (!open) return null;
   return <aside aria-label={t('notifications:advertisingPrivacy')} className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-xl rounded-2xl border border-border bg-surface p-5 shadow-2xl">
     <AnalyticsConsent embedded />
     <p className="font-bold">{t('notifications:advertisingPrivacy')}</p>

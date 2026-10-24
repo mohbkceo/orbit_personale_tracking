@@ -1,13 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/useAuth.js';
 import { Spinner } from '../components/ui.jsx';
 import { meta } from '../analytics/meta.js';
 import { analytics } from '../analytics/client.js';
-import { GetStartedModal } from '../marketing/GetStartedModal.jsx';
-import '../marketing/marketing.css';
+import { whatsappUrl } from '../marketing/whatsapp.js';
 import { displayValue, formatMoney } from '../utils/format.js';
 import { planDuration, planFeature, planName } from '../utils/planDisplay.js';
 
@@ -18,9 +17,8 @@ export default function Checkout() {
   const planId = params.get('plan'); const orderId = params.get('order');
   const [plan, setPlan] = useState(null); const [order, setOrder] = useState(null);
   const [enabled, setEnabled] = useState(false); const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [contact, setContact] = useState(false);
+  const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [sales, setSales] = useState(null);
   const [resumeOrderId, setResumeOrderId] = useState(null);
-  const closeContact = useCallback(() => setContact(false), []);
   const [billing, setBilling] = useState({ firstname: '', lastname: '', phone: '', address: '' });
   const inFlight = useRef(false); const key = useRef(crypto.randomUUID());
   const confirmedOrder = useRef(null);
@@ -37,6 +35,7 @@ export default function Checkout() {
       .then(([config, data]) => {
         if (!live) return;
         setEnabled(config.data.payments?.enabled === true);
+        setSales(config.data.sales || null);
         if (orderId) { setOrder(data.data); setPlan(data.data.plan); }
         else { setOrder(null); key.current = crypto.randomUUID(); const selected = data.data.find((p) => p.id === planId); setPlan(selected || null); if (!selected) setError('planUnavailable'); }
       }).catch((failure) => { if (live) setError(failure.message); }).finally(() => { if (live) setLoading(false); });
@@ -102,13 +101,13 @@ export default function Checkout() {
     </section><section className="panel p-6">
       {error && <p role="alert" className="mb-4 text-sm text-danger">{error === 'planUnavailable' ? _t('checkout:ui.chooseAnAvailablePlanToContinue') : error}</p>}
       {resumeOrderId && <Link className="btn-secondary mb-4" to={`/checkout?order=${resumeOrderId}`}>{_t('checkout:ui.resumeUnfinishedOrder')}</Link>}
-      {paid ? <><p role="status">{_t('checkout:ui.paymentVerifiedYourSubscriptionIsReady')}</p><Link to="/onboarding" className="btn-primary mt-5">{_t('checkout:ui.continueToOrbit')}</Link></> : processing ? <><h2 className="font-bold">{_t('checkout:ui.paymentAwaitingConfirmation')}</h2><p role="status" className="mt-3 text-sm text-muted">{order.reviewCode ? _t('checkout:ui.weCouldNotConfirmThisPaymentYetKeepThisOrderReferenceAndContactS') : _t('checkout:ui.orbitWillActivateAccessOnlyAfterSlickpayConfirmsPayment')}</p><button disabled={busy} onClick={verify} className="btn-primary mt-5">{busy ? _t('checkout:ui.checking') : _t('checkout:ui.checkPaymentStatus')}</button>{order.invoiceId && !order.reviewCode && <form onSubmit={pay}><button disabled={busy || !enabled} className="btn-secondary mt-3">{_t('checkout:ui.resumeSecurePayment')}</button></form>}</> : terminal ? <><p role="status">{_t('pricing:accessState', { state: i18n.resolvedLanguage === 'ar' ? displayValue(order.state.toLowerCase()) : order.state.toLowerCase() })}</p><Link className="btn-primary mt-4" to="/pricing">{_t('checkout:ui.chooseAPlan')}</Link></> : !enabled ? <p role="status">{_t('checkout:ui.onlinePaymentIsCurrentlyUnavailableYouCanArrangeAccessThroughWha')}</p> : plan && plan.price?.currency !== 'DZD' && !order ? <p>{_t('checkout:ui.thisPlanIsAvailableThroughOurContactPurchaseOption')}</p> : plan && <form onSubmit={pay} className="space-y-4">
+      {paid ? <><p role="status">{_t('checkout:ui.paymentVerifiedYourSubscriptionIsReady')}</p><Link to="/panel" className="btn-primary mt-5">{_t('checkout:ui.continueToOrbit')}</Link></> : processing ? <><h2 className="font-bold">{_t('checkout:ui.paymentAwaitingConfirmation')}</h2><p role="status" className="mt-3 text-sm text-muted">{order.reviewCode ? _t('checkout:ui.weCouldNotConfirmThisPaymentYetKeepThisOrderReferenceAndContactS') : _t('checkout:ui.orbitWillActivateAccessOnlyAfterSlickpayConfirmsPayment')}</p><button disabled={busy} onClick={verify} className="btn-primary mt-5">{busy ? _t('checkout:ui.checking') : _t('checkout:ui.checkPaymentStatus')}</button>{order.invoiceId && !order.reviewCode && <form onSubmit={pay}><button disabled={busy || !enabled} className="btn-secondary mt-3">{_t('checkout:ui.resumeSecurePayment')}</button></form>}</> : terminal ? <><p role="status">{_t('pricing:accessState', { state: i18n.resolvedLanguage === 'ar' ? displayValue(order.state.toLowerCase()) : order.state.toLowerCase() })}</p><Link className="btn-primary mt-4" to="/pricing">{_t('checkout:ui.chooseAPlan')}</Link></> : !enabled ? <p role="status">{_t('checkout:ui.onlinePaymentIsCurrentlyUnavailableYouCanArrangeAccessThroughWha')}</p> : plan && plan.price?.currency !== 'DZD' && !order ? <p>{_t('checkout:ui.thisPlanIsAvailableThroughOurContactPurchaseOption')}</p> : plan && <form onSubmit={pay} className="space-y-4">
         <h2 className="font-bold">{_t('checkout:ui.billingDetailsForSlickpay')}</h2><p className="text-sm text-muted">{_t('checkout:ui.yourAccountEmailIsUsedForBillingEnterCardDetailsOnlyOnSlickpaysS')}</p>
         {[['firstname', 'First name', 'given-name'], ['lastname', 'Last name', 'family-name'], ['phone', 'Phone number', 'tel'], ['address', 'Billing address', 'street-address']].map(([field, label, complete]) => <label className="block" key={field}><span className="label">{_t(`checkout:billingFields.${field}`, { defaultValue: label })}</span><input required className="field" autoComplete={complete} type={field === 'phone' ? 'tel' : 'text'} minLength={field === 'address' ? 5 : undefined} maxLength={field === 'address' ? 300 : field === 'phone' ? 24 : 100} value={billing[field]} onChange={(e) => setBilling({ ...billing, [field]: e.target.value })} /></label>)}
         <button disabled={busy} className="btn-primary w-full justify-center">{busy ? _t('checkout:ui.preparingSecurePayment') : _t('checkout:ui.continueToSlickpay')}</button>
       </form>}
       {order?.state === 'PENDING' && <button disabled={busy} className="mt-4 block text-sm text-primary underline" onClick={cancel}>{_t('checkout:ui.cancelUnpaidOrder')}</button>}
-      {!paid && <button className="mt-5 text-sm text-primary underline" onClick={() => setContact(true)}>{_t('checkout:ui.contactSupportWhatsappCod')}</button>}
+      {!paid && whatsappUrl(sales) && <a className="mt-5 inline-block text-sm text-primary underline" href={whatsappUrl(sales)} target="_blank" rel="noopener noreferrer">{_t('checkout:ui.contactSupportWhatsappCod')}</a>}
     </section></div>}
-  </div><GetStartedModal open={contact} onClose={closeContact} /></main>;
+  </div></main>;
 }

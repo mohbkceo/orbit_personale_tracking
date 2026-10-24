@@ -165,7 +165,7 @@ export default function Settings() {
           ))}
         </nav>
         <div className="space-y-4">
-          {tab === 'general' && <section className="panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="flex items-center gap-2 font-display text-lg font-bold"><Compass size={19} className="text-primary" /> {t('gettingStarted')}</h2><p className="mt-1 text-sm text-muted">{t('settings:gettingStartedDescription')}</p></div><Link to="/panel?onboarding=1" className="btn-secondary shrink-0">{t('openGuide')}</Link></section>}
+          {tab === 'general' && <section className="panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="flex items-center gap-2 font-display text-lg font-bold"><Compass size={19} className="text-primary" /> {t('gettingStarted')}</h2><p className="mt-1 text-sm text-muted">{t('settings:gettingStartedDescription')}</p></div><Link to="/onboarding" className="btn-secondary shrink-0">{t('openGuide')}</Link></section>}
           {tab === 'events' && <EventPreferences />}
           {tab === 'general' && (
             <Section
@@ -348,6 +348,7 @@ export default function Settings() {
                 <p>
                   <b>{_t('settings:ui.plan')}</b> {access?.subscription?.planSnapshot?.name || _t('settings:ui.free')}
                 </p>
+                <Link to="/subscribe" className="btn-secondary min-h-12 w-fit">{_t('subscribe:title')}</Link>
                 <p>
                   <b>{_t('settings:ui.activated')}</b>{' '}
                   {access?.subscription?.activatedAt

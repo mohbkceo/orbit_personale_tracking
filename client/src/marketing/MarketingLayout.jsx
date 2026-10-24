@@ -1,15 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { MarketingHeader } from './MarketingHeader.jsx';
-import { GetStartedModal } from './GetStartedModal.jsx';
 import './marketing.css';
 import { useTranslation } from 'react-i18next';
 
 export function MarketingLayout() {
   const { t, i18n } = useTranslation();
-  const [getStartedOpen, setGetStartedOpen] = useState(false);
-  const openGetStarted = useCallback(() => setGetStartedOpen(true), []);
-  const closeGetStarted = useCallback(() => setGetStartedOpen(false), []);
   const { pathname } = useLocation();
   useEffect(() => {
     const key = ({ '/': 'home', '/features': 'features', '/about': 'about', '/pricing': 'pricing' })[pathname] || 'home';
@@ -25,9 +21,8 @@ export function MarketingLayout() {
   }, [pathname, i18n.resolvedLanguage, t]);
   return (
     <div className="marketing-shell">
-      <MarketingHeader onGetStarted={openGetStarted} />
-      <Outlet context={{ openGetStarted }} />
-      <GetStartedModal open={getStartedOpen} onClose={closeGetStarted} />
+      <MarketingHeader />
+      <Outlet />
     </div>
   );
 }

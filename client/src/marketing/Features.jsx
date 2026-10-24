@@ -10,14 +10,13 @@ import {
   Sparkles,
   WalletCards,
 } from 'lucide-react';
-import { useOutletContext } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { marketingContent } from '../i18n/marketingContent.js';
 
 const groupIcons = [CalendarCheck2, WalletCards, Bell, Sparkles];
 
 export default function Features() {
-  const { openGetStarted } = useOutletContext();
   const { t, i18n } = useTranslation();
   const copy = marketingContent[i18n.resolvedLanguage === 'ar' ? 'ar' : 'en'].features;
   return (
@@ -26,13 +25,12 @@ export default function Features() {
         <span className="marketing-eyebrow">{copy.eyebrow}</span>
         <h1>{copy.title}</h1>
         <p>{copy.intro}</p>
-        <button
-          type="button"
+        <Link
+          to="/register"
           className="marketing-button marketing-button-primary"
-          onClick={openGetStarted}
         >
           {t('marketing:getStarted')} <ArrowRight className="rtl-flip" size={18} />
-        </button>
+        </Link>
       </div>
       <div className="marketing-feature-grid">
         {copy.groups.map(([title, description, items], index) => {
