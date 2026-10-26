@@ -26,7 +26,7 @@ export function MarketingHeader() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
   return (
-    <header className="marketing-header">
+    <header className="marketing-header mt-8">
       <div className="marketing-header-inner">
         <Link to="/" className="marketing-brand" aria-label={t('marketing:home')}>
           <img src="/logo-orbit.png" alt="" />
@@ -44,10 +44,7 @@ export function MarketingHeader() {
           <Link to="/login" className="marketing-sign-in">
             {t('auth:signIn')}
           </Link>
-          <Link
-            to="/register"
-            className="marketing-button marketing-button-primary"
-          >
+          <Link to="/register" className="marketing-button marketing-button-primary">
             {t('marketing:getStarted')}
           </Link>
         </div>
