@@ -9,7 +9,6 @@ import {
   HandCoins,
   ListTodo,
   ShieldCheck,
-  Sparkles,
   WalletCards,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';

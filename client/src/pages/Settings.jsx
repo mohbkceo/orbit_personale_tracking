@@ -58,8 +58,11 @@ export default function Settings() {
   const [accounts, setAccounts] = useState([]);
   const [form, setForm] = useState(null);
   const [gender, setGender] = useState(user?.gender || '');
+  const [promotionalTelegram, setPromotionalTelegram] = useState(false);
+  const [preferenceBusy, setPreferenceBusy] = useState(false);
   const savedAppearance = useRef(null);
   useEffect(() => {
+    api.get('/message-preferences').then((result) => setPromotionalTelegram(result.data.promotionalTelegram)).catch(() => {});
     Promise.all([api.get('/settings'), endpoints.list('accounts').catch(() => ({ data: [] }))])
       .then(([settings, accountList]) => {
         savedAppearance.current = normalizeAppearance(settings.data.appearance, settings.data.theme);
@@ -213,6 +216,9 @@ export default function Settings() {
           )}
           {tab === 'telegram' && (
             <>
+              <Section title={t('settings:promotionalTelegramTitle')} description={t('settings:promotionalTelegramDescription')}>
+                <label className="flex items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-emerald-700" checked={promotionalTelegram} disabled={preferenceBusy} onChange={async (event) => { const next = event.target.checked; setPreferenceBusy(true); try { const result = await api.put('/message-preferences', { promotionalTelegram: next }); setPromotionalTelegram(result.data.promotionalTelegram); } catch (error) { toast(error.message, 'error'); } finally { setPreferenceBusy(false); } }} /><span>{t('settings:promotionalTelegramConsent')}</span></label>
+              </Section>
               <Section
                 title={_t('settings:telegram')}
                 description={_t('settings:ui.oneCentralOrbitBotConnectedSecurelyToYourAccount')}

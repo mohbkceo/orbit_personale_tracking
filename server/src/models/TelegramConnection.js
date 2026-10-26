@@ -9,5 +9,7 @@ const telegramConnectionSchema = new mongoose.Schema({
   lastInteractionAt: Date,
   lastUpdateAt: Date,
 }, { timestamps: true });
+telegramConnectionSchema.index({ telegramUsername: 1 });
+telegramConnectionSchema.index({ lastInteractionAt: -1 });
 
 export const TelegramConnection = mongoose.model('TelegramConnection', telegramConnectionSchema);

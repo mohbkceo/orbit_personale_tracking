@@ -6,6 +6,7 @@ import { getSettingsDocument } from '../services/settingsService.js';
 import { sendTelegramNotification } from '../telegram/notifier.js';
 import { canAccess } from '../services/entitlementService.js';
 import { telegramText as tr } from '../i18n/telegram.js';
+import { renderAutomaticMessage } from '../services/automaticMessages.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -22,10 +23,11 @@ export async function sendSummaries(userId) {
     const key = `${userId}:${local.format('YYYY-MM-DD')}:${mode}`;
     if (!enabled || at !== local.format('HH:mm') || sent.has(key)) continue;
     const summary = await dashboardSummary(userId);
-    await sendTelegramNotification(userId, {
-      title: tr(settings, mode === 'morning' ? 'morningGreeting' : 'dailyWrapUp'),
-      message: `${summary.tasks.open} ${tr(settings, 'open')} ${tr(settings, 'tasks')} · ${summary.tasks.overdue} ${tr(settings, 'overdue')}\n${tr(settings, 'net')} ${tr(settings, 'thisMonth')}: ${new Intl.NumberFormat(settings.language === 'ar' ? 'ar-DZ' : 'en-DZ').format(summary.money.net)} ${settings.defaultCurrency}`,
-    });
+    const title = tr(settings, mode === 'morning' ? 'morningGreeting' : 'dailyWrapUp');
+    const message = `${summary.tasks.open} ${tr(settings, 'open')} ${tr(settings, 'tasks')} · ${summary.tasks.overdue} ${tr(settings, 'overdue')}\n${tr(settings, 'net')} ${tr(settings, 'thisMonth')}: ${new Intl.NumberFormat(settings.language === 'ar' ? 'ar-DZ' : 'en-DZ').format(summary.money.net)} ${settings.defaultCurrency}`;
+    const rendered = await renderAutomaticMessage(`summary-${mode}`, settings.language, { legacyTitle: title, legacyMessage: message, openTasks: summary.tasks.open, overdueTasks: summary.tasks.overdue, netAmount: summary.money.net, currency: settings.defaultCurrency });
+    if (!rendered) continue;
+    await sendTelegramNotification(userId, rendered);
     sent.add(key);
   }
   if (sent.size > 10000) sent.clear();

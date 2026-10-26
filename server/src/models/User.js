@@ -23,5 +23,8 @@ const userSchema = new mongoose.Schema({
   authVersion: { type: Number, default: 0 },
   advertisingAllowed: { type: Boolean, default: undefined },
 }, { timestamps: true });
+userSchema.index({ status: 1, createdAt: -1 });
+userSchema.index({ lastLoginAt: -1 });
+userSchema.index({ fullName: 1 });
 
 export const User = mongoose.model('User', userSchema);

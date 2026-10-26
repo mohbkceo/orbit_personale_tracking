@@ -11,6 +11,7 @@ import { automationTimezone } from '../services/automationSettings.service.js';
 import { collectTaskDigest, renderTaskDigest } from '../services/taskReminderDigest.service.js';
 import { env } from '../config/env.js';
 import { sendMessage } from '../telegram/botClient.js';
+import { getAutomaticTemplate, renderAutomaticMessage } from '../services/automaticMessages.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -27,6 +28,8 @@ export async function runTaskReminderDigestForUser(userId, now, rules) {
   if (!policy.times.includes(time)) return false;
   const digest = renderTaskDigest(await collectTaskDigest(userId, rules, zone, now), settings);
   if (!digest) return false;
+  const template = await getAutomaticTemplate('task-digest');
+  if (!template.enabled) return false;
   const key = { user: userId, localDate: local.format('YYYY-MM-DD'), time };
   let claim;
   try { claim = await TaskDigestDelivery.create({ ...key, claimedAt: now }); }
@@ -35,7 +38,10 @@ export async function runTaskReminderDigestForUser(userId, now, rules) {
     return false;
   }
   // Keep the slot claim if Telegram accepts the message before an API error.
-  await sendMessage(env.ORBIT_TELEGRAM_BOT_TOKEN, connection.chatId, digest.text, digest.markup);
+  const edited = ['en', 'ar'].some((language) => template.variants?.[language]?.title !== '{legacyTitle}' || template.variants?.[language]?.body !== '{legacyMessage}');
+  const custom = edited ? await renderAutomaticMessage('task-digest', settings.language, { legacyTitle: 'Task Digest', legacyMessage: digest.text.replace(/<[^>]*>/g, ''), taskList: digest.text.replace(/<[^>]*>/g, ''), taskCount: String(digest.markup.inline_keyboard.flat().length) }) : null;
+  const markup = { inline_keyboard: [...digest.markup.inline_keyboard, ...(template.buttons || []).map((row) => row.map((button) => ({ text: button.label, url: button.url })))] };
+  await sendMessage(env.ORBIT_TELEGRAM_BOT_TOKEN, connection.chatId, custom ? `<b>${custom.title}</b>\n\n${custom.message}` : digest.text, markup);
   await TaskDigestDelivery.updateOne({ _id: claim._id }, { $set: { sentAt: new Date() } });
   return true;
 }

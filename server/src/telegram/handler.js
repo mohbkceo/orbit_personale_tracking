@@ -20,6 +20,10 @@ import { sendMessage, telegramRequest } from './botClient.js';
 import { parseAmount, parseTelegramMessage } from './parser.js';
 import { executeCommand, executeIntent, helpText, lastAction, paymentReply, quickMenu } from './commandHandlers.js';
 import { handleCallbackAction } from './callbackHandlers.js';
+import { BroadcastCampaign } from '../models/BroadcastCampaign.js';
+import { BroadcastInteraction } from '../models/BroadcastInteraction.js';
+import { BroadcastRecipient } from '../models/BroadcastRecipient.js';
+import { MessagePreference } from '../models/MessagePreference.js';
 import { handleReminderCallback } from './callbacks/reminderCallbacks.js';
 import { handleFocusCallback } from './callbacks/focusCallbacks.js';
 import { handleTaskReminderDigestCallback } from './callbacks/taskReminderDigestCallbacks.js';
@@ -271,6 +275,16 @@ export async function handleTelegramUpdate(update) {
     await updateSettings(user._id, { language });
     await telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: tr(language, 'languageChanged').slice(0, 190) });
     return sendMessage(token, chatId, tr(language, 'languageChanged'));
+  }
+  if (callback && /^b:(ack|optout):[a-f\d]{24}$/i.test(String(callback.data))) {
+    const [, action, id] = String(callback.data).split(':');
+    const campaign = await BroadcastCampaign.findById(id).select('category');
+    if (campaign && await BroadcastRecipient.exists({ campaign: campaign._id, user: user._id })) {
+      try { await BroadcastInteraction.create({ campaign: campaign._id, user: user._id, action: action === 'ack' ? 'ACK' : 'PROMO_OPTOUT', updateId: Number.isSafeInteger(update.update_id) ? update.update_id : undefined }); }
+      catch (error) { if (error.code !== 11000) throw error; }
+      if (action === 'optout') await MessagePreference.findOneAndUpdate({ user: user._id }, { $set: { promotionalTelegram: false, optOutAt: new Date() } }, { upsert: true });
+    }
+    return telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: action === 'optout' ? (settings.language === 'ar' ? 'تم إيقاف الرسائل الترويجية' : 'Promotional messages turned off') : (settings.language === 'ar' ? 'تم التأكيد' : 'Acknowledged') });
   }
   try {
     await assertFeature(user, 'telegram-assistant');

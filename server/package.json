@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "worker:broadcast": "node src/jobs/runBroadcastWorker.js",
     "seed": "node src/seed.js",
     "bootstrap:admin": "node src/scripts/bootstrapAdmin.js",
     "migrate:legacy": "node src/scripts/migrateLegacy.js",

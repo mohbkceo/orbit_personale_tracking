@@ -14,6 +14,7 @@ const schema = z.object({
   EMAIL_FROM: z.string().default(''),
   ORBIT_TELEGRAM_BOT_TOKEN: z.string().default(''),
   ORBIT_TELEGRAM_BOT_USERNAME: z.string().default(''),
+  BROADCAST_WORKER_EMBEDDED: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
   DZEVENT_API_KEY: z.string().default(''),
   ANALYTICS_REQUIRE_CONSENT: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   META_PIXEL_ID: z.literal('1432887715641697').default('1432887715641697'),

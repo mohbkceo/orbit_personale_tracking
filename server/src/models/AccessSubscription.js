@@ -33,6 +33,8 @@ const accessSubscriptionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 accessSubscriptionSchema.index({ user: 1, expiresAt: -1 });
+accessSubscriptionSchema.index({ user: 1, status: 1, expiresAt: -1 });
+accessSubscriptionSchema.index({ plan: 1, status: 1, expiresAt: -1 });
 accessSubscriptionSchema.index({ activationLink: 1 }, { name: 'activationLink_partial_unique', unique: true, partialFilterExpression: { activationLink: { $type: 'objectId' } } });
 accessSubscriptionSchema.index({ order: 1 }, { unique: true, partialFilterExpression: { order: { $type: 'objectId' } } });
 accessSubscriptionSchema.index({ idempotencyKey: 1 }, { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } });

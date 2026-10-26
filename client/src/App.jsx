@@ -65,6 +65,7 @@ const AdminQrPrintTemplateEditor = lazy(() => import('./pages/admin/QrPrintTempl
 const AdminAutomationSettings = lazy(() => import('./pages/admin/AutomationSettings.jsx'));
 const AdminEventSettings = lazy(() => import('./pages/admin/EventSettings.jsx'));
 const AdminEvents = lazy(() => import('./pages/admin/Events.jsx'));
+const AdminBroadcast = lazy(() => import('./pages/admin/Broadcast.jsx'));
 const AdminAnalytics = lazy(() => import('./pages/admin/analytics/Analytics.jsx'));
 const AdminAccessControl = lazy(() => import('./pages/AdminAccessControl.jsx'));
 const SupportWorkspace = lazy(() => import('./pages/admin/SupportWorkspace.jsx'));
@@ -183,6 +184,7 @@ export default function App() {
             <Route path="qr-batches/:id" element={<AdminQrBatchDetail />} />
             <Route path="activity" element={<AdminActivity />} />
             <Route path="events" element={<AdminEvents />} />
+            <Route path="broadcast" element={<AdminBroadcast />} />
             <Route path="analytics/*" element={<AdminAnalytics />} />
             <Route
               path="admins"

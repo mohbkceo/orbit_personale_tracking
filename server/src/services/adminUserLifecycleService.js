@@ -12,6 +12,9 @@ import { TelegramConnection } from '../models/TelegramConnection.js';
 import { TelegramLinkToken } from '../models/TelegramLinkToken.js';
 import { TelegramSession } from '../models/TelegramSession.js';
 import { TelegramInteraction } from '../models/TelegramInteraction.js';
+import { BroadcastInteraction } from '../models/BroadcastInteraction.js';
+import { BroadcastRecipient } from '../models/BroadcastRecipient.js';
+import { MessagePreference } from '../models/MessagePreference.js';
 import { Account } from '../models/Account.js';
 import { Transaction } from '../models/Transaction.js';
 import { Debt } from '../models/Debt.js';
@@ -71,6 +74,9 @@ export const workspaceModels = [
   TelegramConnection,
   TelegramLinkToken,
   TelegramInteraction,
+  BroadcastInteraction,
+  BroadcastRecipient,
+  MessagePreference,
 ];
 
 export async function deleteUserAccount(userId, adminId, reason, ip, expectedEmail) {

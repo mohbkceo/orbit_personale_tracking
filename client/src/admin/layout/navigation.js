@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, ChartNoAxesCombined, CircleGauge, KeyRound, Layers3, QrCode, Settings2, Shield, Users, WandSparkles } from 'lucide-react';
+import { Activity, CalendarDays, ChartNoAxesCombined, CircleGauge, KeyRound, Layers3, QrCode, Radio, Settings2, Shield, Users, WandSparkles } from 'lucide-react';
 
 export const adminNavigation = [
   { label: 'Overview', items: [{ label: 'Dashboard', to: '/admin', icon: CircleGauge, end: true }] },
@@ -13,6 +13,7 @@ export const adminNavigation = [
     { label: 'QR Batches', to: '/admin/qr-batches', icon: QrCode },
     { label: 'Print Templates', to: '/admin/qr-batches/print-templates', icon: Layers3 },
     { label: 'Events', to: '/admin/events', icon: CalendarDays },
+    { label: 'Broadcast', to: '/admin/broadcast', icon: Radio },
     { label: 'Activity', to: '/admin/activity', icon: Activity },
     { label: 'Payments', to: '/admin/payments', icon: Layers3 },
     { label: 'Analytics', to: '/admin/analytics', icon: ChartNoAxesCombined },

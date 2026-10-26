@@ -4,6 +4,8 @@ import { checkAccess } from '../services/accessService.js';
 import { canAccess } from '../services/entitlementService.js';
 import { env } from '../config/env.js';
 import { sendMessage } from './botClient.js';
+import { sendPhoto } from './botClient.js';
+import { loadBroadcastImage } from '../services/broadcastMedia.js';
 import { escapeHtml } from './formatters.js';
 
 function validTelegramUrl(value) {
@@ -14,7 +16,7 @@ function validTelegramUrl(value) {
   } catch { return null; }
 }
 
-export async function sendTelegramNotification(userId, { title, message, buttons = [] }) {
+export async function sendTelegramNotification(userId, { title, message, buttons = [], html = false, imageId = null }) {
   if (!env.ORBIT_TELEGRAM_BOT_TOKEN) return { sent: 0 };
   const [user, connection] = await Promise.all([User.findById(userId), TelegramConnection.findOne({ user: userId })]);
   if (!user || !connection || !(await checkAccess(user)).eligible || !(await canAccess(user, 'telegram-assistant')).allowed) return { sent: 0 };
@@ -25,6 +27,8 @@ export async function sendTelegramNotification(userId, { title, message, buttons
     if (button.callbackData && !button.url && /^[\w:.-]{1,64}$/.test(button.callbackData)) return { text: button.text, callback_data: button.callbackData };
     throw new Error('Invalid Telegram button');
   })) } : undefined;
-  await sendMessage(env.ORBIT_TELEGRAM_BOT_TOKEN, connection.chatId, `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(message)}`, keyboard);
+  const text = `<b>${html ? title : escapeHtml(title)}</b>\n\n${html ? message : escapeHtml(message)}`;
+  if (imageId && text.replace(/<[^>]*>/g, '').length <=900) await sendPhoto(env.ORBIT_TELEGRAM_BOT_TOKEN, connection.chatId, await loadBroadcastImage(imageId), 'image/jpeg', text, keyboard);
+  else await sendMessage(env.ORBIT_TELEGRAM_BOT_TOKEN, connection.chatId, text, keyboard);
   return { sent: 1 };
 }
