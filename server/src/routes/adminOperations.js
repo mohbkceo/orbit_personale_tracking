@@ -37,8 +37,8 @@ adminOperationRoutes.get('/dashboard', asyncHandler(async (_req, res) => {
   const active = latest.filter((item) => item.expiresAt > now && !suspendedIds.has(String(item.user))).length;
   const expiringSoon = latest.filter((item) => item.expiresAt > now && item.expiresAt <= soon && !suspendedIds.has(String(item.user))).length;
   const [expiring, activations, links] = await Promise.all([
-    AccessSubscription.find({ _id: { $in: latest.filter((item) => item.expiresAt > now && item.expiresAt <= soon && !suspendedIds.has(String(item.user))).map((item) => item._id) } }).populate('user', 'fullName email').sort({ expiresAt: 1 }).limit(10),
-    AccessSubscription.find().populate('user', 'fullName email').sort({ activatedAt: -1 }).limit(10),
+    AccessSubscription.find({ _id: { $in: latest.filter((item) => item.expiresAt > now && item.expiresAt <= soon && !suspendedIds.has(String(item.user))).map((item) => item._id) } }).populate('user', 'fullName email phone').sort({ expiresAt: 1 }).limit(10),
+    AccessSubscription.find().populate('user', 'fullName email phone').sort({ activatedAt: -1 }).limit(10),
     ActivationLink.find().populate('plan', 'name').sort({ createdAt: -1 }).limit(10),
   ]);
   return success(res, { metrics: { totalUsers, activeAccess: active, expiredAccess: latest.filter((item) => item.expiresAt <= now && !suspendedIds.has(String(item.user))).length, suspendedUsers, telegramConnected, expiringSoon, unusedActivationLinks }, expiring, activations, links });

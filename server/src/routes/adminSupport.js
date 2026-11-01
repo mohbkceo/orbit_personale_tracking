@@ -122,7 +122,7 @@ adminSupportRoutes.post(
   ),
   verifyFreshAdmin,
   asyncHandler(async (req, res) => {
-    const user = await User.findById(req.body.userId).select('fullName email status');
+    const user = await User.findById(req.body.userId).select('fullName email phone status');
     if (!user) throw new AppError('User not found', 404);
     await audit('SUPPORT_SESSION_REQUESTED', {
       actorType: 'ADMIN',
@@ -190,7 +190,7 @@ adminSupportRoutes.post(
     return success(
       res,
       {
-        user: { id: String(user._id), fullName: user.fullName, email: user.email },
+        user: { id: String(user._id), fullName: user.fullName, email: user.email, phone: user.phone },
         expiresAt,
         scope: 'READ_ONLY',
       },
@@ -229,7 +229,7 @@ adminSupportRoutes.get(
   '/session',
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.supportSession.user).select(
-      'fullName email status createdAt lastLoginAt',
+      'fullName email phone status createdAt lastLoginAt',
     );
     if (!user) throw new AppError('User not found', 404);
     await audit('SUPPORT_SESSION_ENTERED', {
@@ -244,7 +244,7 @@ adminSupportRoutes.get(
       user: {
         id: String(user._id),
         fullName: user.fullName,
-        email: user.email,
+        email: user.email, phone: user.phone,
         status: user.status,
       },
       expiresAt: req.supportSession.expiresAt,
@@ -267,7 +267,7 @@ adminSupportRoutes.get(
     if (!pageResult.success) throw new AppError('Invalid page', 422);
     const page = pageResult.data;
     const user = await User.findById(req.supportSession.user).select(
-      'fullName email status createdAt lastLoginAt',
+      'fullName email phone status createdAt lastLoginAt',
     );
     if (!user) throw new AppError('User not found', 404);
     if (user.status !== 'ACTIVE') throw new AppError('User workspace is suspended', 403, undefined, 'USER_SUSPENDED');

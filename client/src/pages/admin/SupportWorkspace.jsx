@@ -99,7 +99,7 @@ export default function SupportWorkspace() {
               Admin Support Mode · Viewing {session?.user?.fullName || 'user'} · Read-only
             </p>
             <p className="text-xs text-muted">
-              {session?.user?.email || 'Session verification required'} ·{' '}
+              {session?.user?.phone || session?.user?.email || 'Session verification required'} ·{' '}
               {expired
                 ? 'Session expired'
                 : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} remaining`}

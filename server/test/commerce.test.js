@@ -28,15 +28,15 @@ import { ensureAccessCatalog } from '../src/services/accessCatalogSeed.js';
 let mongo; let plan; let admin; let agent; let user;
 const originalEnv = { ...env };
 const billing = { firstname: 'Test', lastname: 'Customer', phone: '+213555123456', address: 'Algiers, Algeria' };
-const signup = { fullName: 'Test Customer', email: 'customer@example.com', password: 'a-long-secure-password' };
+const signup = { phone: '+213550123456', fullName: 'Test Customer', email: 'customer@example.com', password: 'a-long-secure-password' };
 const response = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
 const invoice = (id = 123) => ({ success: 1, id, url: `https://devapi.slick-pay.com/api/v2/users/invoices/satim/payment/REF${id}` });
 const paid = (amount = 2500, serial = 'PAY123') => ({ success: 1, data: { completed: 1, serial, transaction: { amount } } });
-async function register({ ads = false } = {}) {
+async function register({ ads = false, phoneOnly = false } = {}) {
   agent = request.agent(app);
   await agent.post('/api/analytics/session').send({ landingUrl: 'https://orbit.test/?utm_source=meta&utm_medium=cpc&utm_campaign=launch&fbclid=realclick', entry: true }).expect(200);
   if (ads) await agent.post('/api/analytics/advertising-consent').send({ granted: true }).expect(200);
-  const result = await agent.post('/api/auth/register').set('User-Agent', 'Orbit test browser').set('X-Orbit-Fbp', 'fb.1.1780000000000.1234').send(signup).expect(201);
+  const result = await agent.post('/api/auth/register').set('User-Agent', 'Orbit test browser').set('X-Orbit-Fbp', 'fb.1.1780000000000.1234').send(phoneOnly ? { ...signup, email: undefined } : signup).expect(201);
   user = await User.findById(result.body.data.user.id);
   return result;
 }
@@ -114,6 +114,23 @@ describe('registration and entitlement isolation', () => {
   });
 });
 describe('SlickPay lifecycle and recovery', () => {
+  it('takes a real billing email for phone-only payments without changing account identity', async () => {
+    await register({ phoneOnly: true });
+    const current = await order();
+    const rejected = await initiate(current).expect(422);
+    expect(rejected.body.code).toBe('BILLING_EMAIL_REQUIRED');
+    expect((await PaymentOrder.findById(current.id)).state).toBe('PENDING');
+    expect(fetch).not.toHaveBeenCalled();
+    fetch.mockResolvedValue(response(invoice()));
+    await agent.post(`/api/payments/orders/${current.id}/pay`).send({ ...billing, email: 'billing@example.com' }).expect(200);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).email).toBe('billing@example.com');
+    expect((await User.findById(user._id)).email).toBeUndefined();
+    fetch.mockResolvedValue(response(paid()));
+    const verified = await verify(current);
+    expect(verified.body.data.state).toBe('PAID');
+    expect(await AccessSubscription.countDocuments({ user: user._id })).toBe(1);
+  });
+
   it('creates a documented invoice with server price; concurrent repeated calls create one invoice', async () => {
     await register();
     const key = randomUUID();

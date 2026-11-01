@@ -28,10 +28,12 @@ import { AutomaticMessageTemplate } from './models/AutomaticMessageTemplate.js';
 import { AutomaticMessageRevision } from './models/AutomaticMessageRevision.js';
 import { User } from './models/User.js';
 import { TelegramConnection } from './models/TelegramConnection.js';
+import { assertUserIdentityIndexes } from './services/identityMigrationService.js';
 
 await connectDatabase();
 await ensureAccessCatalog();
 await Promise.all([User.createIndexes(), TelegramConnection.createIndexes(), BroadcastCampaign.createIndexes(), BroadcastRecipient.createIndexes(), BroadcastSettings.createIndexes(), BroadcastWorkerSlot.createIndexes(), BroadcastLaunchGuard.createIndexes(), BroadcastDailyQuota.createIndexes(), BroadcastSegment.createIndexes(), BroadcastInteraction.createIndexes(), MessagePreference.createIndexes(), AutomaticMessageTemplate.createIndexes(), AutomaticMessageRevision.createIndexes()]);
+await assertUserIdentityIndexes(User.collection);
 await ensureAutomaticTemplates();
 await Promise.all([PaymentOrder.createIndexes(), AnalyticsEvent.createIndexes(), AdvertisingConsent.createIndexes()]);
 if (env.SLICKPAY_ENABLED) {

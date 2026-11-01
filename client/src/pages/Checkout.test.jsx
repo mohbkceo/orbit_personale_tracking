@@ -16,6 +16,17 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 describe('checkout return and recovery', () => {
+  it('collects a provider billing email for a phone-only account without changing login identity', async () => {
+    mocks.get.mockImplementation(async (path) => ({ data: path === '/public/config' ? { payments: { enabled: true } } : { ...order, state: 'PENDING', invoiceId: null } }));
+    render(<MemoryRouter initialEntries={['/checkout?order=order1']}><Checkout /></MemoryRouter>);
+    const email = await screen.findByLabelText('Billing email');
+    expect(email.required).toBe(true);
+    expect(screen.getByText(/It will not be added as a login identity/)).toBeTruthy();
+    fireEvent.change(email, { target: { value: 'billing@example.com' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Continue to SlickPay' }).closest('form'));
+    await waitFor(() => expect(mocks.post).toHaveBeenCalledWith('/payments/orders/order1/pay', expect.objectContaining({ email: 'billing@example.com' })));
+  });
+
   it('does not trust success query parameters and stays pending until verification', async () => {
     render(<MemoryRouter initialEntries={['/checkout/return?order=order1&success=true']}><Checkout /></MemoryRouter>);
     expect(await screen.findByText('Payment awaiting confirmation')).toBeTruthy();

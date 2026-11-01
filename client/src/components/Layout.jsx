@@ -78,7 +78,7 @@ function Sidebar({ open, close }) {
       <SidebarLink label="Settings" path="/panel/settings" Icon={Settings} close={close} />
       <div className="mt-2 flex items-center gap-2 border-t border-border px-2 pt-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text">{initials}</span>
-        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{user?.fullName || _t('navigation:ui.orbitUser')}</span><span dir="ltr" className="block truncate text-[11px] text-sidebar-muted">{user?.email}</span></span>
+        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{user?.fullName || _t('navigation:ui.orbitUser')}</span><span dir="ltr" className="block truncate text-[11px] text-sidebar-muted">{user?.phone || user?.email}</span></span>
         <button type="button" className="icon-btn shrink-0" onClick={logout} aria-label={t('logout')} title={t('logout')}><LogOut size={16} /></button>
       </div>
     </div>
@@ -115,7 +115,7 @@ function Header({ openMenu, openSearch, openQuickAdd, toggleTheme, darkMode }) {
         <div className="relative">
           <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-primary-text" aria-label={_t('navigation:ui.openAccountMenu')} aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>{initials}</button>
           {profileOpen && <div role="menu" className="orbit-profile-menu absolute right-0 top-11 z-50 w-52 rounded-[var(--orbit-radius)] border border-border bg-surface p-1.5 shadow-lift">
-            <p className="truncate border-b border-border px-2 py-2 text-xs font-semibold">{user?.fullName || user?.email}</p>
+            <p className="truncate border-b border-border px-2 py-2 text-xs font-semibold">{user?.fullName || user?.phone || user?.email}</p>
             <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-start text-sm hover:bg-hover" onClick={() => { navigate('/panel/settings'); setProfileOpen(false); }}><Settings size={16} />{' '}{_t('common:settings')}</button>
             <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-start text-sm hover:bg-hover" onClick={() => { toggleTheme(); setProfileOpen(false); }}>{darkMode ? <Sun size={16} /> : <Moon size={16} />} {darkMode ? _t('navigation:ui.lightMode') : _t('navigation:ui.darkMode')}</button>
           </div>}

@@ -91,7 +91,7 @@ adminUserActionRoutes.delete(
   '/:id',
   sensitive,
   requireAdminCsrf,
-  validate(z.strictObject({ reason, adminPassword: password, confirmationEmail: z.email() })),
+  validate(z.strictObject({ reason, adminPassword: password, confirmationEmail: z.email().optional(), confirmationIdentifier: z.string().trim().min(1).max(254).optional() }).refine((value) => Boolean(value.confirmationEmail) !== Boolean(value.confirmationIdentifier), 'Supply one confirmation identity')),
   verifyFreshAdmin,
   asyncHandler(async (req, res) =>
     success(
@@ -101,7 +101,7 @@ adminUserActionRoutes.delete(
         req.admin._id,
         req.body.reason,
         req.ip,
-        req.body.confirmationEmail,
+        req.body.confirmationIdentifier ?? req.body.confirmationEmail,
       ),
     ),
   ),
@@ -112,7 +112,7 @@ adminUserActionRoutes.get(
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id)
       .select(
-        'fullName email gender status onboardingCompletedAt firstUseOnboarding createdAt lastLoginAt authVersion',
+        'fullName email phone gender status onboardingCompletedAt firstUseOnboarding createdAt lastLoginAt authVersion',
       )
       .lean();
     if (!user) throw new AppError('User not found', 404);

@@ -78,11 +78,13 @@ export async function initiatePayment(order, user, billing) {
     await PaymentOrder.updateOne({ _id: order._id, state: 'PENDING' }, { $set: { state: 'EXPIRED' }, $unset: { openKey: 1 } });
     throw new AppError('The plan or price changed. Please select your plan again.', 409, undefined, 'QUOTE_EXPIRED');
   }
+  const billingEmail = user.email || billing.email;
+  if (!billingEmail) throw new AppError('A billing email is required by the payment provider. This does not change your login identity.', 422, undefined, 'BILLING_EMAIL_REQUIRED');
   const claimed = await PaymentOrder.findOneAndUpdate({ _id: order._id, state: 'PENDING' }, { $set: { state: 'PROCESSING', creationStartedAt: new Date(), reviewCode: 'INVOICE_CREATING' } }, { new: true });
   if (!claimed) throw new AppError('Payment is already being prepared. Resume this order in a moment.', 409, undefined, 'PAYMENT_IN_PROGRESS');
   try {
     // Never automatically retry POST: SlickPay has no documented idempotency contract.
-    const invoice = await slickpayProvider.createInvoice(order, billing, user.email);
+    const invoice = await slickpayProvider.createInvoice(order, billing, billingEmail);
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {

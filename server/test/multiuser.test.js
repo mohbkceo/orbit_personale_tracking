@@ -33,10 +33,13 @@ async function makeLink(agent = superAgent, planId = plan._id) {
   return { id: response.body.data.link._id, key: response.body.data.url.split('/').pop() };
 }
 
+const phones = new Map();
+const phoneFor = (email) => { if (!phones.has(email)) phones.set(email, `+213550${String(phones.size + 100000).padStart(6, '0')}`); return phones.get(email); };
+
 async function onboard(email, name = 'Test User') {
   const link = await makeLink();
   const agent = request.agent(app);
-  await agent.post(`/api/activation/${link.key}/register`).send({ fullName: name, email, password: 'very-long-user-password', gender: 'MALE', preferences: { defaultCurrency: 'DZD' } }).expect(201);
+  await agent.post(`/api/activation/${link.key}/register`).send({ fullName: name, email, phone: phoneFor(email), password: 'very-long-user-password', gender: 'MALE', preferences: { defaultCurrency: 'DZD' } }).expect(201);
   await agent.post(`/api/activation/${link.key}/activate`).expect(200);
   return { agent, link, user: await User.findOne({ email }) };
 }
@@ -61,7 +64,7 @@ describe('multi-user access', () => {
   it('requires gender on new registration and persists onboarding appearance', async () => {
     const link = await makeLink();
     const agent = request.agent(app);
-    const base = { fullName: 'Taylor', email: 'taylor@example.com', password: 'very-long-user-password' };
+    const base = { fullName: 'Taylor', email: 'taylor@example.com', phone: phoneFor('taylor@example.com'), password: 'very-long-user-password' };
     await agent.post(`/api/activation/${link.key}/register`).send(base).expect(422);
     await agent.post(`/api/activation/${link.key}/register`).send({ ...base, gender: 'OTHER' }).expect(422);
     const result = await agent.post(`/api/activation/${link.key}/register`).send({ ...base, gender: 'FEMALE', preferences: { appearance: { mode: 'dark', preset: 'sage' } } }).expect(201);
@@ -87,7 +90,7 @@ describe('multi-user access', () => {
     const link = await makeLink();
     const agent = request.agent(app);
     await request(app).get(`/api/activation/${link.key}`).expect(200);
-    await agent.post(`/api/activation/${link.key}/register`).send({ fullName: 'Alice', email: 'alice@example.com', password: 'very-long-user-password', gender: 'FEMALE' }).expect(201);
+    await agent.post(`/api/activation/${link.key}/register`).send({ fullName: 'Alice', email: 'alice@example.com', phone: phoneFor('alice@example.com'), password: 'very-long-user-password', gender: 'FEMALE' }).expect(201);
     await agent.get('/api/tasks').expect(200);
     await agent.post('/api/telegram-link').expect(201);
     const responses = await Promise.all([agent.post(`/api/activation/${link.key}/activate`), agent.post(`/api/activation/${link.key}/activate`)]);
@@ -179,7 +182,7 @@ describe('multi-user access', () => {
     expect(response.body.data.link.intendedUser).toBe(String(a.user._id));
     expect((await request(app).get(`/api/activation/${key}`).expect(200)).body.data.requiresExistingAccount).toBe(true);
     await b.agent.post(`/api/activation/${key}/activate`).expect(403);
-    await request(app).post(`/api/activation/${key}/register`).send({ fullName: 'Wrong User', email: 'wrong@example.com', password: 'very-long-user-password', gender: 'MALE' }).expect(403);
+    await request(app).post(`/api/activation/${key}/register`).send({ fullName: 'Wrong User', email: 'wrong@example.com', phone: phoneFor('wrong@example.com'), password: 'very-long-user-password', gender: 'MALE' }).expect(403);
     await a.agent.post(`/api/activation/${key}/activate`).expect(200);
     expect(await AccessSubscription.countDocuments({ user: b.user._id })).toBe(1);
   });

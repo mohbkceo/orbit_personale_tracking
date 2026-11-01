@@ -62,13 +62,13 @@ export function AdminDashboard() {
             <ListPanel
               title="Expiring soon"
               rows={data.expiring}
-              render={(row) => `${row.user?.email || 'Unknown'} · ${date(row.expiresAt)}`}
+              render={(row) => `${row.user?.phone || row.user?.email || 'Unknown'} · ${date(row.expiresAt)}`}
             />
             <ListPanel
               title="Recent activations"
               rows={data.activations}
               render={(row) =>
-                `${row.user?.email || 'Unknown'} · ${row.planSnapshot?.name || 'Plan'}`
+                `${row.user?.phone || row.user?.email || 'Unknown'} · ${row.planSnapshot?.name || 'Plan'}`
               }
             />
             <ListPanel
@@ -164,8 +164,8 @@ export function AdminUsers() {
       <div className="mb-5 flex flex-wrap gap-3">
         <input
           className="field max-w-sm"
-          aria-label="Search users by name or email"
-          placeholder="Search name or email"
+          aria-label="Search users by name, phone or email"
+          placeholder="Search name, phone or email"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -217,7 +217,7 @@ export function AdminUsers() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row._id} className="border-b border-black/5 dark:border-white/5">
-                  {superAdmin && <td data-label="Select" className="p-4"><input type="checkbox" aria-label={`Select ${row.fullName} (${row.email})`} checked={selected.has(row._id)} onChange={() => toggleUser(row._id)} /></td>}
+                  {superAdmin && <td data-label="Select" className="p-4"><input type="checkbox" aria-label={`Select ${row.fullName} (${row.phone || row.email})`} checked={selected.has(row._id)} onChange={() => toggleUser(row._id)} /></td>}
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">{row.fullName?.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>
@@ -227,7 +227,8 @@ export function AdminUsers() {
                       >
                         {row.fullName}
                       </Link>
-                      <div className="break-all text-xs text-muted">{row.email}</div>
+                      <div className="break-all text-xs text-muted">{row.phone || row.email}</div>
+                      {row.phone && row.email && <div className="break-all text-xs text-muted">{row.email}</div>}
                       <div className="text-xs text-muted">Joined {date(row.createdAt)} · Last login {date(row.lastLoginAt)}</div></div>
                     </div>
                   </td>
@@ -402,7 +403,7 @@ export function AdminActivationLinks() {
                   <td className="p-3">{row.createdByAdmin?.fullName}</td>
                   <td className="p-3">{date(row.createdAt)}</td>
                   <td className="p-3">{date(row.expiresAt)}</td>
-                  <td className="p-3">{row.activatedUser?.email || '—'}</td>
+                  <td className="p-3">{row.activatedUser?.phone || row.activatedUser?.email || '—'}</td>
                   <td className="p-3">{date(row.activatedAt)}</td>
                   <td className="p-3">{row.note || '—'}</td>
                   <td className="p-3">
@@ -448,9 +449,9 @@ export function AdminActivationLinks() {
             First opened: {date(selected.firstOpenedAt)} · last opened:{' '}
             {date(selected.lastOpenedAt)}
           </p>
-          <p>Intended user: {selected.intendedUser?.email || 'Any account'}</p>
+          <p>Intended user: {selected.intendedUser?.phone || selected.intendedUser?.email || 'Any account'}</p>
           <p>
-            Activated user: {selected.activatedUser?.email || '—'} · activated at:{' '}
+            Activated user: {selected.activatedUser?.phone || selected.activatedUser?.email || '—'} · activated at:{' '}
             {date(selected.activatedAt)}
           </p>
         </section>

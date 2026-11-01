@@ -28,7 +28,7 @@ export function audiencePipeline(selection, { promotional = false, now = new Dat
   ];
   if (f.search) {
     const regex = escapeRegex(f.search);
-    pipeline.push({ $match: { $or: [{ fullName: { $regex: regex, $options: 'i' } }, { email: { $regex: regex, $options: 'i' } }, { 'connection.telegramUsername': { $regex: regex, $options: 'i' } }] } });
+    pipeline.push({ $match: { $or: [{ fullName: { $regex: regex, $options: 'i' } }, { email: { $regex: regex, $options: 'i' } }, { phone: { $regex: regex, $options: 'i' } }, { 'connection.telegramUsername': { $regex: regex, $options: 'i' } }] } });
   }
   if (f.telegram === 'CONNECTED') pipeline.push({ $match: { hasConnection: true } });
   if (f.telegram === 'NOT_CONNECTED') pipeline.push({ $match: { hasConnection: false } });
@@ -61,7 +61,7 @@ export async function previewAudience(selection, options = {}) {
 export async function listAudience(selection, { page = 1, limit = 25, promotional = false } = {}) {
   const pipeline = audiencePipeline(selection, { promotional });
   const [result] = await User.aggregate([...pipeline, { $facet: {
-    rows: [{ $sort: { createdAt: -1, _id: -1 } }, { $skip: (page - 1) * limit }, { $limit: limit }, { $project: { fullName: 1, email: 1, status: 1, createdAt: 1, lastLoginAt: 1, connected: '$hasConnection', telegramUsername: '$connection.telegramUsername', planName: '$plan.name', expiresAt: '$currentSubscription.expiresAt', hasActivePaid: 1, suppressed: 1, excluded: 1, deliverable: 1 } }],
+    rows: [{ $sort: { createdAt: -1, _id: -1 } }, { $skip: (page - 1) * limit }, { $limit: limit }, { $project: { fullName: 1, email: 1, phone: 1, status: 1, createdAt: 1, lastLoginAt: 1, connected: '$hasConnection', telegramUsername: '$connection.telegramUsername', planName: '$plan.name', expiresAt: '$currentSubscription.expiresAt', hasActivePaid: 1, suppressed: 1, excluded: 1, deliverable: 1 } }],
     count: [{ $count: 'total' }],
   } }]);
   return { rows: result.rows, total: result.count[0]?.total || 0, page, limit };

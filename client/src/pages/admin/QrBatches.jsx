@@ -436,7 +436,7 @@ export function AdminQrBatchDetail() {
                   <StatusBadge tone={statusTone(link.status)}>{link.status}</StatusBadge>
                 </td>
                 <td className="p-3">{link.openCount || 0}</td>
-                <td className="p-3">{link.activatedUser?.email || '—'}</td>
+                <td className="p-3">{link.activatedUser?.phone || link.activatedUser?.email || '—'}</td>
                 <td className="p-3 whitespace-nowrap">{formatDate(link.activatedAt)}</td>
                 <td className="p-3 whitespace-nowrap">{formatDate(link.expiresAt)}</td>
               </tr>

@@ -162,7 +162,7 @@ export async function getQrBatch(id, { search = '' } = {}) {
   if (term) linkFilter.batchCode = { $regex: escapeRegex(term), $options: 'i' };
   const [links, grouped] = await Promise.all([
     ActivationLink.find(linkFilter)
-      .populate('activatedUser', 'fullName email')
+      .populate('activatedUser', 'fullName email phone')
       .select(
         'batchCode batchSequence status openCount activatedUser activatedAt expiresAt createdAt',
       )

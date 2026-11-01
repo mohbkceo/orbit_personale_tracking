@@ -16,7 +16,7 @@ api.interceptors.response.use((response) => response.data, (error) => {
   failure.responseData = error.response?.data;
   const path = String(error.config?.url || '');
   if (!path.startsWith('/admin/') && i18n.resolvedLanguage === 'ar') {
-    const codeKeys = { ACCOUNT_EXISTS: 'accountExists', ACCESS_EXPIRED: 'accessExpired', ACCESS_REQUIRED: 'accessRequired', USER_SUSPENDED: 'suspended', FEATURE_NOT_INCLUDED: 'featureUpgrade', FEATURE_DISABLED: 'featureDisabled', FEATURE_LIMIT_EXCEEDED: 'limit', INTERNAL_ERROR: 'internal' };
+    const codeKeys = { INVALID_CREDENTIALS: 'invalidCredentials', ACCOUNT_EXISTS: 'accountExists', ACCESS_EXPIRED: 'accessExpired', ACCESS_REQUIRED: 'accessRequired', USER_SUSPENDED: 'suspended', FEATURE_NOT_INCLUDED: 'featureUpgrade', FEATURE_DISABLED: 'featureDisabled', FEATURE_LIMIT_EXCEEDED: 'limit', INTERNAL_ERROR: 'internal' };
     const key = codeKeys[failure.code] || (failure.status === 404 ? 'notFound' : failure.status === 400 || failure.status === 422 ? 'validation' : 'internal');
     failure.message = i18n.t(`errors:${key}`);
   }

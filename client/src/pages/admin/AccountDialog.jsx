@@ -88,7 +88,7 @@ export function AccountDialog({ id, data, management, onClose, onChanged }) {
           >
             <option value="PROFILE">Edit profile</option>
             <option value="EMAIL_CHANGE">Request verified email change</option>
-            <option value="PASSWORD_RESET">Send password recovery link</option>
+            <option value="PASSWORD_RESET" disabled={!data.user.email}>Send password recovery link{!data.user.email ? " (requires email)" : ""}</option>
             <option value="STATUS">
               {data.user.status === 'ACTIVE' ? 'Suspend account' : 'Unsuspend account'}
             </option>
@@ -100,6 +100,7 @@ export function AccountDialog({ id, data, management, onClose, onChanged }) {
             <option value="NOTE">Add internal support note</option>
           </select>
         </Field>
+        {!data.user.email && <p className="text-muted">Phone recovery is unavailable. An unverified phone cannot prove ownership. Verify the customer through your established support process before requesting an email addition.</p>}
         {action === 'PROFILE' && (
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Full name">

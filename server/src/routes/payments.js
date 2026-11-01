@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { rateLimit } from 'express-rate-limit';
 import { userAuth, adminAuth } from '../middleware/auth.js';
+import { emailInput } from '../utils/userIdentity.js';
 import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/api.js';
@@ -22,6 +23,7 @@ paymentRoutes.post('/orders', validate(z.strictObject({ planId: z.string().regex
 }));
 paymentRoutes.get('/orders/:id', asyncHandler(async (req, res) => success(res, publicOrder(await ownedOrder(req.params.id, req.user)))));
 const billingInput = z.strictObject({
+  email: emailInput.optional(),
   firstname: z.string().trim().min(1).max(100), lastname: z.string().trim().min(1).max(100),
   phone: z.string().trim().regex(/^\+?[\d\s().-]{8,24}$/), address: z.string().trim().min(5).max(300),
 });

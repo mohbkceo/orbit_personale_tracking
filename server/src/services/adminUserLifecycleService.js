@@ -37,6 +37,7 @@ import { AnalyticsEvent } from '../models/AnalyticsEvent.js';
 import { AnalyticsLead } from '../models/AnalyticsLead.js';
 import { audit } from './auditService.js';
 import { AppError } from '../utils/AppError.js';
+import { normalizePhone } from '../utils/userIdentity.js';
 
 // PaymentOrder, AccessSubscription, ActivationLink and AuditLog are retained as
 // financial/access and accountability records. No user workspace collection is.
@@ -79,14 +80,16 @@ export const workspaceModels = [
   MessagePreference,
 ];
 
-export async function deleteUserAccount(userId, adminId, reason, ip, expectedEmail) {
+export async function deleteUserAccount(userId, adminId, reason, ip, expectedIdentity) {
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      const user = await User.findById(userId).select('email').session(session);
+      const user = await User.findById(userId).select('email phone').session(session);
       if (!user) throw new AppError('User not found', 404);
-      if (expectedEmail && user.email !== expectedEmail.trim().toLowerCase())
-        throw new AppError('Confirmation email does not match', 422);
+      if (expectedIdentity) {
+        const expected = user.email ? expectedIdentity.trim().toLowerCase() : normalizePhone(expectedIdentity);
+        if (expected !== (user.email || user.phone)) throw new AppError('Confirmation identity does not match', 422);
+      }
       // Serialize against payment confirmation, activation, manual grants and
       // account status changes, all of which write the User document.
       await User.updateOne({ _id: userId }, { $inc: { authVersion: 1 } }, { session });

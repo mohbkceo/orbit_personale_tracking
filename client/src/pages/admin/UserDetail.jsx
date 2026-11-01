@@ -164,7 +164,7 @@ export function AdminUserDetail() {
             </div>
             <div className="min-w-0">
               <h1 className="break-words font-display text-2xl font-semibold">{user.fullName}</h1>
-              <p className="break-all text-sm text-muted">{user.email}</p>
+              <p className="break-all text-sm text-muted">{user.phone || user.email || '—'}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <StatusBadge tone={user.status === 'ACTIVE' ? 'success' : 'danger'}>
                   {user.status === 'ACTIVE' ? 'Active' : 'Suspended'}
@@ -277,7 +277,8 @@ export function AdminUserDetail() {
               <Facts
                 items={[
                   ['Full name', user.fullName],
-                  ['Email', user.email],
+                  ['Phone', user.phone || '—'],
+                  ['Email', user.email || '—'],
                   ['Gender', user.gender || 'Not set'],
                   ['Account', user.status],
                   [
@@ -459,7 +460,7 @@ export function AdminUserDetail() {
             </Section>
             <Section title="Recovery and Telegram">
               <p className="text-sm text-muted">
-                Password recovery and verified email changes send one-time links to the user.
+                Password recovery requires an account email; phone-only recovery is unavailable. Email additions or changes require the existing admin reauthentication and one-time email verification workflow. An unverified phone is never proof of ownership.
                 Telegram can be disconnected; the user reconnects from their settings.
               </p>
             </Section>

@@ -12,6 +12,7 @@ import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/api.js';
 import { AppError } from '../utils/AppError.js';
+import { normalizePhone } from '../utils/userIdentity.js';
 import { escapeRegex } from '../utils/query.js';
 import { audit } from '../services/auditService.js';
 import { createActivationLink } from '../services/activationService.js';
@@ -40,7 +41,12 @@ adminUserRoutes.get('/', asyncHandler(async (req, res) => {
   const now = new Date();
   const sevenDays = new Date(now.getTime() + 7 * 86400000);
   const pipeline = [];
-  if (search) { const rx = new RegExp(escapeRegex(search), 'i'); pipeline.push({ $match: { $or: [{ fullName: rx }, { email: rx }] } }); }
+  if (search) {
+    const rx = new RegExp(escapeRegex(search), 'i');
+    const matches = [{ fullName: rx }, { email: rx }, { phone: rx }];
+    try { matches.push({ phone: normalizePhone(search) }); } catch { /* Name, email or partial phone search. */ }
+    pipeline.push({ $match: { $or: matches } });
+  }
   pipeline.push(
     { $lookup: { from: 'accesssubscriptions', let: { uid: '$_id' }, pipeline: [{ $match: { $expr: { $eq: ['$user', '$$uid'] }, status: { $in: ['ACTIVE', null] } } }, { $sort: { expiresAt: -1 } }, { $limit: 1 }], as: 'access' } },
     { $lookup: { from: 'telegramconnections', localField: '_id', foreignField: 'user', as: 'telegram' } },
@@ -49,7 +55,7 @@ adminUserRoutes.get('/', asyncHandler(async (req, res) => {
   );
   if (filter === 'EXPIRING_SOON') pipeline.push({ $match: { accessStatus: 'ACTIVE', 'access.expiresAt': { $gt: now, $lte: sevenDays } } });
   else if (['ACTIVE', 'FREE', 'SUSPENDED'].includes(filter)) pipeline.push({ $match: { accessStatus: filter } });
-  pipeline.push({ $project: { fullName: 1, email: 1, status: 1, createdAt: 1, lastLoginAt: 1, accessStatus: 1, access: { planSnapshot: 1, startedAt: 1, expiresAt: 1 }, telegram: { telegramUsername: 1, linkedAt: 1 } } }, { $sort: { createdAt: -1 } }, { $facet: { rows: [{ $skip: (page - 1) * limit }, { $limit: limit }], count: [{ $count: 'total' }] } });
+  pipeline.push({ $project: { fullName: 1, email: 1, phone: 1, status: 1, createdAt: 1, lastLoginAt: 1, accessStatus: 1, access: { planSnapshot: 1, startedAt: 1, expiresAt: 1 }, telegram: { telegramUsername: 1, linkedAt: 1 } } }, { $sort: { createdAt: -1 } }, { $facet: { rows: [{ $skip: (page - 1) * limit }, { $limit: limit }], count: [{ $count: 'total' }] } });
   const [result] = await User.aggregate(pipeline);
   const total = result.count[0]?.total || 0;
   return success(res, result.rows, 200, { pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
@@ -58,7 +64,7 @@ adminUserRoutes.get('/', asyncHandler(async (req, res) => {
 adminUserRoutes.get('/:id', asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('User not found', 404);
   const [user, history, telegram, current, tasks, transactions, reminders, purchases, telegramInteractions] = await Promise.all([
-    User.findById(req.params.id).select('fullName email gender status onboardingCompletedAt firstUseOnboarding createdAt lastLoginAt'),
+    User.findById(req.params.id).select('fullName email phone gender status onboardingCompletedAt firstUseOnboarding createdAt lastLoginAt'),
     AccessSubscription.find({ user: req.params.id }).select('plan source grantKind grantReason paymentReference grantedBy activationLink startedAt activatedAt expiresAt status planSnapshot entitlementOverrides createdAt').sort({ activatedAt: -1 }).limit(100).lean(),
     TelegramConnection.findOne({ user: req.params.id }).select('telegramUsername linkedAt lastInteractionAt').lean(),
     currentSubscription(req.params.id),
@@ -69,7 +75,7 @@ adminUserRoutes.get('/:id', asyncHandler(async (req, res) => {
   if (!user) throw new AppError('User not found', 404);
   const entitlements = await resolveUserEntitlements(user, { readOnly: true });
   const features = Object.entries(entitlements.decisions).map(([key, value]) => ({ key, allowed: value.allowed, limit: value.limit, reason: value.reason }));
-  return success(res, { user: { id: String(user._id), fullName: user.fullName, email: user.email, gender: user.gender, status: user.status, createdAt: user.createdAt, lastLoginAt: user.lastLoginAt, onboardingCompletedAt: user.onboardingCompletedAt, firstUseOnboarding: user.firstUseOnboarding }, access: current?.expiresAt > new Date() ? { planSnapshot: current.planSnapshot, startedAt: current.startedAt, expiresAt: current.expiresAt, status: current.status, source: current.source } : null, history, purchases, features, telegram, telegramInteractions, metrics: { tasks, transactions, reminders } });
+  return success(res, { user: { id: String(user._id), fullName: user.fullName, email: user.email, phone: user.phone, gender: user.gender, status: user.status, createdAt: user.createdAt, lastLoginAt: user.lastLoginAt, onboardingCompletedAt: user.onboardingCompletedAt, firstUseOnboarding: user.firstUseOnboarding }, access: current?.expiresAt > new Date() ? { planSnapshot: current.planSnapshot, startedAt: current.startedAt, expiresAt: current.expiresAt, status: current.status, source: current.source } : null, history, purchases, features, telegram, telegramInteractions, metrics: { tasks, transactions, reminders } });
 }));
 
 adminUserRoutes.patch('/:id/status', sensitive, requireSuperAdmin, requireAdminCsrf, validate(z.strictObject({ status: z.enum(['ACTIVE', 'SUSPENDED']), reason: z.string().trim().min(10).max(500), adminPassword: z.string().min(1) })), verifyFreshAdmin, asyncHandler(async (req, res) => {

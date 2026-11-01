@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/useAuth.js';
+import { PhoneField } from '../components/PhoneField.jsx';
 import { Spinner } from '../components/ui.jsx';
 import { AppearancePicker } from '../appearance/AppearancePicker.jsx';
 import { defaults, recommendedThemes } from '../appearance/themes.js';
@@ -21,7 +22,7 @@ export default function Activation() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', gender: '', name: _t('settings:ui.myWorkspace'), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Algiers', defaultCurrency: 'DZD', dateFormat: 'DD MMM YYYY', appearance: { ...defaults } });
+  const [form, setForm] = useState({ fullName: '', phone: '', password: '', gender: '', name: _t('settings:ui.myWorkspace'), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Algiers', defaultCurrency: 'DZD', dateFormat: 'DD MMM YYYY', appearance: { ...defaults } });
   const [telegram, setTelegram] = useState(null);
   useEffect(() => {
     const defaultsByLanguage = new Set(['en', 'ar'].map((language) => _t('settings:ui.myWorkspace', { lng: language })));
@@ -36,7 +37,7 @@ export default function Activation() {
   async function createAccount(event) {
     event.preventDefault(); setBusy(true); setError('');
     try {
-      await register(key, { fullName: form.fullName, email: form.email, password: form.password, gender: form.gender, preferences: { name: form.name, timezone: form.timezone, defaultCurrency: form.defaultCurrency, dateFormat: form.dateFormat, appearance: { mode: form.appearance.mode, preset: form.appearance.preset } } });
+      await register(key, { fullName: form.fullName.trim(), phone: form.phone, password: form.password, gender: form.gender, preferences: { name: form.name, timezone: form.timezone, defaultCurrency: form.defaultCurrency, dateFormat: form.dateFormat, appearance: { mode: form.appearance.mode, preset: form.appearance.preset } } });
       setStage(4);
     } catch (failure) { setError(failure.message); }
     finally { setBusy(false); }
@@ -64,13 +65,13 @@ export default function Activation() {
       <ol className="mt-6 flex flex-wrap gap-2 text-xs">{stepKeys.slice(0, 4).map((step, index) => <li key={step} className={`rounded-full px-3 py-1.5 ${index === stage ? 'bg-primary text-primary-text' : 'bg-surface-alt text-muted'}`}>{index + 1}. {_t(`checkout:activationSteps.${step}`)}</li>)}</ol>
       <form onSubmit={stage === 3 ? createAccount : next} className="mt-6 space-y-5">
         <h2 className="font-display text-xl font-bold">{stage + 1}. {_t('checkout:activationSteps.' + stepKeys[stage])}</h2>
-        {stage === 0 && <><div className="grid gap-4 sm:grid-cols-2"><label><span className="label">{_t('auth:fullName')}</span><input required className="field" value={form.fullName} onChange={update('fullName')} /></label><label><span className="label">{_t('auth:email')}</span><input required type="email" className="field" value={form.email} onChange={update('email')} /></label></div><label className="block"><span className="label">{_t('checkout:ui.password12Characters')}</span><input required minLength="12" type="password" className="field" value={form.password} onChange={update('password')} /></label></>}
+        {stage === 0 && <><div className="grid gap-4 sm:grid-cols-2"><label><span className="label">{_t('auth:fullName')}</span><input required minLength={2} maxLength={120} autoComplete="name" className="field" value={form.fullName} onChange={update('fullName')} /></label><PhoneField id="activation-phone" value={form.phone} onChange={update('phone')} disabled={busy} /></div><label className="block"><span className="label">{_t('checkout:ui.password12Characters')}</span><input required minLength="12" type="password" className="field" value={form.password} onChange={update('password')} /></label></>}
         {stage === 1 && <div><p className="mb-4 text-sm text-muted">{_t('checkout:ui.thisOnlyChangesWhichWorkspaceStylesOrbitSuggestsFirstAllStylesRe')}</p><div className="grid gap-3 sm:grid-cols-2">{[['MALE','Male'],['FEMALE','Female']].map(([id]) => <label key={id} className={`cursor-pointer rounded-xl border p-4 ${form.gender === id ? 'border-primary bg-selected' : 'border-border'}`}><input type="radio" name="gender" required value={id} checked={form.gender === id} onChange={update('gender')} className="me-2 accent-primary" />{_t(id === 'MALE' ? 'checkout:gender.MALE' : 'checkout:gender.FEMALE')}</label>)}</div></div>}
         {stage === 2 && <div className="grid gap-4 sm:grid-cols-2"><label><span className="label">{_t('settings:workspaceName')}</span><input required className="field" value={form.name} onChange={update('name')} /></label><label><span className="label">{_t('common:timezone')}</span><input required className="field" value={form.timezone} onChange={update('timezone')} /></label><label><span className="label">{_t('checkout:ui.currency')}</span><input required maxLength="3" minLength="3" className="field uppercase" value={form.defaultCurrency} onChange={update('defaultCurrency')} /></label><label><span className="label">{_t('common:dateFormat')}</span><select className="field" value={form.dateFormat} onChange={update('dateFormat')}><option value="DD MMM YYYY">{_t('checkout:ui.ddMmmYyyy')}</option><option value="MM/DD/YYYY">{_t('checkout:ui.mmDdYyyy')}</option><option value="YYYY-MM-DD">{_t('checkout:ui.yyyyMmDd')}</option></select></label></div>}
         {stage === 3 && <AppearancePicker appearance={form.appearance} gender={form.gender} onChange={(appearance) => setForm((value) => ({ ...value, appearance }))} onboarding />}
         <div className="flex justify-between gap-3">{stage > 0 && <button type="button" className="btn-secondary" onClick={() => setStage((current) => current - 1)}>{_t('checkout:ui.back')}</button>}<button disabled={busy || (stage === 1 && !form.gender)} className="btn-primary ms-auto">{busy ? _t('checkout:ui.creatingAccount') : stage === 3 ? _t('checkout:ui.createAccountAndContinue') : _t('checkout:ui.continue')}</button></div>
       </form>
-    </> : <div className="mt-6 space-y-5"><p className="text-sm">{_t('checkout:ui.signedInAs')}{' '}<b>{user.email}</b>{_t('checkout:ui.yourExistingDataAndTelegramConnectionWillBePreserved')}</p>
+    </> : <div className="mt-6 space-y-5"><p className="text-sm">{_t('checkout:ui.signedInAs')}{' '}<bdi dir="ltr" className="font-bold">{user.phone || user.email || user.fullName}</bdi>{_t('checkout:ui.yourExistingDataAndTelegramConnectionWillBePreserved')}</p>
       <section className="rounded-xl border border-border p-4"><h2 className="font-bold">{_t('checkout:ui.5TelegramOptional')}</h2><p className="mt-1 text-sm text-muted">{_t('checkout:ui.connectTheCentralOrbitBotNowOrLaterFromSettings')}</p>{telegram?.connected ? <p className="mt-3 text-sm text-primary">{_t('checkout:ui.telegramIsConnected')}{telegram.telegramUsername ? _t('common:dynamic.asUsername', { username: telegram.telegramUsername }) : ''}.</p> : <button disabled={busy} onClick={connectTelegram} className="btn-secondary mt-3">{_t('checkout:ui.connectTelegram')}</button>}{telegram?.url && <p className="mt-2 text-xs">{_t('checkout:ui.aTelegramLinkOpenedFinishThereThenContinueBelow')}</p>}<button onClick={() => api.get('/telegram-link').then((response) => setTelegram(response.data))} className="ms-3 text-xs text-primary underline">{_t('checkout:ui.refreshStatus')}</button></section>
       <section><h2 className="font-bold">{_t('checkout:ui.6FinalActivation')}</h2><p className="mt-1 text-sm text-muted">{_t('checkout:ui.yourAccessPeriodStartsOnlyWhenYouPressActivate')}</p><button disabled={busy} onClick={activate} className="btn-primary mt-4 w-full justify-center">{busy ? _t('checkout:ui.activating') : _t('checkout:ui.activateOrbitAccess')}</button></section>
     </div>}

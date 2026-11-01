@@ -18,11 +18,12 @@ describe('direct registration', () => {
   it('collects only essentials and enters onboarding after registration', async () => {
     auth.registerDirect.mockResolvedValue({});
     render(<MemoryRouter initialEntries={['/register?next=%2Fcheckout%3Fplan%3Dabc']}><Routes><Route path="/register" element={<Register />} /><Route path="/onboarding" element={<p>Onboarding ready</p>} /></Routes></MemoryRouter>);
+    expect(screen.queryByLabelText('Email')).toBeNull();
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Test Customer' } });
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText('Phone number'), { target: { value: '0550123456' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long-password-123' } });
     fireEvent.click(screen.getByRole('button', { name: /Create account/ }));
-    await waitFor(() => expect(auth.registerDirect).toHaveBeenCalledWith({ fullName: 'Test Customer', email: 'test@example.com', password: 'long-password-123' }));
+    await waitFor(() => expect(auth.registerDirect).toHaveBeenCalledWith({ fullName: 'Test Customer', phone: '0550123456', password: 'long-password-123' }));
     expect(await screen.findByText('Onboarding ready')).toBeTruthy();
     expect(sessionStorage.getItem('orbit:registration-next')).toBe('/checkout?plan=abc');
   });
@@ -33,17 +34,18 @@ describe('direct registration', () => {
       return {};
     });
     render(<MemoryRouter initialEntries={['/register']}><Routes><Route path="/register" element={<Register />} /><Route path="/onboarding" element={<p>Onboarding ready</p>} /><Route path="/panel" element={<p>Dashboard ready</p>} /></Routes></MemoryRouter>);
+    expect(screen.queryByLabelText('Email')).toBeNull();
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'New User' } });
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'new@example.com' } });
+    fireEvent.change(screen.getByLabelText('Phone number'), { target: { value: '+213550123456' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-password' } });
     fireEvent.click(screen.getByRole('button', { name: /Create account/ }));
     expect(await screen.findByText('Onboarding ready')).toBeTruthy();
     expect(screen.queryByText('Dashboard ready')).toBeNull();
   });
   it('shows understandable server validation/duplicate feedback', async () => {
-    auth.registerDirect.mockRejectedValue(new Error('An account with this email already exists. Please sign in.'));
+    auth.registerDirect.mockRejectedValue(new Error('An account with this identity already exists. Please sign in.'));
     render(<MemoryRouter><Register /></MemoryRouter>);
     fireEvent.submit(screen.getByRole('button', { name: /Create account/ }).closest('form'));
-    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'An account with this email already exists. Please sign in.');
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'An account with this identity already exists. Please sign in.');
   });
 });

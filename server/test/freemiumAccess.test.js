@@ -21,7 +21,7 @@ let adminAgent;
 let member;
 let account;
 let paid;
-const signup = { fullName: 'Free Member', email: 'free@example.com', password: 'very-long-free-password' };
+const signup = { phone: '+213550123456', fullName: 'Free Member', email: 'free@example.com', password: 'very-long-free-password' };
 
 beforeAll(async () => { mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } }); await connectDatabase(mongo.getUri()); });
 afterAll(async () => { await disconnectDatabase(); await mongo.stop(); vi.unstubAllGlobals(); });

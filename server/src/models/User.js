@@ -1,8 +1,10 @@
 import mongoose from 'mongoose';
+import { normalizePhone } from '../utils/userIdentity.js';
 
 const userSchema = new mongoose.Schema({
   fullName: { type: String, required: true, trim: true, maxlength: 120 },
-  email: { type: String, required: true, lowercase: true, trim: true, unique: true, index: true },
+  email: { type: String, lowercase: true, trim: true },
+  phone: { type: String, set: (value) => value == null ? undefined : normalizePhone(value) },
   passwordHash: { type: String, required: true, select: false },
   // Public checkout accounts collect optional personalization after purchase.
   gender: { type: String, enum: ['MALE', 'FEMALE'] },
@@ -26,5 +28,11 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ status: 1, createdAt: -1 });
 userSchema.index({ lastLoginAt: -1 });
 userSchema.index({ fullName: 1 });
+// Production autoIndex is disabled. Use migrate:identities; never syncIndexes().
+userSchema.index({ email: 1 }, { name: 'user_email_unique_present', unique: true, partialFilterExpression: { email: { $type: 'string' } } });
+userSchema.index({ phone: 1 }, { name: 'user_phone_unique_present', unique: true, partialFilterExpression: { phone: { $type: 'string' } } });
+userSchema.pre('validate', function () {
+  if (!this.email && !this.phone) this.invalidate('phone', 'An email or phone identity is required');
+});
 
 export const User = mongoose.model('User', userSchema);

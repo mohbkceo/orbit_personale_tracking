@@ -286,7 +286,7 @@ export default function Subscribe() {
   const slickpayConfigured = Boolean(
     config?.payments?.enabled && chosen?.price?.currency === 'DZD',
   );
-  const contactUrl = whatsappUrl(config?.sales, undefined, user?.email);
+  const contactUrl = whatsappUrl(config?.sales, undefined, user?.email, user?.phone);
   const hasPaymentMethods = ccpConfigured || slickpayConfigured || Boolean(contactUrl);
 
   function choosePlan(id) {

@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, UserRound } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, UserRound } from 'lucide-react';
 import { useAuth } from '../context/useAuth.js';
+import { PhoneField } from '../components/PhoneField.jsx';
 import { Spinner } from '../components/ui.jsx';
 import { loginDestination } from '../utils/navigation.js';
 import { analytics } from '../analytics/client.js';
@@ -19,7 +20,7 @@ export default function Register() {
   const { loading, user, access, registerDirect } = useAuth();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ fullName: '', email: '', password: '' });
+  const [form, setForm] = useState({ fullName: '', phone: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -43,7 +44,7 @@ export default function Register() {
     setError('');
     analytics.track(EVENTS.SIGNUP_STARTED);
     try {
-      await registerDirect({ ...form, fullName: form.fullName.trim(), email: form.email.trim() });
+      await registerDirect({ ...form, fullName: form.fullName.trim(), phone: form.phone.trim() });
       try {
         sessionStorage.removeItem('orbit:registration-next');
         if (params.get('next') && next !== '/panel' && next !== '/access') {
@@ -132,37 +133,7 @@ export default function Register() {
               />
             </div>
           </div>
-          <div>
-            <label
-              htmlFor="register-email"
-              className="mb-2 block text-sm font-semibold text-slate-700"
-            >
-              {t('auth:email')}
-            </label>
-            <div className="relative">
-              <Mail
-                size={18}
-                aria-hidden="true"
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-              <input
-                id="register-email"
-                name="email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                dir="ltr"
-                required
-                maxLength={254}
-                value={form.email}
-                onChange={(e) => updateField('email', e.target.value)}
-                className={`${inputClass} text-left`}
-              />
-            </div>
-          </div>
+          <PhoneField id="register-phone" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} inputClass={inputClass} disabled={busy} />
           <div>
             <label
               htmlFor="register-password"

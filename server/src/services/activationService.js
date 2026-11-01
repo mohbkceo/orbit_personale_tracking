@@ -7,7 +7,8 @@ import { User } from '../models/User.js';
 import { Setting } from '../models/Setting.js';
 import { addDuration, currentSubscription } from './accessService.js';
 import { audit } from './auditService.js';
-import { hashPassword, normalizeEmail } from './authService.js';
+import { hashPassword } from './authService.js';
+import { registrationIdentity, accountExists } from '../utils/userIdentity.js';
 import { encryptSecret, decryptSecret } from '../utils/crypto.js';
 import { AppError } from '../utils/AppError.js';
 import { env } from '../config/env.js';
@@ -66,8 +67,9 @@ export async function activationUrl(linkId) {
 export async function registerWithLink(key, input, req, res) {
   // Validate before claiming analytics identity; the same user ID survives retries.
   await findValidLink(key);
+  const identity = registrationIdentity(input);
   const userId = new mongoose.Types.ObjectId();
-  const context = req ? await captureConversionContext(req, res, { _id: userId, email: normalizeEmail(input.email) }, undefined, { newAccount: true }) : null;
+  const context = req ? await captureConversionContext(req, res, { _id: userId, ...identity }, undefined, { newAccount: true }) : null;
   const session = await mongoose.startSession();
   let user;
   try {
@@ -75,9 +77,8 @@ export async function registerWithLink(key, input, req, res) {
       const link = await findValidLink(key, { session });
       if (link.intendedUser) throw new AppError('This renewal link requires the existing account to sign in.', 403, undefined, 'ACTIVATION_ACCOUNT_REQUIRED');
       if (link.reservedByUser) throw new AppError('This Activation Link is already reserved.', 409, undefined, 'ACTIVATION_USED');
-      const email = normalizeEmail(input.email);
-      if (await User.exists({ email }).session(session)) throw new AppError('An Orbit account already exists. Sign in to activate this access.', 409, undefined, 'ACCOUNT_EXISTS');
-      [user] = await User.create([{ _id: userId, fullName: input.fullName, email, gender: input.gender, passwordHash: await hashPassword(input.password) }], { session });
+      if (await User.exists({ $or: Object.entries(identity).map(([field, value]) => ({ [field]: value })) }).session(session)) throw accountExists();
+      [user] = await User.create([{ _id: userId, fullName: input.fullName, ...identity, gender: input.gender, passwordHash: await hashPassword(input.password), firstUseOnboarding: { status: 'NOT_STARTED', step: 'welcome', autoPresent: true } }], { session });
       const claimed = await ActivationLink.updateOne({ _id: link._id, status: 'ACTIVE', reservedByUser: null }, { $set: { reservedByUser: user._id } }, { session });
       if (claimed.modifiedCount !== 1) throw new AppError('This Activation Link is already reserved.', 409, undefined, 'ACTIVATION_USED');
       await Setting.create([{ user: user._id, ...(input.preferences || {}) }], { session });
@@ -85,6 +86,9 @@ export async function registerWithLink(key, input, req, res) {
       const claimedContext = await claimRegistrationContext(context, user._id, session);
       await recordDurableConversion(EVENTS.REGISTRATION_COMPLETED, `registration:${user._id}`, user._id, claimedContext, {}, session);
     });
+  } catch (error) {
+    if (error.code === 11000) throw accountExists();
+    throw error;
   } finally { await session.endSession(); }
   return user;
 }

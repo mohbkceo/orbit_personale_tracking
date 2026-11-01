@@ -18,7 +18,7 @@ adminActivationLinkRoutes.get('/', asyncHandler(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
   const filter = ['ACTIVE', 'USED', 'REVOKED', 'EXPIRED'].includes(req.query.status) ? { status: req.query.status } : {};
-  const [data, total] = await Promise.all([ActivationLink.find(filter).populate('plan', 'name durationValue durationUnit').populate('createdByAdmin', 'fullName email').populate('activatedUser', 'fullName email').populate('intendedUser', 'fullName email').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit), ActivationLink.countDocuments(filter)]);
+  const [data, total] = await Promise.all([ActivationLink.find(filter).populate('plan', 'name durationValue durationUnit').populate('createdByAdmin', 'fullName email').populate('activatedUser', 'fullName email phone').populate('intendedUser', 'fullName email phone').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit), ActivationLink.countDocuments(filter)]);
   return success(res, data, 200, { pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 adminActivationLinkRoutes.post('/', validate(z.object({ planId: z.string().regex(/^[a-f\d]{24}$/i), validityDays: z.coerce.number().int().min(1).max(365).default(7), note: z.string().max(500).default(''), leadCode: z.string().regex(/^LEAD-[A-F0-9]{16}$/).optional() })), asyncHandler(async (req, res) => {

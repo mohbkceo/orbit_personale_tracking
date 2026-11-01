@@ -11,10 +11,14 @@ import { hashPassword, normalizeEmail } from './authService.js';
 const digest = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 export async function initiateAccountAction(userId, adminId, kind, newEmail, reason, ip) {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM)
-    throw new AppError('Email delivery is not configured', 503, undefined, 'EMAIL_NOT_CONFIGURED');
   const user = await User.findById(userId).select('email fullName');
   if (!user) throw new AppError('User not found', 404);
+  if (kind === 'PASSWORD_RESET' && !user.email) {
+    throw new AppError('Password recovery requires an account email. Phone recovery is unavailable; an unverified phone cannot prove ownership.', 409, undefined, 'RECOVERY_EMAIL_REQUIRED');
+  }
+  if (kind === 'EMAIL_CHANGE' && !newEmail) throw new AppError('New email required', 422);
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM)
+    throw new AppError('Email delivery is not configured', 503, undefined, 'EMAIL_NOT_CONFIGURED');
   const recipient = kind === 'EMAIL_CHANGE' ? normalizeEmail(newEmail) : user.email;
   if (kind === 'EMAIL_CHANGE' && (await User.exists({ email: recipient })))
     throw new AppError('Email already in use', 409);

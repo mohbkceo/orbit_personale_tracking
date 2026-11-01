@@ -343,8 +343,12 @@ export default function Settings() {
                   <b>{_t('settings:ui.name')}</b> {user?.fullName}
                 </p>
                 <p>
-                  <b>{_t('settings:ui.email')}</b> {user?.email}
+                  <b>{_t('auth:phone')}</b> <bdi dir="ltr">{user?.phone || '—'}</bdi>
                 </p>
+                <p>
+                  <b>{_t('settings:ui.email')}</b> {user?.email || '—'}
+                </p>
+                {!user?.email && <p className="text-xs text-muted">{_t('auth:recoveryLimitation')}</p>}
                 <p>
                   <b>{_t('settings:ui.status')}</b> <StatusBadge tone="success">{user?.status}</StatusBadge>
                 </p>

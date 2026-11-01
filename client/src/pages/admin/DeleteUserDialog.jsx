@@ -5,7 +5,7 @@ import { Field, Message, UserDialog } from './UserDialog.jsx';
 
 export function DeleteUserDialog({ user, onClose }) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [identity, setIdentity] = useState('');
   const [reason, setReason] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export function DeleteUserDialog({ user, onClose }) {
     setError('');
     try {
       await api.delete(`/admin/users/${user.id}`, {
-        data: { confirmationEmail: email.trim(), reason, adminPassword },
+        data: { ...(user.email ? { confirmationEmail: identity.trim() } : { confirmationIdentifier: identity.trim() }), reason, adminPassword },
       });
       navigate('/admin/users', { replace: true });
     } catch (failure) {
@@ -31,13 +31,13 @@ export function DeleteUserDialog({ user, onClose }) {
           subscription, activation and audit records remain. Unfinished payments must be resolved
           first. This cannot be undone.
         </p>
-        <Field label={`Type ${user.email} to confirm`}>
+        <Field label={`Type ${user.email || user.phone} to confirm`}>
           <input
             className="field"
-            type="email"
+            type="text"
             autoComplete="off"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            value={identity}
+            onChange={(event) => setIdentity(event.target.value)}
           />
         </Field>
         <Field label="Reason">
@@ -61,7 +61,7 @@ export function DeleteUserDialog({ user, onClose }) {
           className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
           disabled={
             busy ||
-            email.trim().toLowerCase() !== user.email.toLowerCase() ||
+            identity.trim().toLowerCase() !== (user.email || user.phone || '').toLowerCase() ||
             reason.trim().length < 10 ||
             !adminPassword
           }

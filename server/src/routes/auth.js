@@ -14,21 +14,21 @@ import { clearAnalyticsIdentity } from '../analytics/identityService.js';
 import { analyticsAllowed } from '../analytics/consentService.js';
 import { registerPublic } from '../services/registrationService.js';
 import { completeAccountAction, inspectAccountAction } from '../services/accountRecoveryService.js';
+import { registrationFields, userLoginInput } from '../utils/userIdentity.js';
 
-const loginInput = z.object({ email: z.email(), password: z.string().min(1) });
 export const authRoutes = Router();
 authRoutes.get('/account-action/:token', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 30 }), asyncHandler(async (req, res) => success(res, await inspectAccountAction(req.params.token))));
 authRoutes.post('/account-action/:token', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10 }), validate(z.strictObject({ password: z.string().min(12).max(200).optional() })), asyncHandler(async (req, res) => success(res, await completeAccountAction(req.params.token, req.body.password))));
 authRoutes.post('/register', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(z.strictObject({
-  fullName: z.string().trim().min(2).max(120), email: z.string().trim().toLowerCase().max(254).pipe(z.email()), password: z.string().min(12).max(200),
+  ...registrationFields,
   language: z.enum(['en', 'ar']).optional(),
 })), asyncHandler(async (req, res) => {
   const user = await registerPublic(req.body, req, res);
   await issueCookie(res, user, 'user', req);
   return success(res, { user: safeIdentity(user), access: await checkAccess(user), conversion: { name: 'CompleteRegistration', eventId: `registration:${user._id}` } }, 201);
 }));
-authRoutes.post('/login', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(loginInput), asyncHandler(async (req, res) => {
-  const user = await login(req.body.email, req.body.password, 'user');
+authRoutes.post('/login', rateLimit({ windowMs: 15 * 60_000, limit: process.env.NODE_ENV === 'test' ? 1000 : 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(userLoginInput), asyncHandler(async (req, res) => {
+  const user = await login(req.body.identifier ?? req.body.email ?? req.body.phone, req.body.password, 'user');
   await issueCookie(res, user, 'user', req);
   if (analyticsAllowed(req)) {
     try { await ensureSession(req, res, {}, user._id); }

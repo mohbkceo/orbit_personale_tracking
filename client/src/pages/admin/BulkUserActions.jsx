@@ -47,7 +47,7 @@ export function BulkUserActions({ users, onClose, onApplied }) {
             <div className="max-h-56 space-y-1 overflow-y-auto">
               {results.map((row) => (
                 <p key={row.id} className="border-b border-border py-1">
-                  {users.find((user) => user._id === row.id)?.email || row.id} ·{' '}
+                  {users.find((user) => user._id === row.id)?.phone || users.find((user) => user._id === row.id)?.email || row.id} ·{' '}
                   {row.error || (row.deleted || row.changed ? 'Completed' : 'Already in this state')}
                 </p>
               ))}
@@ -58,7 +58,7 @@ export function BulkUserActions({ users, onClose, onApplied }) {
           <>
             <p className="text-muted">Only the selected users on this page will be affected.</p>
             <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-border p-3">
-              {users.map((user) => <p key={user._id}>{user.fullName} · {user.email}</p>)}
+              {users.map((user) => <p key={user._id}>{user.fullName} · {user.phone || user.email}</p>)}
             </div>
             <Field label="Action">
               <select className="field" value={action} onChange={(event) => { setAction(event.target.value); setConfirmation(''); setConfirmed(false); }}>

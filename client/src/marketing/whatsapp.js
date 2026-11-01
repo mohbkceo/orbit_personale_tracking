@@ -1,6 +1,6 @@
 import i18n from '../i18n/index.js';
 
-export function whatsappUrl(sales, leadCode, email) {
+export function whatsappUrl(sales, leadCode, email, phone) {
   if (sales?.whatsappEnabled === false) return null;
   const number = String(sales?.whatsappNumber || '').replace(/\D/g, '');
   const message = sales?.whatsappMessage?.trim();
@@ -8,5 +8,6 @@ export function whatsappUrl(sales, leadCode, email) {
   const lines = [message];
   if (leadCode) lines.push(i18n.t('marketing:reference', { reference: leadCode }));
   if (email?.trim()) lines.push(i18n.t('subscribe:accountEmail', { email: email.trim() }));
+  if (phone?.trim()) lines.push(i18n.t('subscribe:accountPhone', { phone: phone.trim() }));
   return `https://wa.me/${number}?text=${encodeURIComponent(lines.join('\n'))}`;
 }

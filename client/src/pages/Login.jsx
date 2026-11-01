@@ -16,7 +16,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -35,7 +35,7 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      const result = await login(email.trim(), password);
+      const result = await login(identifier.trim(), password);
       navigate(loginDestination(params.get('next'), result.access?.eligible), { replace: true });
     } catch (failure) {
       setError(
@@ -91,10 +91,10 @@ export default function Login() {
         <form onSubmit={submit} aria-busy={busy} className="space-y-5">
           <div>
             <label
-              htmlFor="login-email"
+              htmlFor="login-identifier"
               className="mb-2 block text-sm font-semibold text-slate-700"
             >
-              {t('auth:email')}
+              {t('auth:identifier')}
             </label>
             <div className="relative">
               <Mail
@@ -103,19 +103,20 @@ export default function Login() {
                 className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
-                id="login-email"
-                name="email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
+                id="login-identifier"
+                name="identifier"
+                type="text"
+                inputMode="text"
+                autoComplete="username"
+                maxLength={254}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
                 required
                 dir="ltr"
-                value={email}
+                value={identifier}
                 onChange={(event) => {
-                  setEmail(event.target.value);
+                  setIdentifier(event.target.value);
                   if (error) setError('');
                 }}
                 className="w-full rounded-2xl border border-white/70 bg-white/60 py-3.5 pl-11 pr-4 text-left text-base font-medium text-slate-800 outline-none transition-colors placeholder:text-slate-400 hover:bg-white/75 focus:border-[#EB4300]/80 focus:bg-white/90 focus:ring-2 focus:ring-[#EB4300]/20"

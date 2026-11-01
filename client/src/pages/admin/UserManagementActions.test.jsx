@@ -29,6 +29,20 @@ const rows = [
 ];
 
 describe('user deletion and bulk selection', () => {
+  it('requires a phone confirmation and admin password for phone-only deletion', async () => {
+    remove.mockResolvedValue({ data: { deleted: true } });
+    render(<MemoryRouter initialEntries={['/admin/users/phone']}><Routes><Route path="/admin/users/:id" element={<DeleteUserDialog user={{ id: 'phone', fullName: 'Phone Member', phone: '+213550123456' }} onClose={vi.fn()} />} /><Route path="/admin/users" element={<p>Phone user removed</p>} /></Routes></MemoryRouter>);
+    const submit = screen.getByRole('button', { name: 'Permanently delete user' });
+    expect(submit.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Type +213550123456 to confirm'), { target: { value: '+213550123456' } });
+    fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'Customer requested removal' } });
+    expect(submit.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Confirm admin password'), { target: { value: 'admin-password' } });
+    fireEvent.click(submit);
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('/admin/users/phone', { data: { confirmationIdentifier: '+213550123456', reason: 'Customer requested removal', adminPassword: 'admin-password' } }));
+    expect(await screen.findByText('Phone user removed')).toBeTruthy();
+  });
+
   it('selects visible users and applies a confirmed bulk action', async () => {
     get.mockResolvedValue({ data: rows, pagination: { total: 2, pages: 1 } });
     post.mockResolvedValue({ data: { results: rows.map((user) => ({ id: user._id, changed: true })) } });

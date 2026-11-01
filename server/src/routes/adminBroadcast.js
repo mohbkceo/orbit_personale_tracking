@@ -191,7 +191,7 @@ adminBroadcastRoutes.get('/:id/recipients', validate(pageInput, 'query'), asyncH
   const campaign = await campaignById(req.params.id);
   const { page, limit } = req.query;
   const [rows, total, counts, errors] = await Promise.all([
-    BroadcastRecipient.find({ campaign: campaign._id }).select('-chatId').populate('user', 'fullName email').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    BroadcastRecipient.find({ campaign: campaign._id }).select('-chatId').populate('user', 'fullName email phone').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     BroadcastRecipient.countDocuments({ campaign: campaign._id }),
     BroadcastRecipient.aggregate([{ $match: { campaign: campaign._id } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     BroadcastRecipient.aggregate([{ $match: { campaign: campaign._id, status: 'FAILED' } }, { $group: { _id: '$lastError.code', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),

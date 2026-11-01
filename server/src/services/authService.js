@@ -6,12 +6,13 @@ import { Admin } from '../models/Admin.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 import { AuthSession } from '../models/AuthSession.js';
+import { identityQuery } from '../utils/userIdentity.js';
 
 const cookieOptions = { httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'lax', path: '/' };
 
-export const normalizeEmail = (email) => String(email).trim().toLowerCase();
+export const normalizeEmail = (email) => typeof email === 'string' ? email.trim().toLowerCase() : '';
 export const hashPassword = (password) => bcrypt.hash(password, 12);
-export const safeIdentity = (person) => ({ id: String(person._id), fullName: person.fullName, email: person.email, ...(!person.role ? { gender: person.gender || null } : { role: person.role }), status: person.status });
+export const safeIdentity = (person) => ({ id: String(person._id), fullName: person.fullName, email: person.email, ...(!person.role ? { phone: person.phone || null, gender: person.gender || null } : { role: person.role }), status: person.status });
 
 export const sessionHash = (id) => crypto.createHash('sha256').update(id).digest('hex');
 
@@ -53,10 +54,10 @@ export async function revokeCurrentSession(req) {
   } catch { /* An invalid cookie has nothing to revoke. */ }
 }
 
-export async function login(email, password, type) {
+export async function login(identifier, password, type) {
   const Model = type === 'admin' ? Admin : User;
-  const person = await Model.findOne({ email: normalizeEmail(email) }).select('+passwordHash');
-  if (!person || !(await bcrypt.compare(password, person.passwordHash)) || (type === 'admin' && person.status !== 'ACTIVE')) throw new AppError('Invalid email or password', 401, undefined, 'INVALID_CREDENTIALS');
+  const person = await Model.findOne(type === 'admin' ? { email: normalizeEmail(identifier) } : identityQuery(identifier)).select('+passwordHash');
+  if (!person || !(await bcrypt.compare(password, person.passwordHash)) || (type === 'admin' && person.status !== 'ACTIVE')) throw new AppError(type === 'admin' ? 'Invalid email or password' : 'Invalid email, phone number or password', 401, undefined, 'INVALID_CREDENTIALS');
   person.lastLoginAt = new Date();
   await person.save();
   return person;

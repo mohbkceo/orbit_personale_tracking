@@ -166,7 +166,9 @@ describe('worker and templates', () => {
   it('visits later campaigns when older campaigns are waiting for retries', async () => {
     const startedAt = new Date();
     const campaigns = await BroadcastCampaign.create(Array.from({ length: 11 }, (_, index) => ({
-      ...campaignBody(), name: `Campaign ${index}`, status: 'SENDING', startedAt, createdBy: root._id,
+      // Distinct start times match the worker's chronological ordering. Equal
+      // sort keys have no guaranteed order in MongoDB.
+      ...campaignBody(), name: `Campaign ${index}`, status: 'SENDING', startedAt: new Date(startedAt.getTime() - (11 - index) * 1000), createdBy: root._id,
     })));
     await BroadcastRecipient.create(campaigns.map((campaign, index) => ({
       campaign: campaign._id, user: rootUser._id, chatId: '1',
