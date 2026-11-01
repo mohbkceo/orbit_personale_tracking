@@ -22,8 +22,18 @@ const legacyEmailIndex = (index) =>
   !index.hidden &&
   !index.expireAfterSeconds;
 
+async function listIdentityIndexes(collection) {
+  try {
+    return await collection.indexes();
+  } catch (error) {
+    // A new deployment may not have a users collection yet.
+    if (error.code === 26) return [];
+    throw error;
+  }
+}
+
 export async function assertUserIdentityIndexes(collection) {
-  const indexes = await collection.indexes();
+  const indexes = await listIdentityIndexes(collection);
   const complete = identityIndexes.every(({ field }) =>
     indexes.some((index) => desiredIndex(index, field)),
   );
@@ -39,9 +49,57 @@ export async function assertUserIdentityIndexes(collection) {
     );
 }
 
+// Index-only startup upgrade. Account values are never changed here: data that
+// needs normalization or manual review must use the guarded CLI migration.
+export async function ensureUserIdentityIndexes(collection) {
+  const indexes = await listIdentityIndexes(collection);
+  const complete = identityIndexes.every(({ field }) =>
+    indexes.some((index) => desiredIndex(index, field)),
+  );
+  if (complete && !indexes.some(legacyEmailIndex)) {
+    await assertUserIdentityIndexes(collection);
+    return;
+  }
+
+  const validate = (plan) => {
+    if (plan.problems.length || plan.phoneNormalizationCount)
+      throw new Error(
+        'Run the reviewed migrate:identities procedure before starting Orbit: identity data or indexes require manual review.',
+      );
+  };
+  const plan = await inspectUserIdentities(collection);
+  validate(plan);
+  // Build both constraints before removing any legacy constraint. MongoDB
+  // enforces uniqueness during index builds, including concurrent writes.
+  for (const { field, name } of identityIndexes) {
+    if (!plan.indexes.some((index) => desiredIndex(index, field))) {
+      await collection.createIndex(
+        { [field]: 1 },
+        { name, unique: true, partialFilterExpression: { [field]: { $type: 'string' } } },
+      );
+    }
+  }
+  const ready = await inspectUserIdentities(collection);
+  validate(ready);
+  for (const name of plan.legacyEmailIndexes) {
+    const current = (await collection.indexes()).find((index) => index.name === name);
+    // Another starting instance may have completed the same index-only upgrade.
+    if (!current) continue;
+    const reviewed = plan.indexes.find((index) => index.name === name);
+    if (!legacyEmailIndex(current) || JSON.stringify(current) !== JSON.stringify(reviewed))
+      throw new Error('Legacy index definition changed; refusing to drop it');
+    try {
+      await collection.dropIndex(name);
+    } catch (error) {
+      if (error.code !== 27) throw error; // IndexNotFound from concurrent startup
+    }
+  }
+  await assertUserIdentityIndexes(collection);
+}
+
 // Native collection API: never initializes Mongoose models or writes during inspection.
 export async function inspectUserIdentities(collection) {
-  const indexes = await collection.indexes();
+  const indexes = await listIdentityIndexes(collection);
   const identities = [];
   const problems = [];
   const owners = { email: new Map(), phone: new Map() };

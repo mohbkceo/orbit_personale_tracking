@@ -28,7 +28,8 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ status: 1, createdAt: -1 });
 userSchema.index({ lastLoginAt: -1 });
 userSchema.index({ fullName: 1 });
-// Production autoIndex is disabled. Use migrate:identities; never syncIndexes().
+// Production startup ensures these indexes; data rewrites use migrate:identities.
+// Never use syncIndexes(), which could remove unrelated indexes.
 userSchema.index({ email: 1 }, { name: 'user_email_unique_present', unique: true, partialFilterExpression: { email: { $type: 'string' } } });
 userSchema.index({ phone: 1 }, { name: 'user_phone_unique_present', unique: true, partialFilterExpression: { phone: { $type: 'string' } } });
 userSchema.pre('validate', function () {
