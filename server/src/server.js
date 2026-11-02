@@ -29,10 +29,15 @@ import { AutomaticMessageRevision } from './models/AutomaticMessageRevision.js';
 import { User } from './models/User.js';
 import { TelegramConnection } from './models/TelegramConnection.js';
 import { ensureUserIdentityIndexes } from './services/identityMigrationService.js';
+import { OnboardingFlow, OnboardingConfiguration } from './models/OnboardingFlow.js';
+import { OnboardingResponse } from './models/OnboardingResponse.js';
+import { activeOnboarding } from './services/onboardingService.js';
 
 await connectDatabase();
 await ensureUserIdentityIndexes(User.collection);
 await ensureAccessCatalog();
+await Promise.all([OnboardingFlow.createIndexes(), OnboardingConfiguration.createIndexes(), OnboardingResponse.createIndexes()]);
+await activeOnboarding();
 await Promise.all([User.createIndexes(), TelegramConnection.createIndexes(), BroadcastCampaign.createIndexes(), BroadcastRecipient.createIndexes(), BroadcastSettings.createIndexes(), BroadcastWorkerSlot.createIndexes(), BroadcastLaunchGuard.createIndexes(), BroadcastDailyQuota.createIndexes(), BroadcastSegment.createIndexes(), BroadcastInteraction.createIndexes(), MessagePreference.createIndexes(), AutomaticMessageTemplate.createIndexes(), AutomaticMessageRevision.createIndexes()]);
 await ensureAutomaticTemplates();
 await Promise.all([PaymentOrder.createIndexes(), AnalyticsEvent.createIndexes(), AdvertisingConsent.createIndexes()]);

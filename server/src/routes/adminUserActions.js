@@ -253,7 +253,7 @@ adminUserActionRoutes.post(
         const updated = await User.updateOne(
           { _id: req.params.id },
           {
-            $set: { firstUseOnboarding: { status: 'NOT_STARTED', step: 'welcome', autoPresent: true } },
+            $set: { firstUseOnboarding: { status: 'NOT_STARTED', step: 'welcome', autoPresent: true, attempt: String(new mongoose.Types.ObjectId()) } },
             $unset: { planSelectionSkippedAt: 1 },
           },
           { session },

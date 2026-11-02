@@ -67,6 +67,7 @@ const AdminEventSettings = lazy(() => import('./pages/admin/EventSettings.jsx'))
 const AdminEvents = lazy(() => import('./pages/admin/Events.jsx'));
 const AdminBroadcast = lazy(() => import('./pages/admin/Broadcast.jsx'));
 const AdminAnalytics = lazy(() => import('./pages/admin/analytics/Analytics.jsx'));
+const OnboardingStudio = lazy(() => import('./pages/admin/OnboardingStudio.jsx'));
 const AdminAccessControl = lazy(() => import('./pages/AdminAccessControl.jsx'));
 const SupportWorkspace = lazy(() => import('./pages/admin/SupportWorkspace.jsx'));
 const AccountAction = lazy(() => import('./pages/AccountAction.jsx'));
@@ -176,6 +177,7 @@ export default function App() {
             <Route path="plans" element={<AdminPlans />} />
             <Route path="payments" element={<AdminPayments />} />
             <Route path="features" element={<AdminFeatures />} />
+            <Route path="onboarding" element={<OnboardingStudio />} />
             <Route path="access-control" element={<AdminProtectedRoute superOnly><AdminAccessControl /></AdminProtectedRoute>} />
             <Route path="activation-links" element={<AdminActivationLinks />} />
             <Route path="qr-batches" element={<AdminQrBatches />} />

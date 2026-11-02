@@ -53,7 +53,7 @@ export default function Register() {
       } catch {
         /* Browser storage is optional. */
       }
-      navigate('/onboarding', { replace: true });
+      navigate('/onboarding?auto=1', { replace: true });
     } catch (failure) {
       registering.current = false;
       setError(
@@ -70,7 +70,7 @@ export default function Register() {
   }
 
   if (loading) return <Spinner />;
-  if (user) return <Navigate to={registering.current ? '/onboarding' : next} replace />;
+  if (user) return <Navigate to={registering.current ? '/onboarding?auto=1' : next} replace />;
 
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f4f7fb] px-4 py-8 text-slate-800 sm:px-6 sm:py-12">

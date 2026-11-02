@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   NavLink,
+  Link,
   Route,
   Routes,
   useLocation,
@@ -290,6 +291,7 @@ export default function AdminAnalytics() {
         eyebrow="Admin / Analytics"
         title="Analytics"
         description="Acquisition, activation and product behavior from first-party data."
+        actions={<Link className="btn-secondary" to="/admin/onboarding?tab=insights">Onboarding insights</Link>}
       />
       <nav
         aria-label="Analytics sections"

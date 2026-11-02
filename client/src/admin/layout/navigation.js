@@ -4,6 +4,7 @@ export const adminNavigation = [
   { label: 'Overview', items: [{ label: 'Dashboard', to: '/admin', icon: CircleGauge, end: true }] },
   { label: 'Management', items: [
     { label: 'Users', to: '/admin/users', icon: Users },
+    { label: 'Onboarding', to: '/admin/onboarding', icon: WandSparkles },
     { label: 'Plans', to: '/admin/plans', icon: Layers3 },
     { label: 'Features', to: '/admin/features', icon: WandSparkles },
     { label: 'Access Control', to: '/admin/access-control', icon: Shield, superOnly: true },

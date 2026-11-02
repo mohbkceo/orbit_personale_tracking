@@ -56,7 +56,19 @@ function renderRoutes(path = '/admin/users/aaaaaaaaaaaaaaaaaaaaaaaa') {
 }
 
 describe('user administration interface', () => {
-  it('has exactly three main tabs and required actions with responsive tab navigation', async () => {
+  it('shows reset progress separately from retained historical submissions', async () => {
+    get.mockImplementation((path) => Promise.resolve({ data: path.endsWith('/management') ? { sessions: [], events: [] } : {
+      ...detail,
+      user: { ...detail.user, firstUseOnboarding: { status: 'NOT_STARTED', attempt: 'new-attempt' } },
+      onboarding: [{ _id: 'previous', flow: 'old-flow', version: 3, attempt: 'initial', status: 'completed', answers: { goal: 'Save money' } }],
+    } }));
+    renderRoutes();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Onboarding' }));
+    expect(screen.getByText('NOT_STARTED')).toBeTruthy();
+    expect(screen.getByText('Not yet assigned')).toBeTruthy();
+    expect(screen.getByText('Save money')).toBeTruthy();
+  });
+  it('has management and onboarding tabs with required actions and responsive tab navigation', async () => {
     mockReads();
     renderRoutes();
     expect(await screen.findByRole('heading', { name: 'Taylor Doe' })).toBeTruthy();
@@ -64,6 +76,7 @@ describe('user administration interface', () => {
       'Overview',
       'Activity',
       'Security',
+      'Onboarding',
     ]);
     expect(screen.getByRole('button', { name: 'Manage subscription' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Manage account' })).toBeTruthy();
@@ -74,6 +87,8 @@ describe('user administration interface', () => {
     expect(screen.getByText('Activation and grant history')).toBeTruthy();
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Activity' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Security' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Onboarding' }));
+    expect(screen.getByText('No questionnaire responses have been collected.')).toBeTruthy();
   });
 
   it('requires reason, admin password and confirmation before entering, then exits', async () => {

@@ -7,11 +7,12 @@ import { UserDialog, Field, Message } from './UserDialog.jsx';
 import { SubscriptionDialog } from './SubscriptionDialog.jsx';
 import { AccountDialog } from './AccountDialog.jsx';
 import { DeleteUserDialog } from './DeleteUserDialog.jsx';
+import { AnswerList } from './onboarding/Insights.jsx';
 
 const when = (value) => (value ? new Date(value).toLocaleString() : '—');
 const remaining = (value) =>
   value ? Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86400000)) : 0;
-const tabs = ['Overview', 'Activity', 'Security'];
+const tabs = ['Overview', 'Activity', 'Security', 'Onboarding'];
 function Section({ title, children, className = '' }) {
   return (
     <section className={`border-b border-border py-6 last:border-b-0 ${className}`}>
@@ -139,6 +140,10 @@ export function AdminUserDetail() {
       </div>
     );
   const user = data.user;
+  const currentOnboarding = data.onboarding?.find((row) =>
+    String(row.flow) === String(user.firstUseOnboarding?.flow) &&
+    (row.attempt || 'initial') === (user.firstUseOnboarding?.attempt || 'initial'),
+  );
   const access = data.access;
   const sessions = management?.sessions || [];
   const events = management?.events || [];
@@ -271,6 +276,27 @@ export function AdminUserDetail() {
         ))}
       </div>
       <div id="user-tab-panel" role="tabpanel" aria-labelledby={`user-tab-${tab.toLowerCase()}`} tabIndex={0} className="min-w-0 px-1">
+        {tab === 'Onboarding' && (
+          <Section title="Onboarding">
+            <Facts items={[
+              ['Status', currentOnboarding?.status || user.firstUseOnboarding?.status || 'Not started'],
+              ['Flow version', currentOnboarding?.version ? `v${currentOnboarding.version}` : data.onboarding?.length ? 'Not yet assigned' : 'Legacy tour'],
+              ['Completed', when(currentOnboarding?.completedAt || user.firstUseOnboarding?.completedAt)],
+            ]} />
+            <div className="mt-5 space-y-5">
+              {data.onboarding?.map((row) => (
+                <section key={row._id} className="rounded-xl border border-border p-4">
+                  <h3 className="mb-4 text-sm font-semibold">
+                    v{row.version} · {row.status} · {row.plan} · {when(row.completedAt || row.updatedAt)}
+                  </h3>
+                  <AnswerList row={row} />
+                  {!Object.keys(row.answers || {}).length && <p className="text-sm text-muted">No submitted answers.</p>}
+                </section>
+              ))}
+              {!data.onboarding?.length && <p className="text-sm text-muted">No questionnaire responses have been collected.</p>}
+            </div>
+          </Section>
+        )}
         {tab === 'Overview' && (
           <>
             <Section title="Identity and profile">

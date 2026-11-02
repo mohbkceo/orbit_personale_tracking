@@ -24,6 +24,7 @@ import { ReminderEvent } from '../models/ReminderEvent.js';
 import { Bill, Subscription, Goal } from '../models/Planning.js';
 import { Contact, Project, Note, Habit, Wishlist } from '../models/Personal.js';
 import { Setting } from '../models/Setting.js';
+import { OnboardingResponse } from '../models/OnboardingResponse.js';
 import { Activity } from '../models/Activity.js';
 import { DailyFocus } from '../models/DailyFocus.js';
 import { TaskExecutionEvent } from '../models/TaskExecutionEvent.js';
@@ -42,6 +43,7 @@ import { normalizePhone } from '../utils/userIdentity.js';
 // PaymentOrder, AccessSubscription, ActivationLink and AuditLog are retained as
 // financial/access and accountability records. No user workspace collection is.
 export const workspaceModels = [
+  OnboardingResponse,
   Account,
   Transaction,
   Debt,

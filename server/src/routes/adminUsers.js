@@ -23,6 +23,8 @@ import { currentSubscription } from '../services/accessService.js';
 import { PaymentOrder } from '../models/PaymentOrder.js';
 import { resolveUserEntitlements } from '../services/entitlementService.js';
 import { AuthSession } from '../models/AuthSession.js';
+import { OnboardingResponse } from '../models/OnboardingResponse.js';
+import { OnboardingFlow } from '../models/OnboardingFlow.js';
 
 export const adminUserRoutes = Router();
 adminUserRoutes.use(adminAuth);
@@ -75,7 +77,10 @@ adminUserRoutes.get('/:id', asyncHandler(async (req, res) => {
   if (!user) throw new AppError('User not found', 404);
   const entitlements = await resolveUserEntitlements(user, { readOnly: true });
   const features = Object.entries(entitlements.decisions).map(([key, value]) => ({ key, allowed: value.allowed, limit: value.limit, reason: value.reason }));
-  return success(res, { user: { id: String(user._id), fullName: user.fullName, email: user.email, phone: user.phone, gender: user.gender, status: user.status, createdAt: user.createdAt, lastLoginAt: user.lastLoginAt, onboardingCompletedAt: user.onboardingCompletedAt, firstUseOnboarding: user.firstUseOnboarding }, access: current?.expiresAt > new Date() ? { planSnapshot: current.planSnapshot, startedAt: current.startedAt, expiresAt: current.expiresAt, status: current.status, source: current.source } : null, history, purchases, features, telegram, telegramInteractions, metrics: { tasks, transactions, reminders } });
+  const onboardingResponses = await OnboardingResponse.find({ user: user._id }).sort({ updatedAt: -1 }).limit(100).lean();
+  const onboardingFlows = await OnboardingFlow.find({ _id: { $in: onboardingResponses.map((row) => row.flow) } }).select('pages').lean();
+  const onboarding = onboardingResponses.map((row) => ({ ...row, definition: onboardingFlows.filter((flow) => String(flow._id) === String(row.flow)) }));
+  return success(res, { user: { id: String(user._id), fullName: user.fullName, email: user.email, phone: user.phone, gender: user.gender, status: user.status, createdAt: user.createdAt, lastLoginAt: user.lastLoginAt, onboardingCompletedAt: user.onboardingCompletedAt, firstUseOnboarding: user.firstUseOnboarding }, access: current?.expiresAt > new Date() ? { planSnapshot: current.planSnapshot, startedAt: current.startedAt, expiresAt: current.expiresAt, status: current.status, source: current.source } : null, history, purchases, features, telegram, telegramInteractions, onboarding, metrics: { tasks, transactions, reminders } });
 }));
 
 adminUserRoutes.patch('/:id/status', sensitive, requireSuperAdmin, requireAdminCsrf, validate(z.strictObject({ status: z.enum(['ACTIVE', 'SUSPENDED']), reason: z.string().trim().min(10).max(500), adminPassword: z.string().min(1) })), verifyFreshAdmin, asyncHandler(async (req, res) => {

@@ -13,7 +13,10 @@ const userSchema = new mongoose.Schema({
   // Optional product tour. Older accounts have no value and are never auto-prompted.
   firstUseOnboarding: {
     status: { type: String, enum: ['NOT_STARTED', 'IN_PROGRESS', 'SKIPPED', 'COMPLETED'] },
-    step: { type: String, enum: ['welcome', 'first-action', 'telegram', 'finish'] },
+    step: { type: String, maxlength: 80 },
+    flow: { type: mongoose.Schema.Types.ObjectId, ref: 'OnboardingFlow' },
+    revision: Number,
+    attempt: String,
     autoPresent: Boolean,
     startedAt: Date,
     dismissedAt: Date,
