@@ -3,6 +3,7 @@ import { api } from '../../../api/client.js';
 import { useAdminAuth } from '../../../context/useAuth.js';
 import { Spinner } from '../../../components/ui.jsx';
 import { errorMessage } from '../broadcastModel.js';
+import CustomAutomations from './CustomAutomations.jsx';
 
 const groups = [
   ['Task Reminders / Digest', ['TASKS', 'REMINDER']], ['Daily Focus', ['FOCUS']], ['Debt & Bill Reminders', ['DEBT', 'BILL']], ['Subscription Reminders', ['SUBSCRIPTION']], ['Goal Reviews', ['GOAL']], ['Event Notifications', ['EVENT']], ['Daily Summaries', ['SUMMARY']],
@@ -107,10 +108,12 @@ export default function AutoMessages() {
   const categorized = new Set(groups.flatMap(([, categories]) => categories));
   const displayGroups = [...groups, ...(list.some((item) => !categorized.has(item.category)) ? [['Other Messages', [...new Set(list.filter((item) => !categorized.has(item.category)).map((item) => item.category))]]] : [])];
   return <div className="space-y-5">
+    <CustomAutomations canEdit={canEdit} />
+    <section aria-label="Existing Automations" className="space-y-3"><h2 className="font-semibold">Existing Automations</h2>
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{notice && <p role="status" className="text-sm text-emerald-700">{notice}</p>}
     {loading ? <Spinner /> : displayGroups.map(([name, categories]) => {
       const rows = list.filter((item) => categories.includes(item.category));
-      return rows.length > 0 && <section key={name}><h2 className="mb-2 text-sm font-semibold text-muted">{name}</h2><div className="panel divide-y divide-border">{rows.map((item) => {
+      return rows.length > 0 && <section key={name}><h3 className="mb-2 text-sm font-semibold text-muted">{name}</h3><div className="panel divide-y divide-border">{rows.map((item) => {
         const active = selected?.key === item.key;
         const [title, description] = stages[item.key] || [item.name, 'Automatic Orbit notification.'];
         return <div key={item.key}>
@@ -124,6 +127,6 @@ export default function AutoMessages() {
         </div>;
       })}</div></section>;
     })}
-    {!loading && !list.length && !error && <p className="text-sm text-muted">No automatic messages available.</p>}
+    {!loading && !list.length && !error && <p className="text-sm text-muted">No automatic messages available.</p>}</section>
   </div>;
 }

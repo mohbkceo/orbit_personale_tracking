@@ -1,3 +1,4 @@
+import { isPromotional } from '../services/adminTelegramPolicy.js';
 import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import express, { Router } from 'express';
@@ -121,7 +122,7 @@ adminBroadcastRoutes.post('/:id/duplicate', asyncHandler(async (req, res) => {
   await record(req, 'BROADCAST_DUPLICATED', campaign._id, { source: source._id });
   return success(res, campaign, 201);
 }));
-adminBroadcastRoutes.get('/:id/audience', asyncHandler(async (req, res) => { const campaign = await campaignById(req.params.id); return success(res, await previewAudience(campaign.audience, { promotional: campaign.category !== 'IMPORTANT_NOTICE' })); }));
+adminBroadcastRoutes.get('/:id/audience', asyncHandler(async (req, res) => { const campaign = await campaignById(req.params.id); return success(res, await previewAudience(campaign.audience, { promotional: isPromotional(campaign.category) })); }));
 adminBroadcastRoutes.post('/:id/preview', validate(z.strictObject({ language: z.enum(['en', 'ar']).default('en') })), asyncHandler(async (req, res) => {
   const campaign = await campaignById(req.params.id);
   return success(res, broadcastParts(campaign, req.body.language, { firstName: 'Alex', fullName: 'Alex Example', planName: 'Orbit Plus', expiryDate: '31 Dec 2026' }));

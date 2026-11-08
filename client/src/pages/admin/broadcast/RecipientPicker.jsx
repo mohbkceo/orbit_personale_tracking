@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../api/client.js';
 import { emptyFilters, errorMessage, isSelected, toggleUser } from '../broadcastModel.js';
 
-export default function RecipientPicker({ selection, onChange }) {
+export default function RecipientPicker({ selection, onChange, promotional = false }) {
   const [filters, setFilters] = useState(() => selection.allMatching ? selection.filters : { ...emptyFilters });
   const [plans, setPlans] = useState([]);
   const [page, setPage] = useState(1);
@@ -15,13 +15,13 @@ export default function RecipientPicker({ selection, onChange }) {
     setBusy(true);
     const timer = setTimeout(() => {
       // Browsing must never be restricted to the IDs already selected for delivery.
-      api.post('/admin/broadcast-audience/users', { selection: { filters, allMatching: true, includeIds: [], excludeIds: [] }, promotional: true, page, limit: 25 })
+      api.post('/admin/broadcast-audience/users', { selection: { filters, allMatching: true, includeIds: [], excludeIds: [] }, promotional, page, limit: 25 })
         .then((response) => { if (active) { setResult(response.data); setError(''); } })
         .catch((failure) => { if (active) setError(errorMessage(failure)); })
         .finally(() => { if (active) setBusy(false); });
     }, 200);
     return () => { active = false; clearTimeout(timer); };
-  }, [filters, page]);
+  }, [filters, page, promotional]);
   function filter(key, value) { setFilters((current) => ({ ...current, [key]: value })); setPage(1); }
   const locked = selection.allMatching;
   return <div className="mt-3 min-w-0 space-y-3">

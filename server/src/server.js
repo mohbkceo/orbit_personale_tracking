@@ -1,3 +1,6 @@
+import { CustomAutomation, AutomationExecution } from './models/CustomAutomation.js';
+import { AuditLog } from './models/AuditLog.js';
+import { startCustomAutomationWorker } from './jobs/customAutomationWorker.js';
 import { app } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { env } from './config/env.js';
@@ -34,6 +37,7 @@ import { OnboardingResponse } from './models/OnboardingResponse.js';
 import { activeOnboarding } from './services/onboardingService.js';
 
 await connectDatabase();
+await Promise.all([CustomAutomation.createIndexes(), AutomationExecution.createIndexes(), AuditLog.createIndexes()]);
 await ensureUserIdentityIndexes(User.collection);
 await ensureAccessCatalog();
 await Promise.all([OnboardingFlow.createIndexes(), OnboardingConfiguration.createIndexes(), OnboardingResponse.createIndexes()]);
@@ -56,7 +60,10 @@ const server = app.listen(env.PORT, () => {
 const stopCommerce = env.NODE_ENV !== 'test' ? startCommerceJobs() : () => {};
 const stopBroadcast = env.NODE_ENV !== 'test' && env.BROADCAST_WORKER_EMBEDDED ? startBroadcastWorker() : () => {};
 
+const stopCustomAutomations = env.NODE_ENV !== 'test' && env.BROADCAST_WORKER_EMBEDDED ? startCustomAutomationWorker() : () => {};
+
 async function shutdown(signal) {
+  stopCustomAutomations();
   stopCommerce();
   stopBroadcast();
   console.log(`${signal} received, shutting down`);

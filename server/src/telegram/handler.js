@@ -1,3 +1,4 @@
+import { AutomationExecution } from '../models/CustomAutomation.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
@@ -254,6 +255,7 @@ export async function handleTelegramUpdate(update) {
   }
   const connection = await TelegramConnection.findOne({ telegramUserId: String(from.id), chatId: String(chatId) });
   if (!connection) return text === '/start' || text === '/language' ? sendMessage(token, chatId, tr('ar', 'connectFirst')) : undefined;
+  connection.deliveryDisabledAt = undefined;
   connection.lastInteractionAt = new Date();
   connection.lastUpdateAt = new Date();
   await connection.save();
@@ -284,6 +286,7 @@ export async function handleTelegramUpdate(update) {
       catch (error) { if (error.code !== 11000) throw error; }
       if (action === 'optout') await MessagePreference.findOneAndUpdate({ user: user._id }, { $set: { promotionalTelegram: false, optOutAt: new Date() } }, { upsert: true });
     }
+    if (action === 'optout' && await AutomationExecution.exists({ automation: id, user: user._id })) await MessagePreference.findOneAndUpdate({ user: user._id }, { $set: { promotionalTelegram: false, optOutAt: new Date() } }, { upsert: true });
     return telegramRequest(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: action === 'optout' ? (settings.language === 'ar' ? 'تم إيقاف الرسائل الترويجية' : 'Promotional messages turned off') : (settings.language === 'ar' ? 'تم التأكيد' : 'Acknowledged') });
   }
   try {

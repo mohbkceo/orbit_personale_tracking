@@ -1,3 +1,4 @@
+import { adminCustomAutomationRoutes } from './routes/adminCustomAutomations.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -94,6 +95,7 @@ app.use('/api/admin/users', adminUserActionRoutes);
 app.use('/api/admin/broadcasts', adminBroadcastRoutes);
 app.use('/api/admin/broadcast-audience', adminAudienceRoutes);
 app.use('/api/admin/broadcast-settings', adminBroadcastSettingsRoutes);
+app.use('/api/admin/custom-automations', adminCustomAutomationRoutes);
 app.use('/api/admin/automatic-messages', adminAutomaticMessageRoutes);
 app.use('/api/message-preferences', userAuth, messagePreferenceRoutes);
 app.use('/api/admin/support', adminSupportRoutes);

@@ -8,6 +8,7 @@ const telegramConnectionSchema = new mongoose.Schema({
   linkedAt: { type: Date, default: Date.now },
   lastInteractionAt: Date,
   lastUpdateAt: Date,
+  deliveryDisabledAt: Date,
 }, { timestamps: true });
 telegramConnectionSchema.index({ telegramUsername: 1 });
 telegramConnectionSchema.index({ lastInteractionAt: -1 });

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { User } from '../models/User.js';
+import { TelegramConnection } from '../models/TelegramConnection.js';
 
 const objectIds = (values) => values.map((value) => new mongoose.Types.ObjectId(value));
 const dateRange = (from, to) => ({ ...(from ? { $gte: new Date(from) } : {}), ...(to ? { $lte: new Date(to) } : {}) });
@@ -13,9 +14,9 @@ export function audiencePipeline(selection, { promotional = false, now = new Dat
   if (f.lastLoginFrom || f.lastLoginTo) account.lastLoginAt = dateRange(f.lastLoginFrom, f.lastLoginTo);
   if (!allMatching) account._id = { $in: objectIds(includeIds) };
   const pipeline = [{ $match: account },
-    { $lookup: { from: 'telegramconnections', localField: '_id', foreignField: 'user', as: 'connection' } },
+    { $lookup: { from: TelegramConnection.collection.name, localField: '_id', foreignField: 'user', pipeline: [{ $match: { chatId: { $regex: /^-?[1-9]\d*$/ }, deliveryDisabledAt: null } }], as: 'connection' } },
     { $lookup: { from: 'accesssubscriptions', let: { uid: '$_id' }, pipeline: [
-      { $match: { $expr: { $eq: ['$user', '$$uid'] }, status: { $in: ['ACTIVE', null] } } },
+      { $match: { $expr: { $eq: ['$user', '$$uid'] }, status: { $in: ['ACTIVE', null] }, expiresAt: { $gt: now } } },
       { $sort: { expiresAt: -1, createdAt: -1 } }, { $limit: 1 },
     ], as: 'currentSubscription' } },
     { $lookup: { from: 'accesssubscriptions', let: { uid: '$_id' }, pipeline: [
@@ -24,7 +25,9 @@ export function audiencePipeline(selection, { promotional = false, now = new Dat
     { $lookup: { from: 'accesssubscriptions', let: { uid: '$_id' }, pipeline: [{ $match: { $expr: { $eq: ['$user', '$$uid'] } } }, { $limit: 1 }], as: 'anySubscription' } },
     { $lookup: { from: 'messagepreferences', localField: '_id', foreignField: 'user', as: 'preference' } },
     { $set: { hasConnection: { $gt: [{ $size: '$connection' }, 0] }, connection: { $first: '$connection' }, currentSubscription: { $first: '$currentSubscription' }, preference: { $first: '$preference' }, hasExpired: { $gt: [{ $size: '$expiredSubscription' }, 0] }, hasPaidHistory: { $gt: [{ $size: '$anySubscription' }, 0] } } },
-    { $set: { hasActivePaid: { $and: [{ $ne: ['$currentSubscription', null] }, { $gt: ['$currentSubscription.expiresAt', now] }] } } },
+    { $lookup: { from: 'plans', localField: 'currentSubscription.plan', foreignField: '_id', as: 'plan' } },
+    { $set: { plan: { $first: '$plan' } } },
+    { $set: { hasActivePaid: { $and: [{ $ne: ['$currentSubscription', null] }, { $gt: ['$currentSubscription.expiresAt', now] }, { $eq: [{ $ifNull: ['$plan.kind', 'PAID'] }, 'PAID'] }] } } },
   ];
   if (f.search) {
     const regex = escapeRegex(f.search);
@@ -39,9 +42,8 @@ export function audiencePipeline(selection, { promotional = false, now = new Dat
   if (f.subscription === 'NO_PAID') pipeline.push({ $match: { hasPaidHistory: false } });
   if (f.subscription === 'EXPIRING') pipeline.push({ $match: { 'currentSubscription.expiresAt': { $lte: new Date(now.getTime() + f.expiringDays * 86400000), $gt: now } } });
   if (f.planIds.length) pipeline.push({ $match: { hasActivePaid: true, 'currentSubscription.plan': { $in: objectIds(f.planIds) } } });
-  pipeline.push({ $lookup: { from: 'plans', localField: 'currentSubscription.plan', foreignField: '_id', as: 'plan' } });
   pipeline.push({ $set: {
-    plan: { $first: '$plan' }, excluded: { $in: ['$_id', objectIds(excludeIds)] },
+    excluded: { $in: ['$_id', objectIds(excludeIds)] },
     suppressed: promotional ? { $ne: ['$preference.promotionalTelegram', true] } : false,
   } });
   pipeline.push({ $set: { deliverable: { $and: [{ $eq: ['$status', 'ACTIVE'] }, '$hasConnection', { $eq: ['$excluded', false] }, { $eq: ['$suppressed', false] }] } } });
@@ -57,6 +59,11 @@ export async function previewAudience(selection, options = {}) {
     suppressed: { $sum: { $cond: ['$suppressed', 1, 0] } }, deliverable: { $sum: { $cond: ['$deliverable', 1, 0] } },
   } }]);
   return result || { targeted: 0, connected: 0, eligible: 0, excluded: 0, withoutTelegram: 0, suppressed: 0, deliverable: 0 };
+}
+export async function isAudienceRecipient(selection, userId, options = {}) {
+  if (!selection.allMatching && !selection.includeIds.some((id) => String(id) === String(userId))) return false;
+  const rows = await User.aggregate([...audiencePipeline({ ...selection, allMatching: false, includeIds: [String(userId)] }, options), { $match: { deliverable: true } }, { $limit: 1 }, { $project: { _id: 1 } }]);
+  return rows.length > 0;
 }
 export async function listAudience(selection, { page = 1, limit = 25, promotional = false } = {}) {
   const pipeline = audiencePipeline(selection, { promotional });

@@ -10,5 +10,6 @@ const auditLogSchema = new mongoose.Schema({
   ip: String,
 }, { timestamps: true });
 auditLogSchema.index({ createdAt: -1 });
+auditLogSchema.index({ event: 1, createdAt: 1 });
 
 export const AuditLog = mongoose.model('AuditLog', auditLogSchema);

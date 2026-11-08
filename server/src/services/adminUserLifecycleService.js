@@ -1,3 +1,4 @@
+import { AutomationExecution } from '../models/CustomAutomation.js';
 import mongoose from 'mongoose';
 import { User } from '../models/User.js';
 import { PaymentOrder } from '../models/PaymentOrder.js';
@@ -43,6 +44,7 @@ import { normalizePhone } from '../utils/userIdentity.js';
 // PaymentOrder, AccessSubscription, ActivationLink and AuditLog are retained as
 // financial/access and accountability records. No user workspace collection is.
 export const workspaceModels = [
+  AutomationExecution,
   OnboardingResponse,
   Account,
   Transaction,

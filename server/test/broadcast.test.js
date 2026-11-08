@@ -68,6 +68,47 @@ beforeEach(async () => {
 });
 
 describe('audience and campaign API', () => {
+  it('delivers default announcements to connected Free, Paid and Expired users without personal entitlements', async () => {
+    await TelegramConnection.create({ user: expiredUser._id, telegramUserId: '4', chatId: '4' });
+    const body = campaignBody({ ...selection, filters: { ...filters, telegram: 'CONNECTED' } }, 'ANNOUNCEMENT');
+    const created = await rootAgent.post('/api/admin/broadcasts').set(header).send(body).expect(201);
+    const id = created.body.data._id;
+    const preview = (await rootAgent.get(`/api/admin/broadcasts/${id}/audience`).expect(200)).body.data;
+    expect(preview.deliverable).toBe(3);
+    await rootAgent.post(`/api/admin/broadcasts/${id}/launch`).set(header).send({ confirmation: 'SEND', adminPassword: password }).expect(200);
+    await processBroadcastsOnce(); await processBroadcastsOnce();
+    expect(await BroadcastRecipient.countDocuments({ campaign: id })).toBe(preview.deliverable);
+    expect(await BroadcastRecipient.countDocuments({ campaign: id, status: 'SENT' })).toBe(3);
+    expect(bot.telegramRequest.mock.calls.map((call) => call[2].chat_id).sort()).toEqual(['1', '2', '4']);
+    expect(notify.sendTelegramNotification).not.toHaveBeenCalled();
+    expect((await previewAudience({ ...selection, filters: { ...filters, subscription: 'FREE' } })).deliverable).toBe(2);
+    expect((await previewAudience(selection, { promotional: true })).deliverable).toBe(1);
+  });
+  it('excludes invalid and blocked chats, records Telegram rejection as failed, and suppresses future delivery', async () => {
+    await TelegramConnection.updateOne({ user: freeUser._id }, { $set: { chatId: '' } });
+    expect((await previewAudience(selection)).deliverable).toBe(1);
+    const created = await rootAgent.post('/api/admin/broadcasts').set(header).send(campaignBody()).expect(201);
+    const id = created.body.data._id;
+    await rootAgent.post(`/api/admin/broadcasts/${id}/launch`).set(header).send({ confirmation: 'SEND', adminPassword: password }).expect(200);
+    bot.telegramRequest.mockRejectedValueOnce(Object.assign(new Error('Forbidden: bot was blocked by the user'), { telegramCode: 403 }));
+    await processBroadcastsOnce();
+    expect((await BroadcastRecipient.findOne({ campaign: id })).status).toBe('FAILED');
+    expect((await TelegramConnection.findOne({ user: rootUser._id })).deliveryDisabledAt).toBeTruthy();
+    expect((await previewAudience(selection)).deliverable).toBe(0);
+  });
+  it('rechecks the active-subscriber audience after snapshot when a subscription expires', async () => {
+    const body = campaignBody({ ...selection, filters: { ...filters, subscription: 'ACTIVE' } }, 'ANNOUNCEMENT');
+    const created = await rootAgent.post('/api/admin/broadcasts').set(header).send(body).expect(201);
+    const id = created.body.data._id;
+    await rootAgent.post(`/api/admin/broadcasts/${id}/launch`).set(header).send({ confirmation: 'SEND', adminPassword: password, scheduledAt: new Date(Date.now() + 3600000).toISOString() }).expect(200);
+    await processBroadcastsOnce();
+    await AccessSubscription.updateOne({ user: rootUser._id }, { $set: { expiresAt: new Date(0), status: 'EXPIRED' } });
+    await BroadcastCampaign.updateOne({ _id: id }, { $set: { status: 'SENDING' } });
+    await processBroadcastsOnce();
+    expect((await BroadcastRecipient.findOne({ campaign: id })).status).toBe('SKIPPED');
+    expect(bot.telegramRequest).not.toHaveBeenCalled();
+  });
+
   it('separates active account, paid access, expiry, Telegram connection and consent', async () => {
     expect((await previewAudience(selection)).deliverable).toBe(2);
     expect((await previewAudience(selection, { promotional: true })).deliverable).toBe(1);

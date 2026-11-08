@@ -3,13 +3,11 @@ import { BroadcastCampaign } from '../models/BroadcastCampaign.js';
 import { BroadcastRecipient } from '../models/BroadcastRecipient.js';
 import { BroadcastSettings } from '../models/BroadcastSettings.js';
 import { BroadcastWorkerSlot } from '../models/BroadcastWorkerSlot.js';
-import { User } from '../models/User.js';
-import { TelegramConnection } from '../models/TelegramConnection.js';
-import { MessagePreference } from '../models/MessagePreference.js';
+import { adminTelegramRecipient, isPromotional, recordTelegramFailure } from '../services/adminTelegramPolicy.js';
 import { Plan } from '../models/Plan.js';
 import { Setting } from '../models/Setting.js';
 import { AccessSubscription } from '../models/AccessSubscription.js';
-import { previewAudience, recipientSnapshot } from '../services/broadcastAudience.js';
+import { previewAudience, recipientSnapshot, isAudienceRecipient } from '../services/broadcastAudience.js';
 import { broadcastParts } from '../services/broadcastContent.js';
 import { loadBroadcastImage } from '../services/broadcastMedia.js';
 import { env } from '../config/env.js';
@@ -22,7 +20,7 @@ dayjs.extend(utc); dayjs.extend(timezone);
 
 const workerId = crypto.randomUUID();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const promotional = (campaign) => campaign.category !== 'IMPORTANT_NOTICE';
+const promotional = (campaign) => isPromotional(campaign.category);
 const inWindow = (clock, start, end) => start < end ? clock >= start && clock < end : clock >= start || clock < end;
 const sanitizedError = (error) => ({ code: String(error.telegramCode || error.code || 'DELIVERY_ERROR').slice(0, 40), message: String(error.message || 'Delivery failed').replace(/bot\d+:[A-Za-z0-9_-]+/g, '[redacted]').slice(0, 300) });
 
@@ -33,7 +31,7 @@ export async function getBroadcastSettings() {
     return BroadcastSettings.findOne({ key: 'global' });
   }
 }
-async function reserveGlobalSlot(rate) {
+export async function reserveGlobalSlot(rate) {
   const interval = Math.ceil(1000 / rate);
   const now = new Date();
   const settings = await BroadcastSettings.findOneAndUpdate({ key: 'global' }, [
@@ -42,16 +40,16 @@ async function reserveGlobalSlot(rate) {
   const slotAt = new Date(settings.nextSlotAt).getTime() - interval;
   if (slotAt > Date.now()) await wait(slotAt - Date.now());
 }
-async function ensureWorkerSlots(count) {
+export async function ensureWorkerSlots(count) {
   try { await BroadcastWorkerSlot.bulkWrite(Array.from({ length: count }, (_, slot) => ({ updateOne: { filter: { slot }, update: { $setOnInsert: { slot } }, upsert: true } })), { ordered: false }); }
   catch (error) { if (!(error.code === 11000 || error.writeErrors?.every((item) => item.code === 11000))) throw error; }
 }
-async function claimWorkerSlot(count, now) {
+export async function claimWorkerSlot(count, now) {
   const claim = `${workerId}:${crypto.randomUUID()}`;
   const slot = await BroadcastWorkerSlot.findOneAndUpdate({ slot: { $lt: count }, $or: [{ claimUntil: null }, { claimUntil: { $lte: now } }] }, { $set: { claimedBy: claim, claimUntil: new Date(now.getTime() + 120000) } }, { sort: { slot: 1 }, new: true });
   return slot ? { id: slot._id, claim } : null;
 }
-async function releaseWorkerSlot(slot) {
+export async function releaseWorkerSlot(slot) {
   await BroadcastWorkerSlot.updateOne({ _id: slot.id, claimedBy: slot.claim }, { $set: { claimedBy: null, claimUntil: null } });
 }
 async function snapshotCampaign(campaign, now) {
@@ -76,7 +74,7 @@ async function snapshotCampaign(campaign, now) {
     throw error;
   }
 }
-async function resolveVariables(user) {
+export async function resolveVariables(user) {
   const [subscription, settings] = await Promise.all([
     AccessSubscription.findOne({ user: user._id, status: { $in: ['ACTIVE', null] }, expiresAt: { $gt: new Date() } }).sort({ expiresAt: -1, createdAt: -1 }).lean(),
     Setting.findOne({ user: user._id }).select('language timezone reminders.quietHours').lean(),
@@ -88,17 +86,16 @@ async function markSkipped(recipient, reason) {
   await BroadcastRecipient.updateOne({ _id: recipient._id, claimedBy: workerId }, { $set: { status: 'SKIPPED', skippedReason: reason, claimUntil: null, claimedBy: null }, $push: { attemptLog: { at: new Date(), outcome: 'SKIPPED', code: reason } } });
 }
 async function deliverRecipient(recipient, campaign, settings) {
-  const [user, connection, preference, currentCampaign] = await Promise.all([
-    User.findById(recipient.user).select('fullName status'), TelegramConnection.findOne({ user: recipient.user }).select('chatId'),
-    MessagePreference.findOne({ user: recipient.user }).select('promotionalTelegram'), BroadcastCampaign.findById(campaign._id).select('status'),
+  const [eligible, currentCampaign] = await Promise.all([
+    adminTelegramRecipient(recipient.user, { promotional: promotional(campaign), chatId: recipient.chatId }), BroadcastCampaign.findById(campaign._id).select('status'),
   ]);
   if (currentCampaign?.status === 'PAUSED') {
     await BroadcastRecipient.updateOne({ _id: recipient._id, claimedBy: workerId }, { $set: { status: 'RETRYING', nextAttemptAt: new Date(Date.now() + 10000), claimUntil: null, claimedBy: null } });
     return;
   }
   if (currentCampaign?.status !== 'SENDING') return markSkipped(recipient, 'CAMPAIGN_STOPPED');
-  if (!user || user.status !== 'ACTIVE' || !connection || connection.chatId !== recipient.chatId || (promotional(campaign) && !preference?.promotionalTelegram)) return markSkipped(recipient, 'NO_LONGER_ELIGIBLE');
-  const { language, values, quiet, timezone: zone } = await resolveVariables(user);
+  if (!eligible || !await isAudienceRecipient(campaign.audience, recipient.user, { promotional: promotional(campaign) })) return markSkipped(recipient, 'NO_LONGER_ELIGIBLE');
+  const { language, values, quiet, timezone: zone } = await resolveVariables(eligible.user);
   if (settings.quietHours && quiet?.enabled && inWindow(dayjs().tz(zone).format('HH:mm'), quiet.start || '22:00', quiet.end || '08:00')) {
     await BroadcastRecipient.updateOne({ _id: recipient._id, claimedBy: workerId }, { $set: { status: 'RETRYING', nextAttemptAt: new Date(Date.now() + 15 * 60000), claimUntil: null, claimedBy: null }, $inc: { attempts: -1 } });
     return;
@@ -109,6 +106,7 @@ async function deliverRecipient(recipient, campaign, settings) {
       await reserveGlobalSlot(settings.requestsPerSecond);
       const fresh = await BroadcastCampaign.findById(campaign._id).select('status +photoFileId');
       if (fresh?.status !== 'SENDING') throw Object.assign(new Error('Campaign paused'), { code: 'CAMPAIGN_PAUSED' });
+      if (!await adminTelegramRecipient(recipient.user, { promotional: promotional(campaign), chatId: recipient.chatId }) || !await isAudienceRecipient(campaign.audience, recipient.user, { promotional: promotional(campaign) })) return markSkipped(recipient, 'NO_LONGER_ELIGIBLE');
       const photoBody = { chat_id: recipient.chatId, photo: fresh.photoFileId, ...(parts.photo.caption ? { caption: parts.photo.caption, parse_mode: 'HTML' } : {}), ...(parts.photo.keyboard ? { reply_markup: parts.photo.keyboard } : {}) };
       let result;
       if (fresh.photoFileId && /^[A-Za-z0-9_-]{10,300}$/.test(fresh.photoFileId)) {
@@ -124,15 +122,13 @@ async function deliverRecipient(recipient, campaign, settings) {
       await reserveGlobalSlot(settings.requestsPerSecond);
       const fresh = await BroadcastCampaign.findById(campaign._id).select('status');
       if (fresh?.status !== 'SENDING') throw Object.assign(new Error('Campaign paused'), { code: 'CAMPAIGN_PAUSED' });
-      if (parts.photo) {
-        const [latestUser, latestConnection, latestPreference] = await Promise.all([User.findById(recipient.user).select('status'), TelegramConnection.findOne({ user: recipient.user }).select('chatId'), MessagePreference.findOne({ user: recipient.user }).select('promotionalTelegram')]);
-        if (latestUser?.status !== 'ACTIVE' || latestConnection?.chatId !== recipient.chatId || promotional(campaign) && !latestPreference?.promotionalTelegram) return markSkipped(recipient, 'NO_LONGER_ELIGIBLE');
-      }
+      if (!await adminTelegramRecipient(recipient.user, { promotional: promotional(campaign), chatId: recipient.chatId }) || !await isAudienceRecipient(campaign.audience, recipient.user, { promotional: promotional(campaign) })) return markSkipped(recipient, 'NO_LONGER_ELIGIBLE');
       const result = await telegramRequest(env.ORBIT_TELEGRAM_BOT_TOKEN, 'sendMessage', { chat_id: recipient.chatId, text: parts.text.text, parse_mode: 'HTML', ...(parts.text.keyboard ? { reply_markup: parts.text.keyboard } : {}) });
       await BroadcastRecipient.updateOne({ _id: recipient._id, claimedBy: workerId }, { $set: { 'parts.text': { status: 'SENT', messageId: result.message_id, sentAt: new Date() } } });
     }
     await BroadcastRecipient.updateOne({ _id: recipient._id, claimedBy: workerId }, { $set: { status: 'SENT', sentAt: new Date(), claimUntil: null, claimedBy: null, lastError: null }, $push: { attemptLog: { at: new Date(), outcome: 'SENT' } } });
   } catch (error) {
+    await recordTelegramFailure(recipient.user, recipient.chatId, error);
     const info = sanitizedError(error);
     if (Number(error.telegramCode) === 429 && error.retryAfter) await BroadcastSettings.updateOne({ key: 'global' }, { $max: { rateLimitedUntil: new Date(Date.now() + error.retryAfter * 1000) } });
     const retryable = info.code === 'CAMPAIGN_PAUSED' || Number(error.telegramCode) === 429 || Number(error.telegramCode) >= 500 || !error.telegramCode;

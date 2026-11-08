@@ -1,5 +1,6 @@
 import { AppError } from '../utils/AppError.js';
 import { escapeHtml } from '../telegram/formatters.js';
+import { isPromotional } from './adminTelegramPolicy.js';
 
 const allowedVariables = new Set(['firstName', 'fullName', 'planName', 'expiryDate']);
 const tags = new Set(['b', 'strong', 'i', 'em', 'u', 's', 'code', 'pre', 'a', 'blockquote', 'tg-spoiler']);
@@ -49,7 +50,7 @@ export function telegramKeyboard(rows, campaignId, { promotional = false, langua
 }
 export function broadcastParts(campaign, language, variables) {
   const text = renderBroadcastText(campaign.variants?.[language]?.text || campaign.variants.en.text, variables);
-  const keyboard = telegramKeyboard(campaign.buttons, campaign._id, { promotional: campaign.category !== 'IMPORTANT_NOTICE', language });
+  const keyboard = telegramKeyboard(campaign.buttons, campaign._id, { promotional: isPromotional(campaign.category), language });
   const visibleLength = text.replace(/<[^>]+>/g, '').length;
   return campaign.imageId
     ? { photo: { caption: visibleLength <= 900 ? text : '', keyboard: visibleLength <= 900 ? keyboard : undefined }, text: visibleLength <= 900 ? null : { text, keyboard } }
