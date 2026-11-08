@@ -4,6 +4,7 @@ import { Transaction } from '../models/Transaction.js';
 import { AppError } from '../utils/AppError.js';
 import { escapeRegex, pagination } from '../utils/query.js';
 import { recordActivity } from './activityService.js';
+import { mutateGoalTransaction } from './goalSavingsService.js';
 
 const destinationTypes = ['transfer', 'savings_contribution', 'savings_withdrawal'];
 
@@ -23,7 +24,7 @@ export async function createTransaction(userId, input) {
     destination = await ensureAccount(userId, input.destinationAccountId, 'Destination account');
     if (destination.currency !== account.currency) throw new AppError('Cross-currency transfers are not supported yet');
   }
-  const transaction = await Transaction.create({ ...input, user: userId });
+  const transaction = await mutateGoalTransaction(userId, null, input, () => Transaction.create({ ...input, user: userId }));
   await recordActivity(userId, {
     action: 'created', entityType: 'Transaction', entityId: transaction._id,
     description: `${transaction.type.replaceAll('_', ' ')} · ${transaction.description}`,
@@ -36,17 +37,21 @@ export async function updateTransaction(userId, id, input) {
   const current = await Transaction.findOne({ _id: id, user: userId, deletedAt: null });
   if (!current) throw new AppError('Transaction not found', 404);
   const merged = { ...current.toObject(), ...input };
-  await ensureAccount(userId, merged.accountId);
-  if (destinationTypes.includes(merged.type)) await ensureAccount(userId, merged.destinationAccountId, 'Destination account');
-  Object.assign(current, input);
-  await current.save();
+  const account = await ensureAccount(userId, merged.accountId);
+  if (destinationTypes.includes(merged.type)) {
+    if (String(merged.accountId) === String(merged.destinationAccountId)) throw new AppError('Source and destination accounts must differ');
+    const destination = await ensureAccount(userId, merged.destinationAccountId, 'Destination account');
+    if (destination.currency !== account.currency) throw new AppError('Cross-currency transfers are not supported yet');
+  }
+  await mutateGoalTransaction(userId, current.toObject(), merged, async () => { Object.assign(current, input); await current.save(); });
   await recordActivity(userId, { action: 'updated', entityType: 'Transaction', entityId: current._id, description: `Updated ${current.description}`, previousData: input, newData: current.toObject() });
   return current.populate([{ path: 'accountId', match: { user: userId } }, { path: 'destinationAccountId', match: { user: userId } }]);
 }
 
 export async function archiveTransaction(userId, id, source = 'web') {
-  const transaction = await Transaction.findOneAndUpdate({ _id: id, user: userId, deletedAt: null }, { deletedAt: new Date() }, { new: true });
+  let transaction = await Transaction.findOne({ _id: id, user: userId, deletedAt: null });
   if (!transaction) throw new AppError('Transaction not found', 404);
+  transaction = await mutateGoalTransaction(userId, transaction.toObject(), { ...transaction.toObject(), deletedAt: new Date() }, () => Transaction.findOneAndUpdate({ _id: id, user: userId, deletedAt: null }, { deletedAt: new Date() }, { new: true }));
   await recordActivity(userId, { action: 'archived', entityType: 'Transaction', entityId: transaction._id, description: `Archived ${transaction.description}`, source });
   return transaction;
 }

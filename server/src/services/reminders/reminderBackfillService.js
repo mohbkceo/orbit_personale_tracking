@@ -38,7 +38,7 @@ export async function backfillUpcomingReminders(userId, { maxPerType = 100 } = {
       Subscription,
       { status: 'active', nextBillingDate: { $gte: start, $lte: end } },
     ],
-    ['goal', Goal, { status: 'active' }],
+    ['goal', Goal, { status: 'active', deletedAt: null }],
   ];
   const counts = {};
   for (const [type, Model, filter] of targets) {

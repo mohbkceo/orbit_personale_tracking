@@ -66,7 +66,7 @@ async function writeSubscriberOverride(plan, feature, item, session) {
 
 adminAccessControlRoutes.get('/', asyncHandler(async (_req, res) => {
   const [features, plans, config] = await Promise.all([
-    Feature.find().sort({ category: 1, order: 1, name: 1 }).lean(), Plan.find().select('name slug kind status features public').sort({ 'public.order': 1 }).lean(),
+    Feature.find({ key: { $ne: 'wishlist' } }).sort({ category: 1, order: 1, name: 1 }).lean(), Plan.find().select('name slug kind status features public').sort({ 'public.order': 1 }).lean(),
     AccessConfiguration.findOne({ key: 'global' }).lean(),
   ]);
   return success(res, { features, plans, configurationVersion: config?.version || 1 });
@@ -153,7 +153,7 @@ adminAccessControlRoutes.get('/preview', asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.query.planId)) throw new AppError('Invalid plan ID', 422);
   const plan = await Plan.findById(req.query.planId);
   if (!plan) throw new AppError('Plan not found', 404);
-  const features = await Feature.find().sort({ category: 1, order: 1 });
+  const features = await Feature.find({ key: { $ne: 'wishlist' } }).sort({ category: 1, order: 1 });
   const assigned = new Map(plan.features.map((entry) => [String(entry.feature), entry]));
   const free = await Plan.findOne({ slug: 'free', status: 'ACTIVE' });
   const freeAssigned = new Map((free?.features || []).map((entry) => [String(entry.feature), entry]));

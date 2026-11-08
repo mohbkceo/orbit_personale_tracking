@@ -106,15 +106,6 @@ const FEATURES = [
     order: 110,
   },
   {
-    key: 'wishlist',
-    name: 'Wishlist',
-    description: 'Save and organize things you want.',
-    category: 'Personal',
-    icon: 'mdi:heart-outline',
-    type: 'UNLIMITED',
-    order: 120,
-  },
-  {
     key: 'contacts',
     name: 'Contacts',
     description: 'Keep important personal contacts organized.',

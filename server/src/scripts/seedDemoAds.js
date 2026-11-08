@@ -1103,40 +1103,24 @@ async function run() {
   ]);
 
   // ----------------------------------------------------------
-  // Wishlist
+  // Purchase goals
   // ----------------------------------------------------------
 
-  await Wishlist.create([
+  await Goal.updateOne({ _id: goals[1]._id, user: user._id }, { $set: { priority: 'high', category: 'Technology', notes: 'For development and freelance work.' } });
+
+  await Goal.create([
     {
       user: user._id,
 
-      name: 'MacBook Air',
+      title: 'Noise cancelling headphones',
 
-      expectedPrice: 260_000,
-
-      priority: 'high',
-      category: 'Technology',
-
-      targetDate: daysFromNow(210),
-
-      status: 'saving',
-
-      notes: 'For development and freelance work.',
-
-      goalId: goals[1]._id,
-    },
-
-    {
-      user: user._id,
-
-      name: 'Noise cancelling headphones',
-
-      expectedPrice: 28_000,
+      progressType: 'money',
+      targetAmount: 28_000,
 
       priority: 'medium',
       category: 'Technology',
 
-      status: 'wanted',
+      status: 'active',
     },
   ]);
 
@@ -1307,7 +1291,7 @@ async function run() {
   console.log('  ✓ Contacts');
   console.log('  ✓ Notes');
   console.log('  ✓ Habits');
-  console.log('  ✓ Wishlist');
+  console.log('  ✓ Purchase goals');
   console.log('  ✓ Reminders');
   console.log('  ✓ Activity feed');
   console.log('');

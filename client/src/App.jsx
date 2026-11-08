@@ -149,6 +149,9 @@ export default function App() {
             <Route path="planning/bills" element={gate('bills', <Planning kind="bills" />)} />
             <Route path="planning/subscriptions" element={gate('subscriptions', <Planning kind="subscriptions" />)} />
             <Route path="planning/goals" element={gate('goals', <Planning kind="goals" />)} />
+            <Route path="wishlist/*" element={<Navigate to="/panel/planning/goals" replace />} />
+            <Route path="planning/wishlist/*" element={<Navigate to="/panel/planning/goals" replace />} />
+            <Route path="personal/wishlist/*" element={<Navigate to="/panel/planning/goals" replace />} />
             <Route path="personal/:kind" element={<PersonalRoute />} />
             <Route path="settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
@@ -211,6 +214,7 @@ export default function App() {
             </Route>
           </Route>
         </Route>
+        <Route path="wishlist/*" element={<Navigate to="/panel/planning/goals" replace />} />
         <Route path="tasks" element={<LegacyPanelRedirect />} />
         <Route path="reminders" element={<LegacyPanelRedirect />} />
         <Route path="settings" element={<LegacyPanelRedirect />} />
@@ -231,7 +235,8 @@ function LegacyPanelRedirect() {
 
 function PersonalRoute() {
   const { kind } = useParams();
-  return ['projects', 'habits', 'wishlist', 'contacts', 'notes'].includes(kind) ? (
+  if (kind === 'wishlist') return <Navigate to="/panel/planning/goals" replace />;
+  return ['projects', 'habits', 'contacts', 'notes'].includes(kind) ? (
     gate(kind, <Personal kind={kind} />)
   ) : (
     <NotFound />

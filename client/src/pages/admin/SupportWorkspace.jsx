@@ -17,7 +17,6 @@ const sections = [
   'goals',
   'projects',
   'habits',
-  'wishlist',
   'contacts',
   'notes',
   'events',

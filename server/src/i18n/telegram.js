@@ -66,3 +66,6 @@ export function telegramText(settings, key, values = {}) {
   return template.replace(/{{\s*(\w+)\s*}}/g, (_, name) => escapeHtml(values[name] ?? ''));
 }
 export { messages as telegramMessages };
+
+Object.assign(messages.en, { activeGoal: 'Active' });
+Object.assign(messages.ar, { activeGoal: 'نشط' });

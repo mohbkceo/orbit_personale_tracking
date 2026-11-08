@@ -22,7 +22,7 @@
 - The `orbit_support` cookie is HttpOnly, SameSite Strict, and expires after 15 minutes. It contains a random bearer token; only its SHA-256 digest is stored. It is bound to one active Super Admin and one target user.
 - `/api/admin/support/session` and `/api/admin/support/workspace/:section` only read records owned by the session's target. The support router does not mount ordinary user routes or accept an arbitrary target ID for workspace reads.
 - While the cookie represents a live support session, ordinary user APIs and other admin APIs are rejected by `supportRequestGuard`, including side-effectful GET routes. Exiting revokes the database session before clearing the cookie.
-- Workspace lists are paginated at 100 records per page. Supported sections include dashboard, tasks, reminders, accounts, transactions, expenses, income, debts, bills, subscriptions, goals, projects, habits, wishlist, contacts, notes, followed events, and settings/Telegram connection state.
+- Workspace lists are paginated at 100 records per page. Supported sections include dashboard, tasks, reminders, accounts, transactions, expenses, income, debts, bills, subscriptions, goals, projects, habits, contacts, notes, followed events, and settings/Telegram connection state.
 - Admins can terminate an active support session from Manage account. The scheduled worker audits expiry; access checks also revoke and audit an expired session immediately.
 
 ## User deletion and bulk actions

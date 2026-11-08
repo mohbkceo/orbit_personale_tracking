@@ -14,7 +14,7 @@ import { DEFAULTS } from '../services/entitlementCatalog.js';
 
 export const adminFeatureRoutes = Router();
 adminFeatureRoutes.use(adminAuth);
-adminFeatureRoutes.get('/', asyncHandler(async (_req, res) => success(res, await Feature.find().sort({ order: 1, name: 1 }))));
+adminFeatureRoutes.get('/', asyncHandler(async (_req, res) => success(res, await Feature.find({ key: { $ne: 'wishlist' } }).sort({ order: 1, name: 1 }))));
 adminFeatureRoutes.post('/', validate(featureInput), asyncHandler(async (req, res) => {
   const feature = await Feature.create(req.body);
   await bumpEntitlementVersion();

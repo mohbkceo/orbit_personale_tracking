@@ -1,3 +1,5 @@
+import { Wishlist } from '../models/Personal.js';
+import { Goal } from '../models/Planning.js';
 import { Feature } from '../models/Feature.js';
 import { Plan } from '../models/Plan.js';
 import { User } from '../models/User.js';
@@ -25,7 +27,8 @@ async function catalog() {
   ]);
   const byKey = { ...DEFAULTS };
   for (const feature of features) byKey[feature.key] = feature;
-  const value = { byKey, plans, version: config?.version || 1 };
+  delete byKey.wishlist; // Historical plan entries still resolve through the goals alias.
+  const value = { byKey, plans, featureIds: Object.fromEntries(features.map((feature) => [String(feature._id), feature.key])), version: config?.version || 1 };
   if (process.env.NODE_ENV !== 'test') catalogCache = { value, until: Date.now() + 15_000 };
   return value;
 }
@@ -36,6 +39,10 @@ function entriesFor(plan, featureIds) {
 
 function included(entries, key) {
   const direct = entries[key];
+  if (key === 'goals') {
+    const entriesToMerge = [direct, ...(LEGACY_FEATURE_KEYS[key] || []).map((alias) => entries[alias])].filter(Boolean);
+    return entriesToMerge.find((entry) => entry.enabled) || entriesToMerge[0];
+  }
   if (direct) return direct;
   return (LEGACY_FEATURE_KEYS[key] || []).map((alias) => entries[alias]).find(Boolean);
 }
@@ -45,7 +52,7 @@ export async function resolveUserEntitlements(userOrId, { now = new Date(), read
   if (!user) throw new AppError('Account not found', 401, undefined, 'UNAUTHENTICATED');
   const [access, data, individualOverrides] = await Promise.all([checkAccess(user, { now, readOnly }), catalog(), UserFeatureOverride.find({ user: user._id }).lean()]);
   const overrideByKey = Object.fromEntries(individualOverrides.map((item) => [item.key, item]));
-  const featureIds = Object.fromEntries(Object.values(data.byKey).filter((item) => item._id).map((item) => [String(item._id), item.key]));
+  const featureIds = data.featureIds;
   const freePlan = data.plans.find((plan) => plan.kind === 'FREE' || plan.slug === 'free');
   const paidPlan = access.subscription && data.plans.find((plan) => String(plan._id) === String(access.subscription.plan));
   const effectivePlan = access.subscription ? paidPlan || { _id: access.subscription.plan, name: access.subscription.planSnapshot?.name || 'Paid plan', slug: 'paid', kind: 'PAID' } : freePlan || { name: 'Free', slug: 'free', kind: 'FREE' };
@@ -71,6 +78,7 @@ export async function resolveUserEntitlements(userOrId, { now = new Date(), read
     if (access.subscription) entry = included(paidEntries, key) || included(planEntries, key) || (legacyUnscopedPaid && feature.type !== 'LIMIT' && key !== 'advanced-analytics' ? { enabled: true } : null) || entry;
     if (overrideByKey[key]) entry = overrideByKey[key];
     let allowed = access.eligible && (overrideByKey[key] ? overrideByKey[key].enabled : feature.accessMode === 'FREE' || (feature.accessMode !== 'DISABLED' && feature.status !== 'INACTIVE' && (entry?.enabled ?? false)));
+    if (key === 'goals' && !allowed && access.eligible && !overrideByKey[key] && (await Wishlist.exists({ user: user._id }) || await Goal.exists({ user: user._id, 'legacyWishlist.0': { $exists: true } }))) allowed = true;
     if (feature.accessMode === 'DISABLED' || feature.status === 'INACTIVE') allowed = false;
     const reason = !access.eligible ? 'ACCOUNT_SUSPENDED' : feature.accessMode === 'DISABLED' || feature.status === 'INACTIVE' ? 'FEATURE_DISABLED' : allowed ? null : 'PLAN_REQUIRED';
     decisions[key] = { allowed, featureKey: key, reason, currentPlan: effectivePlan.slug,

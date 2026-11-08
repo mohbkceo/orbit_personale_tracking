@@ -17,7 +17,7 @@ dashboardRoutes.get('/summary', asyncHandler(async (req, res) => {
   else data.recentTransactions = data.recentTransactions.filter((row) => row.type !== 'income' && row.type !== 'expense' || allowed(row.type === 'income' ? 'income' : 'expenses'));
   data.upcoming = data.upcoming.filter((row) => allowed(row.kind === 'bill' ? 'bills' : 'subscriptions'));
   if (!allowed('goals')) data.goals = [];
-  const entity = { Task: 'tasks', Account: 'accounts', Transaction: 'transactions', Debt: 'debts', Bill: 'bills', Subscription: 'subscriptions', Goal: 'goals', Project: 'projects', Habit: 'habits', Note: 'notes', Contact: 'contacts', Wishlist: 'wishlist' };
+  const entity = { Task: 'tasks', Account: 'accounts', Transaction: 'transactions', Debt: 'debts', Bill: 'bills', Subscription: 'subscriptions', Goal: 'goals', Project: 'projects', Habit: 'habits', Note: 'notes', Contact: 'contacts', Wishlist: 'goals' };
   data.activity = data.activity.filter((row) => !entity[row.entityType] || allowed(entity[row.entityType]));
   return success(res, data);
 }));

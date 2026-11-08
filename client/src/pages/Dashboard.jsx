@@ -1,3 +1,4 @@
+import { calculateGoalProgress } from '../../../shared/goalProgress.js';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -58,11 +59,12 @@ function ChartTooltip({ active, payload, label, currency }) {
 }
 
 function GoalRow({ goal }) {
-  const progress = goal.targetAmount ? Math.min(goal.currentAmount / goal.targetAmount * 100, 100) : 0;
+  const { t } = useTranslation();
+  const progress = (goal.progress || calculateGoalProgress(goal)).percentage;
   return <div className="flex items-center gap-3 py-2.5">
     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-success/10 text-success"><Goal size={17} /></span>
-    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{goal.title}</p><AnimatedProgress value={progress} className="mt-2 h-1.5" /></div>
-    <span className="w-10 text-end text-xs font-semibold text-muted"><AnimatedNumber value={progress} />%</span>
+    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{goal.title}</p><span>{progress !== null && <AnimatedProgress value={progress} className="mt-2 h-1.5" />}</span></div>
+    <span className="text-end text-xs font-semibold text-muted">{progress !== null ? <><AnimatedNumber value={progress} />%</> : t(`common:values.${goal.status}`)}</span>
   </div>;
 }
 

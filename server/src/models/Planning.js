@@ -34,6 +34,16 @@ const goalSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true, trim: true }, description: String,
     type: { type: String, enum: ['financial', 'personal'], default: 'financial' }, targetAmount: { type: Number, min: 0 },
+    // Absent on legacy records: financial -> money, personal -> simple.
+    progressType: { type: String, enum: ['money', 'steps', 'simple'] },
+    steps: [{ title: { type: String, required: true, trim: true }, completed: { type: Boolean, default: false } }],
+    priority: { type: String, enum: ['low', 'medium', 'high'] }, url: String, category: String,
+    currency: String,
+    // Opening savings are metadata, never an account movement. Initialized before ledger edits.
+    savingsOpeningAmount: Number,
+    mutationLease: { type: new mongoose.Schema({ token: String, expiresAt: Date }, { _id: false }), select: false },
+    deletedAt: { type: Date, default: null },
+    legacyWishlist: { type: [{ wishlistId: mongoose.Schema.Types.ObjectId, original: mongoose.Schema.Types.Mixed, migratedAt: Date }], default: undefined },
     currentAmount: { type: Number, min: 0, default: 0 }, accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' },
     targetDate: Date, status: { type: String, enum: ['active', 'completed', 'paused', 'cancelled'], default: 'active' }, notes: String,
     reminderMode: { type: String, enum: ['automatic', 'custom', 'off'], default: 'automatic' },
@@ -43,6 +53,7 @@ const goalSchema = new mongoose.Schema(
 billSchema.index({ name: 'text', category: 'text' });
 subscriptionSchema.index({ name: 'text', category: 'text' });
 goalSchema.index({ title: 'text', description: 'text' });
+goalSchema.index({ user: 1, 'legacyWishlist.wishlistId': 1 });
 
 export const Bill = mongoose.model('Bill', billSchema);
 export const Subscription = mongoose.model('Subscription', subscriptionSchema);

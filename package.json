@@ -21,7 +21,8 @@
     "test": "npm run test -w server && npm run test -w client",
     "lint": "eslint .",
     "i18n:check": "node scripts/check-i18n.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "migrate:wishlist": "npm run migrate:wishlist -w server --"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.9",

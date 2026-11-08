@@ -12,7 +12,7 @@ This audit follows the existing `react-i18next` catalogs, persisted language pre
 | `/panel`, `/panel/tasks`, `/panel/reminders`, `/panel/events` | Cards, charts, filters, action menus, nested forms and dialogs, reminder schedules, event notification confirmation, dynamic counts and statuses. |
 | `/panel/money/accounts`, `/panel/money/transactions`, `/panel/money/expenses`, `/panel/money/income`, `/panel/money/debts` | Ledger and account forms, transaction modes, debt payments, archive confirmations, monetary values and status labels. |
 | `/panel/planning/bills`, `/panel/planning/subscriptions`, `/panel/planning/goals` | Billing and goal forms, contribution and withdrawal workflows, due and renewal text, reminders and states. |
-| `/panel/personal/{projects,habits,wishlist,contacts,notes}`, `/panel/settings` | Resource and field labels, empty states, nested settings sections, appearance choices, timezone text and Telegram settings. |
+| `/panel/personal/{projects,habits,contacts,notes}`, `/panel/settings` | Resource and field labels, empty states, nested settings sections, appearance choices, timezone text and Telegram settings. |
 | Shared navigation and overlays | Sidebar, mobile navigation, Quick Add, search palette, Daily Focus, feature gate, rewards, icon picker, confirmation and locked states. |
 | Telegram bot and background jobs | Commands, guided entry, callbacks, task and debt actions, reminder buttons and follow-ups, focus workflows, daily summary and task digest. Persisted recipient settings are read before scheduled delivery. |
 | `/admin/*` | Preserved existing English/LTR behavior. Excluded from public string scanner. |

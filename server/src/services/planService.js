@@ -78,10 +78,10 @@ export async function publicPlans() {
     id: String(plan._id), name: plan.name, slug: plan.slug, kind: plan.kind || 'PAID',
     durationValue: plan.durationValue, durationUnit: plan.durationUnit,
     price: plan.price, appearance: plan.appearance, public: plan.public,
-    features: [...entries.values()]
+    features: [...entries.values()].filter((entry) => entry.feature.key !== 'wishlist' || !entries.has('goals') && !entries.has('goals_savings'))
       .sort((a, b) => a.feature.order - b.feature.order || a.feature.name.localeCompare(b.feature.name))
       .map((entry) => ({
-        key: entry.feature.key, name: entry.feature.name, description: entry.feature.description,
+        key: entry.feature.key === 'wishlist' ? 'goals_savings' : entry.feature.key, name: entry.feature.key === 'wishlist' ? 'Goals' : entry.feature.name, description: entry.feature.description,
         category: entry.feature.category, icon: entry.feature.icon, type: entry.feature.type,
         ...(entry.feature.type === 'LIMIT' ? { limit: entry.limit } : {}),
         ...(entry.feature.type === 'TEXT' ? { value: entry.value } : {}),

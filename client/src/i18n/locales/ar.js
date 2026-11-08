@@ -719,3 +719,55 @@ Object.assign(messages.finance.ui, { opening: 'الرصيد الافتتاحي',
 Object.assign(messages.events.ui, { allCommaSeparatedSlugs: 'جميع المعرّفات، مفصولة بفواصل', eventDelivery: 'قنوات إشعارات الفعاليات', eventChangeAlerts: 'تنبيهات تغيّر الفعاليات', eventQuietHours: 'ساعات الهدوء للفعاليات', moveEarlier: 'قدّم موعد الإشعار', deliverAtExactTime: 'أرسل في الوقت المحدد', dzEvent: 'DZ Event', format: 'صيغة الفعالية', following: 'المتابَعة' });
 Object.assign(messages.reminders.ui, { minBefore: 'دقيقة قبل الموعد', whyThisReminder: 'لماذا وصلك هذا التذكير؟', yourAttentionScheduleReadyWhenItMatters: 'نظّم تذكيراتك لتصلك في الوقت المناسب.', noRemindersYet: 'لا توجد تذكيرات بعد.' });
 Object.assign(messages.tasks.ui, { giveTheWorkAClearNextAction: 'حدّد خطوة تالية واضحة للمهمة.', whatNeedsDoing: 'ما المطلوب إنجازه؟', exactTime: 'الوقت المحدد', low: 'منخفضة', high: 'مرتفعة', urgent: 'عاجلة', enabled: 'مفعّلة', muted: 'مكتومة', aCalmListOfWhatMattersNowSortedByUrgencyNotNoise: 'قائمة واضحة بما يهم الآن، مرتبة حسب الأولوية.' });
+
+messages.goals.unified = {
+  "addGoal": "إضافة هدف",
+  "editGoal": "تعديل الهدف",
+  "deleteGoal": "حذف الهدف",
+  "progressMethod": "تتبع التقدم",
+  "methods": {
+    "money": "ادخار المال",
+    "steps": "إكمال خطوات",
+    "simple": "تتبع الحالة"
+  },
+  "deadline": "الموعد النهائي (اختياري)",
+  "moreOptions": "خيارات إضافية",
+  "notes": "ملاحظات",
+  "url": "الرابط",
+  "priority": "الأولوية",
+  "noTarget": "لم يُحدد مبلغ مستهدف",
+  "remainingAmount": "المتبقي {{amount}}",
+  "stepCount": "{{completed}} / {{total}} خطوة",
+  "remainingSteps": "الخطوات المتبقية: {{remaining}}",
+  "noSteps": "أضف الخطوة الأولى",
+  "progress": "التقدم",
+  "notEnoughData": "لا توجد بيانات كافية",
+  "estimatedDate": "الإكمال المتوقع: {{date}}",
+  "monthlySavings": "ادخر {{amount}} شهريًا",
+  "paceExplanation": "تستند الوتيرة إلى الادخار المسجل والموعد النهائي.",
+  "dueDate": "الموعد {{date}}",
+  "pace": {
+    "on_track": "على المسار الصحيح",
+    "at_risk": "معرض للتأخر",
+    "behind": "متأخر عن الجدول"
+  },
+  "completeStep": "إكمال {{title}}",
+  "stepTitle": "عنوان الخطوة",
+  "removeStep": "إزالة {{title}}",
+  "newStep": "خطوة جديدة",
+  "addStep": "إضافة خطوة",
+  "status": "الحالة",
+  "confirmDelete": "هل تريد حذف هذا الهدف؟ ستُحفظ معاملات الادخار وسجلها.",
+  "confirmRemoveStep": "هل تريد إزالة هذه الخطوة؟",
+  "filterGoals": "تصفية الأهداف",
+  "filters": {
+    "all": "الكل",
+    "active": "نشطة",
+    "completed": "مكتملة"
+  },
+  "unavailable": "الأهداف غير متاحة",
+  "noGoals": "لا توجد أهداف بعد"
+};
+messages.common.values.goal = "هدف";
+messages.pricing.features.wishlist = messages.navigation.goals;
+Object.assign(messages.goals.unified, { earlierDetails: 'التفاصيل السابقة', migrationReview: 'تحتاج بعض السجلات السابقة إلى مراجعة. تم الاحتفاظ ببياناتك الأصلية.' });

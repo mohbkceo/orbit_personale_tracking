@@ -7,13 +7,12 @@ import {
   FolderKanban,
   HeartPulse,
   Plus,
-  ShoppingBag,
   Trash2,
 } from 'lucide-react';
 import { endpoints } from '../api/client.js';
 import { useApp } from '../context/useApp.js';
 import { useData } from '../hooks/useData.js';
-import { displayValue, formatDate, formatMoney, formatNumber } from '../utils/format.js';
+import { displayValue, formatDate, formatNumber } from '../utils/format.js';
 import { EmptyState, Modal, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 import { AnimatedList } from '../animations/AnimatedList.jsx';
 
@@ -42,14 +41,9 @@ const configs = {
       ['name', 'text'], ['frequency', 'select:daily,weekdays,weekly'], ['target', 'number'],
     ],
   },
-  wishlist: {
-    icon: ShoppingBag,
-    fields: [
-      ['name', 'text'], ['expectedPrice', 'number'], ['priority', 'select:low,medium,high'], ['status', 'select:wanted,saving,purchased,cancelled'], ['url', 'url'], ['notes', 'textarea'],
-    ],
-  },
+
 };
-const fieldLabel = (kind, key) => kind === 'projects' && key === 'name' ? 'projectName' : kind === 'habits' && key === 'name' ? 'habitName' : kind === 'wishlist' && key === 'name' ? 'item' : key === 'url' ? 'link' : key;
+const fieldLabel = (kind, key) => kind === 'projects' && key === 'name' ? 'projectName' : kind === 'habits' && key === 'name' ? 'habitName' : key === 'url' ? 'link' : key;
 
 function ResourceForm({ kind, open, onClose, onSaved }) {
   const { t: _t } = useTranslation();
@@ -125,7 +119,7 @@ function ResourceForm({ kind, open, onClose, onSaved }) {
   );
 }
 
-function Card({ kind, item, onRemove, onLog, currency }) {
+function Card({ kind, item, onRemove, onLog }) {
   const { t: _t } = useTranslation();
   if (kind === 'contacts')
     return (
@@ -186,34 +180,7 @@ function Card({ kind, item, onRemove, onLog, currency }) {
       </article>
     );
   }
-  if (kind === 'wishlist')
-    return (
-      <article className="panel p-5">
-        <div className="flex justify-between">
-          <StatusBadge
-            tone={
-              item.status === 'purchased'
-                ? 'success'
-                : item.priority === 'high'
-                  ? 'warning'
-                  : 'neutral'
-            }
-          >
-            {item.status}
-          </StatusBadge>
-          <button className="icon-btn" onClick={onRemove}>
-            <Trash2 size={15} />
-          </button>
-        </div>
-        <h3 className="mt-4 font-display text-lg font-bold">{item.name}</h3>
-        <p className="mt-1 text-xl font-bold text-primary ">
-          {formatMoney(item.expectedPrice, currency)}
-        </p>
-        <p className="mt-3 text-xs capitalize text-muted">
-          {displayValue(item.priority)} {_t('common:ui.priority')}
-        </p>
-      </article>
-    );
+
   return (
     <article className="panel p-5">
       <div className="flex items-start justify-between">
@@ -237,7 +204,7 @@ function Card({ kind, item, onRemove, onLog, currency }) {
 
 export default function Personal({ kind }) {
   const { t: _t } = useTranslation();
-  const { toast, settings } = useApp();
+  const { toast } = useApp();
   const [open, setOpen] = useState(false);
   const config = configs[kind];
   const { data, loading, error, reload } = useData(() => endpoints.list(kind), [kind]);
@@ -303,7 +270,6 @@ export default function Personal({ kind }) {
                 key={item._id}
                 kind={kind}
                 item={item}
-                currency={settings.defaultCurrency}
                 onRemove={() => remove(item._id)}
                 onLog={() => log(item._id)}
               />

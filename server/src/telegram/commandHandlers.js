@@ -1,8 +1,9 @@
+import { listGoals } from '../services/goalService.js';
 import mongoose from 'mongoose';
 import { Debt } from '../models/Debt.js';
 import { Task } from '../models/Task.js';
 import { Transaction } from '../models/Transaction.js';
-import { Bill, Goal, Subscription } from '../models/Planning.js';
+import { Bill, Subscription } from '../models/Planning.js';
 import { createTransaction, accountBalances, archiveTransaction } from '../services/financeService.js';
 import { archiveUnpaidDebt, createDebt, recordDebtPayment } from '../services/debtService.js';
 import { createTask, archiveTask } from '../services/taskService.js';
@@ -136,7 +137,10 @@ export async function executeIntent(userId, parsed, settings, session) {
 
 export async function executeCommand(userId, command, settings) {
   if (command === '/accounts') { const accounts = await accountBalances(userId, { archived: false }); return { text: `<b>${tr(settings, 'accounts')}</b>\n\n${accounts.map((a) => `${h(a.name)}: ${localizedMoney(settings, a.currentBalance, a.currency, settings.language)}`).join('\n') || tr(settings, 'noAccounts')}` }; }
-  if (command === '/goals') { const items = await Goal.find({ user: userId, status: 'active' }).sort({ targetDate: 1 }).limit(8); return { text: `<b>${tr(settings, 'goals')}</b>\n\n${items.map((r) => `${h(r.title)}: ${r.targetAmount ? Math.round((r.currentAmount / r.targetAmount) * 100) : 0}%`).join('\n') || tr(settings, 'noGoals')}` }; }
+  if (command === '/goals') {
+    const items = (await listGoals(userId)).filter((goal) => goal.status === 'active').slice(0, 8);
+    return { text: `<b>${tr(settings, 'goals')}</b>\n\n${items.map((goal) => `${h(goal.title)}: ${goal.progress.percentage === null ? tr(settings, 'activeGoal') : `${Math.round(goal.progress.percentage)}%`}`).join('\n') || tr(settings, 'noGoals')}` };
+  }
   if (command === '/bills') { const items = await Bill.find({ user: userId, status: { $ne: 'paid' } }).sort({ dueDate: 1 }).limit(8); return { text: `<b>${tr(settings, 'bills')}</b>\n\n${items.map((r) => `${h(r.name)}: ${localizedMoney(settings, r.amount, settings.defaultCurrency, settings.language)} · ${localizedDate(settings, r.dueDate, settings.timezone, 'D MMM', settings.language)}`).join('\n') || tr(settings, 'noBills')}` }; }
   if (command === '/subscriptions') { const items = await Subscription.find({ user: userId, status: 'active' }).sort({ nextBillingDate: 1 }).limit(8); return { text: `<b>${tr(settings, 'subscriptions')}</b>\n\n${items.map((r) => `${h(r.name)}: ${localizedMoney(settings, r.amount, r.currency, settings.language)} · ${localizedDate(settings, r.nextBillingDate, settings.timezone, 'D MMM', settings.language)}`).join('\n') || tr(settings, 'noSubscriptions')}` }; }
   if (command === '/month') return executeIntent(userId, { intent: 'SHOW_MONEY' }, settings);

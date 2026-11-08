@@ -103,8 +103,9 @@ export function QuickAdd() {
       title={_t('common:quickAdd')}
       description={_t('common:ui.captureItWhileItIsFresh')}
     >
+      {allowed('quick-access') && allowed('goals') && <Link className="btn-secondary mb-4 w-full" to="/panel/planning/goals?add=1" onClick={() => setQuickAddOpen(false)}>{_t('goals:unified.addGoal')}</Link>}
       {!allowed('quick-access') || !available.length ? (
-        <p className="text-sm text-muted">
+        allowed('quick-access') && allowed('goals') ? null : <p className="text-sm text-muted">
           {_t('common:ui.quickAddIsUnavailableInYourCurrentPlan')}{' '}
           <Link className="text-primary underline" to="/pricing?feature=quick-access">
             {_t('errors:explorePlans')}

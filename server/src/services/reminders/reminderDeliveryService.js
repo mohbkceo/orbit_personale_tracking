@@ -1,3 +1,4 @@
+import { calculateGoalProgress } from '../../../../shared/goalProgress.js';
 import { sendTelegramNotification } from '../../telegram/notifier.js';
 import { getSettingsDocument } from '../settingsService.js';
 import { env } from '../../config/env.js';
@@ -21,7 +22,7 @@ async function templateValues(reminder, title, message) {
     taskTitle: entity?.title || reminder.title, priority: reminder.priority, dueDate: date(entity?.dueDate),
     personName: entity?.personName, remainingAmount: entity?.remainingAmount, currency: entity?.currency,
     billName: entity?.name, amount: entity?.amount, subscriptionName: entity?.name, renewalDate: date(entity?.nextBillingDate),
-    goalTitle: entity?.title, progressPercent: entity?.targetAmount ? Math.round(100 * (entity.currentAmount || 0) / entity.targetAmount) : 0, targetDate: date(entity?.targetDate),
+    goalTitle: entity?.title, progressPercent: entity ? calculateGoalProgress(entity).percentage ?? '—' : '—', targetDate: date(entity?.targetDate),
     eventName: reminder.metadata?.eventIds?.length > 1 ? reminder.title : event?.title || reminder.title, eventDate: date(event?.startsAt || reminder.metadata?.eventStartsAt), venue: event?.venue?.name || reminder.metadata?.venueName || '—',
     completedCount, totalCount: focusTasks.length,
   };

@@ -15,7 +15,6 @@ export const SECTION_DEFINITIONS = [
   ['goals', 'Goals', 'Planning', 'mdi:target', true],
   ['projects', 'Projects', 'Personal', 'mdi:folder-outline', false],
   ['habits', 'Habits', 'Personal', 'mdi:repeat', false],
-  ['wishlist', 'Wishlist', 'Personal', 'mdi:heart-outline', false],
   ['contacts', 'Contacts', 'Personal', 'mdi:account-multiple-outline', false],
   ['notes', 'Notes', 'Personal', 'mdi:note-text-outline', true],
 ];
@@ -41,7 +40,7 @@ export const LEGACY_FEATURE_KEYS = {
   accounts: ['accounts_transactions'], transactions: ['accounts_transactions'],
   expenses: ['income_expenses'], income: ['income_expenses'], debts: ['debts'],
   bills: ['bills_subscriptions'], subscriptions: ['bills_subscriptions'],
-  goals: ['goals_savings'], projects: ['projects'], habits: ['habits'], wishlist: ['wishlist'],
+  goals: ['goals_savings', 'wishlist'], projects: ['projects'], habits: ['habits'],
   contacts: ['contacts'], notes: ['notes'], reminders: ['reminders'], tasks: ['tasks'],
   'telegram-assistant': ['telegram_assistant'], 'quick-access': ['quick_access'],
 };

@@ -66,7 +66,7 @@ async function finishTask(identity, userId, payload, settings, day) {
 
 async function finishGoal(identity, userId, payload, settings, day) {
   if (!await claimPending(identity.userId, identity.chatId, ['ADD_GOAL_DATE', 'ADD_GOAL_OTHER_DATE'], payload.flowId)) return stale(settings);
-  const goal = await createGoal(userId, { title: payload.title, type: 'personal', targetDate: day ? dateOnly(day) : null });
+  const goal = await createGoal(userId, { title: payload.title, progressType: 'simple', targetDate: day ? dateOnly(day) : null });
   await clearPending(identity.userId, identity.chatId);
   return { text: `${tr(settings, 'goalAdded')}\n\n🎯 ${escapeHtml(goal.title)}\n${tr(settings, 'target')}: ${day ? localDate(dateOnly(day), 'UTC', 'ddd D MMM', settings.language) : tr(settings, 'noTargetDate')}` };
 }

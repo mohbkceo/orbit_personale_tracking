@@ -70,6 +70,7 @@ export function isEntityResolved(type, entity) {
   return (
     !entity ||
     entity.archived ||
+    entity.deletedAt ||
     (type === 'task' && ['completed', 'cancelled'].includes(entity.status)) ||
     (type === 'debt' && (entity.status === 'paid' || entity.remainingAmount <= 0)) ||
     (type === 'bill' && entity.status === 'paid') ||

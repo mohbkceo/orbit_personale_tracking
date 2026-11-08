@@ -19,18 +19,21 @@ transactionRoutes.get('/', asyncHandler(async (req, res) => {
   return success(res, result.data, 200, { pagination: result.pagination });
 }));
 transactionRoutes.post('/', validate(transactionInput), asyncHandler(async (req, res) => {
+  if (req.body.sourceEntityType === 'Goal') await assertFeature(req.user, 'goals');
   if (req.body.type === 'expense' || req.body.type === 'income') await assertFeature(req.user, req.body.type === 'expense' ? 'expenses' : 'income');
   return success(res, await createTransaction(req.user._id, req.body), 201);
 }));
 transactionRoutes.patch('/:id', validate(transactionUpdate), asyncHandler(async (req, res) => {
-  const current = await Transaction.findOne({ _id: req.params.id, user: req.user._id, deletedAt: null }).select('type').lean();
+  const current = await Transaction.findOne({ _id: req.params.id, user: req.user._id, deletedAt: null }).select('type sourceEntityType').lean();
   if (!current) throw new AppError('Transaction not found', 404);
+  if (current.sourceEntityType === 'Goal' || req.body.sourceEntityType === 'Goal') await assertFeature(req.user, 'goals');
   for (const type of new Set([current.type, req.body.type].filter(Boolean))) if (type === 'expense' || type === 'income') await assertFeature(req.user, type === 'expense' ? 'expenses' : 'income');
   return success(res, await updateTransaction(req.user._id, req.params.id, req.body));
 }));
 transactionRoutes.delete('/:id', asyncHandler(async (req, res) => {
-  const current = await Transaction.findOne({ _id: req.params.id, user: req.user._id, deletedAt: null }).select('type').lean();
+  const current = await Transaction.findOne({ _id: req.params.id, user: req.user._id, deletedAt: null }).select('type sourceEntityType').lean();
   if (!current) throw new AppError('Transaction not found', 404);
+  if (current.sourceEntityType === 'Goal') await assertFeature(req.user, 'goals');
   if (current.type === 'expense' || current.type === 'income') await assertFeature(req.user, current.type === 'expense' ? 'expenses' : 'income');
   return success(res, await archiveTransaction(req.user._id, req.params.id));
 }));

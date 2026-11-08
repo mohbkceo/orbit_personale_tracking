@@ -724,3 +724,55 @@ Object.assign(messages.pricing.units, {
   year_zero: 'years', year_two: 'years', year_few: 'years', year_many: 'years',
 });
 Object.assign(messages.common.values, { transaction: 'Transaction', debt: 'Debt', contact: 'Contact', note: 'Note', project: 'Project', reminder: 'Reminder', habit: 'Habit', wishlist: 'Wishlist' });
+
+messages.goals.unified = {
+  "addGoal": "Add Goal",
+  "editGoal": "Edit goal",
+  "deleteGoal": "Delete goal",
+  "progressMethod": "Track progress",
+  "methods": {
+    "money": "Save money",
+    "steps": "Complete steps",
+    "simple": "Just track"
+  },
+  "deadline": "Deadline (optional)",
+  "moreOptions": "More options",
+  "notes": "Notes",
+  "url": "Link",
+  "priority": "Priority",
+  "noTarget": "No target set",
+  "remainingAmount": "{{amount}} remaining",
+  "stepCount": "{{completed}} / {{total}} steps",
+  "remainingSteps": "Steps remaining: {{remaining}}",
+  "noSteps": "Add your first step",
+  "progress": "Progress",
+  "notEnoughData": "Not enough data",
+  "estimatedDate": "Estimated completion: {{date}}",
+  "monthlySavings": "Save {{amount}} per month",
+  "paceExplanation": "Pace is based on recorded savings and your deadline.",
+  "dueDate": "Due {{date}}",
+  "pace": {
+    "on_track": "On track",
+    "at_risk": "At risk",
+    "behind": "Behind schedule"
+  },
+  "completeStep": "Complete {{title}}",
+  "stepTitle": "Step title",
+  "removeStep": "Remove {{title}}",
+  "newStep": "New step",
+  "addStep": "Add step",
+  "status": "Status",
+  "confirmDelete": "Delete this goal? Savings transactions and history will be retained.",
+  "confirmRemoveStep": "Remove this step?",
+  "filterGoals": "Filter goals",
+  "filters": {
+    "all": "All",
+    "active": "Active",
+    "completed": "Completed"
+  },
+  "unavailable": "Goals unavailable",
+  "noGoals": "No goals yet"
+};
+messages.common.values.goal = "Goal";
+messages.pricing.features.wishlist = messages.navigation.goals;
+Object.assign(messages.goals.unified, { earlierDetails: 'Earlier details', migrationReview: 'Some earlier records need review. Your original data has been retained.' });

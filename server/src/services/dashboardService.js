@@ -3,10 +3,11 @@ import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import mongoose from 'mongoose';
 import { Activity } from '../models/Activity.js';
-import { Bill, Goal, Subscription } from '../models/Planning.js';
+import { Bill, Subscription } from '../models/Planning.js';
 import { Debt } from '../models/Debt.js';
 import { Task } from '../models/Task.js';
 import { Transaction } from '../models/Transaction.js';
+import { listGoals } from './goalService.js';
 import { accountBalances } from './financeService.js';
 
 dayjs.extend(utc);
@@ -49,7 +50,7 @@ export async function dashboardSummary(userId, options = {}) {
     Transaction.find(active).populate([{ path: 'accountId', match: { user } }, { path: 'destinationAccountId', match: { user } }]).sort({ date: -1 }).limit(7),
     Bill.find({ user, status: { $ne: 'paid' }, dueDate: { $lte: dayjs().add(30, 'day').toDate() } }).sort({ dueDate: 1 }).limit(5),
     Subscription.find({ user, status: 'active', nextBillingDate: { $lte: dayjs().add(30, 'day').toDate() } }).sort({ nextBillingDate: 1 }).limit(5),
-    Goal.find({ user, status: 'active' }).sort({ targetDate: 1 }).limit(4),
+    listGoals(userId).then((items) => items.filter((goal) => goal.status === 'active').slice(0, 4)),
     Activity.find({ user }).sort({ createdAt: -1 }).limit(6),
   ]);
   const totalBalance = accounts.reduce((sum, item) => sum + item.currentBalance, 0);

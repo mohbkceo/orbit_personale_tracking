@@ -15,7 +15,8 @@
     "backfill:reminders": "node src/scripts/backfillReminders.js",
     "backfill:appearance": "node src/scripts/backfillAppearance.js",
     "test": "vitest run",
-    "migrate:identities": "node src/scripts/migrateUserIdentities.js"
+    "migrate:identities": "node src/scripts/migrateUserIdentities.js",
+    "migrate:wishlist": "node src/scripts/migrateWishlist.js"
   },
   "dependencies": {
     "@fontsource/noto-sans": "^5.3.0",

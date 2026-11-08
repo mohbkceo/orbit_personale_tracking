@@ -29,7 +29,7 @@ const secondaryLinks = [
   ['Accounts', '/panel/money/accounts', WalletCards], ['Transactions', '/panel/money/transactions', LayoutList],
   ['Income', '/panel/money/income', CircleDollarSign], ['Bills', '/panel/planning/bills', CreditCard],
   ['Subscriptions', '/panel/planning/subscriptions', Bell], ['Projects', '/panel/personal/projects', FolderKanban],
-  ['Habits', '/panel/personal/habits', Sparkles], ['Wishlist', '/panel/personal/wishlist', BookOpenText],
+  ['Habits', '/panel/personal/habits', Sparkles],
   ['Contacts', '/panel/personal/contacts', ContactRound], ['Notes', '/panel/personal/notes', BookOpenText],
 ];
 const sectionForPath = (path) => path === '/panel' ? 'dashboard' : path.split('/').at(-1);

@@ -17,7 +17,7 @@ import { Account } from '../models/Account.js';
 import { Transaction } from '../models/Transaction.js';
 import { Debt } from '../models/Debt.js';
 import { Bill, Subscription, Goal } from '../models/Planning.js';
-import { Contact, Project, Note, Habit, Wishlist } from '../models/Personal.js';
+import { Contact, Project, Note, Habit } from '../models/Personal.js';
 import { Setting } from '../models/Setting.js';
 import { TelegramConnection } from '../models/TelegramConnection.js';
 import { EventSubscription } from '../models/EventSubscription.js';
@@ -77,10 +77,9 @@ const resources = {
     'subscriptions',
     'name amount currency nextBillingDate status createdAt',
   ],
-  goals: [Goal, 'goals', 'title targetAmount currentAmount targetDate status createdAt'],
+  goals: [Goal, 'goals', 'title progressType steps targetAmount currentAmount targetDate status createdAt', { deletedAt: null }],
   projects: [Project, 'projects', 'name status startDate targetDate createdAt'],
   habits: [Habit, 'habits', 'name frequency active createdAt'],
-  wishlist: [Wishlist, 'wishlist', 'name expectedPrice priority status createdAt'],
   contacts: [Contact, 'contacts', 'name phone email createdAt'],
   notes: [Note, 'notes', 'title content pinned createdAt'],
   events: [EventSubscription, 'events', 'event status createdAt'],
