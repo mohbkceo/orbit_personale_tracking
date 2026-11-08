@@ -117,7 +117,7 @@ adminBroadcastRoutes.delete('/:id', asyncHandler(async (req, res) => {
 }));
 adminBroadcastRoutes.post('/:id/duplicate', asyncHandler(async (req, res) => {
   const source = await campaignById(req.params.id);
-  const campaign = await BroadcastCampaign.create({ name: `${source.name} copy`, description: source.description, category: source.category, channel: source.channel, variants: source.variants, imageId: source.imageId, buttons: source.buttons, audience: source.audience, createdBy: req.admin._id });
+  const campaign = await BroadcastCampaign.create({ name: `${source.name.slice(0, 115)} copy`, description: source.description, category: source.category, channel: source.channel, variants: source.variants, imageId: source.imageId, buttons: source.buttons, audience: source.audience, createdBy: req.admin._id });
   await record(req, 'BROADCAST_DUPLICATED', campaign._id, { source: source._id });
   return success(res, campaign, 201);
 }));

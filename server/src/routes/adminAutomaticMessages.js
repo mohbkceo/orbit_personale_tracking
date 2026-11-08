@@ -7,7 +7,8 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { success } from '../utils/api.js';
 import { AppError } from '../utils/AppError.js';
 import { audit } from '../services/auditService.js';
-import { automaticDefinition, automaticTemplateHistory, getAutomaticTemplate, listAutomaticTemplates, renderAutomaticMessage, resetAutomaticTemplate, restoreAutomaticTemplate, updateAutomaticTemplate } from '../services/automaticMessages.js';
+import { automaticDefinition, automaticTemplateHistory, getAutomaticTemplate, listAutomaticTemplates, renderAutomaticMessage, renderAutomaticContent, validateAutomaticContent, resetAutomaticTemplate, restoreAutomaticTemplate, updateAutomaticTemplate } from '../services/automaticMessages.js';
+import { prepareAutomaticTiming, applyAutomaticTiming } from '../services/automaticMessageTiming.js';
 import { User } from '../models/User.js';
 import { TelegramConnection } from '../models/TelegramConnection.js';
 import { sendTelegramNotification } from '../telegram/notifier.js';
@@ -22,9 +23,14 @@ const log = (req, action, template) => audit(action, { actorType: 'ADMIN', actor
 
 adminAutomaticMessageRoutes.get('/', asyncHandler(async (_req, res) => success(res, await listAutomaticTemplates())));
 adminAutomaticMessageRoutes.get('/:key', asyncHandler(async (req, res) => success(res, await getAutomaticTemplate(key(req.params.key)))));
-adminAutomaticMessageRoutes.put('/:key', requireSuperAdmin, validate(input), asyncHandler(async (req, res) => {
-  const template = await updateAutomaticTemplate(key(req.params.key), req.body, req.admin._id);
+adminAutomaticMessageRoutes.put('/:key', requireSuperAdmin, validate(input.extend({ timing: z.record(z.string(), z.unknown()).optional() })), asyncHandler(async (req, res) => {
+  const templateKey = key(req.params.key);
+  const timing = await prepareAutomaticTiming(templateKey, req.body.timing);
+  const template = await updateAutomaticTemplate(templateKey, req.body, req.admin._id);
   await log(req, 'AUTOMATIC_TEMPLATE_UPDATED', template);
+  try { await applyAutomaticTiming(timing); }
+  catch { throw new AppError('Message saved, but timing could not be saved. Please try saving again.', 500); }
+  if (timing) await audit('AUTOMATIC_TIMING_UPDATED', { actorType: 'ADMIN', actorId: req.admin._id, targetType: 'AutomaticMessageTemplate', targetId: template._id, metadata: { key: templateKey, timing: req.body.timing } });
   return success(res, template);
 }));
 adminAutomaticMessageRoutes.post('/:key/reset', requireSuperAdmin, asyncHandler(async (req, res) => {
@@ -36,10 +42,12 @@ adminAutomaticMessageRoutes.post('/:key/restore/:revision', requireSuperAdmin, a
   const template = await restoreAutomaticTemplate(key(req.params.key), Number(req.params.revision), req.admin._id);
   await log(req, 'AUTOMATIC_TEMPLATE_RESTORED', template); return success(res, template);
 }));
-adminAutomaticMessageRoutes.post('/:key/preview', validate(z.strictObject({ language: z.enum(['en', 'ar']).default('en') })), asyncHandler(async (req, res) => {
+adminAutomaticMessageRoutes.post('/:key/preview', validate(z.strictObject({ language: z.enum(['en', 'ar']).default('en'), content: input.optional() })), asyncHandler(async (req, res) => {
   const definition = automaticDefinition(key(req.params.key));
-  const samples = Object.fromEntries(definition.variables.map((variable) => [variable, ({ legacyTitle: definition.name, legacyMessage: 'Sample Orbit notification', taskTitle: 'Review project', dueDate: '31 Dec 2026', amount: '2,500', currency: 'DZD', completedCount: '2', totalCount: '3' })[variable] || `Sample ${variable}`]));
-  return success(res, await renderAutomaticMessage(definition.key, req.body.language, samples, { preview: true }));
+  const examples = { legacyTitle: definition.name, legacyMessage: ({ TASKS: 'Today: Review project proposal, send invoice, and prepare for your exam.', FOCUS: 'You completed 2 of your 3 focus tasks today.', DEBT: '2,500 DZD remaining for Ahmed, due on 12 November.', BILL: 'Your internet bill of 2,500 DZD is due on 12 November.', SUBSCRIPTION: 'Your Orbit subscription renews on 12 November.', GOAL: 'Your learning goal is 65% complete. Time for a quick review.', EVENT: 'Algiers Tech Meetup starts on 12 November at 14:00.', SUMMARY: '3 open tasks, 1 overdue. Your balance is 12,500 DZD.', REMINDER: 'Review your project proposal today at 14:00.' })[definition.category], taskTitle: 'Review project proposal', priority: 'High', dueDate: '12 Nov 2026', amount: '2,500', remainingAmount: '2,500', currency: 'DZD', personName: 'Ahmed', billName: 'Internet', subscriptionName: 'Orbit Plus', renewalDate: '12 Nov 2026', goalTitle: 'Learn French', progressPercent: '65', targetDate: '31 Dec 2026', eventName: 'Algiers Tech Meetup', eventDate: '12 Nov 2026', venue: 'Algiers', openTasks: '3', overdueTasks: '1', netAmount: '12,500', completedCount: '2', totalCount: '3', taskCount: '3', taskList: 'Review project proposal\nSend invoice\nPrepare for your exam' };
+  const row = req.body.content || await getAutomaticTemplate(definition.key);
+  if (req.body.content) validateAutomaticContent(definition.key, row.variants, row.buttons);
+  return success(res, renderAutomaticContent(row, req.body.language, examples, { preview: true }));
 }));
 adminAutomaticMessageRoutes.post('/:key/test', validate(z.strictObject({ recipientUserId: z.string().regex(/^[a-f\d]{24}$/i), language: z.enum(['en', 'ar']).default('en') })), asyncHandler(async (req, res) => {
   const definition = automaticDefinition(key(req.params.key));

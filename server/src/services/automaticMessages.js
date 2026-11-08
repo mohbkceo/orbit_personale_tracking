@@ -4,6 +4,7 @@ import { escapeHtml } from '../telegram/formatters.js';
 import { AppError } from '../utils/AppError.js';
 import { safeHttpsUrl } from './broadcastContent.js';
 import { broadcastImageExists } from './broadcastMedia.js';
+import { automaticTimingFields } from './automaticMessageTiming.js';
 import { getAutomationSettings } from './automationSettings.service.js';
 import { getEventSettings } from './events/eventSettingsService.js';
 
@@ -69,17 +70,29 @@ const interpolate = (source, values, limit) => {
   const shortened = resolved.slice(0, limit - 1).replace(/[\uD800-\uDBFF]$/, '');
   return escapeHtml(`${shortened}…`);
 };
-export async function renderAutomaticMessage(key, language, values = {}, { preview = false } = {}) {
-  const row = await getAutomaticTemplate(key);
+export function renderAutomaticContent(row, language, values = {}, { preview = false } = {}) {
   if (!row.enabled && !preview) return null;
   const content = row.variants?.[language === 'ar' ? 'ar' : 'en'] || row.variants.en;
   return { title: interpolate(content.title, values, 180), message: interpolate(content.body, values, 3800), html: true, imageId: row.imageId || null, buttons: (row.buttons || []).map((items) => items.map((button) => ({ text: button.label, url: button.url }))) };
+}
+export async function renderAutomaticMessage(key, language, values = {}, options = {}) {
+  return renderAutomaticContent(await getAutomaticTemplate(key), language, values, options);
 }
 export async function listAutomaticTemplates() {
   await ensureAutomaticTemplates();
   const [rows, automation, events] = await Promise.all([AutomaticMessageTemplate.find().lean(), getAutomationSettings(), getEventSettings()]);
   const byKey = new Map(rows.map((item) => [item.key, item]));
-  return automaticCatalog.map((definition) => ({ ...definition, ...byKey.get(definition.key), timingValue: definition.timing?.startsWith('automation.') ? automation[definition.timing.split('.')[1]] : definition.timing?.startsWith('events.') ? events.value[definition.timing.split('.')[1]] : null, channels: definition.key === 'task-digest' ? ['telegram'] : ['telegram', 'web'] }));
+  return automaticCatalog.map((definition) => {
+    const timingValue = definition.timing?.startsWith('automation.')
+      ? automation[definition.timing.split('.')[1]]
+      : definition.timing?.startsWith('events.') ? events.value[definition.timing.split('.')[1]] : null;
+    return {
+      ...definition, ...byKey.get(definition.key), timingValue,
+      timingFields: automaticTimingFields(definition.key, timingValue),
+      timingTimezone: automation.general.timezoneBehavior === 'utc' ? 'Times are in UTC.' : 'Times use each user’s timezone.',
+      channels: definition.key === 'task-digest' ? ['telegram'] : ['telegram', 'web'],
+    };
+  });
 }
 export async function updateAutomaticTemplate(key, input, actorId, note = 'Edited') {
   validateAutomaticContent(key, input.variants, input.buttons || []);

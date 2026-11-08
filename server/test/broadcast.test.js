@@ -278,3 +278,43 @@ describe('worker and templates', () => {
     expect(notify.sendTelegramNotification).toHaveBeenCalledWith(rootUser._id, expect.objectContaining({ message: 'My custom review' }));
   });
 });
+
+describe('simple automatic message editing', () => {
+  it('duplicates a broadcast with a maximum-length name without dropping its content', async () => {
+    const source = await rootAgent.post('/api/admin/broadcasts').set(header).send({ ...campaignBody(), name: 'x'.repeat(120) }).expect(201);
+    const copy = await rootAgent.post(`/api/admin/broadcasts/${source.body.data._id}/duplicate`).set(header).expect(201);
+    expect(copy.body.data.name).toHaveLength(120);
+    expect(copy.body.data.name.endsWith(' copy')).toBe(true);
+    expect(copy.body.data.status).toBe('DRAFT');
+    expect(copy.body.data.variants).toEqual(source.body.data.variants);
+    expect(copy.body.data.audience).toEqual(source.body.data.audience);
+  });
+  it('saves supported timing together with content and preserves unrelated scheduler policies', async () => {
+    const before = (await rootAgent.get('/api/admin/settings/automation').expect(200)).body.data;
+    const catalog = (await rootAgent.get('/api/admin/automatic-messages').expect(200)).body.data;
+    const item = catalog.find((row) => row.key === 'focus-morning');
+    expect(item.timingFields).toEqual([expect.objectContaining({ field: 'morningTime', value: '08:00', type: 'time' })]);
+    await rootAgent.put('/api/admin/automatic-messages/focus-morning').set(header).send({ enabled: false, variants: item.variants, buttons: [], timing: { morningTime: '08:30' } }).expect(200);
+    const after = (await rootAgent.get('/api/admin/settings/automation').expect(200)).body.data;
+    expect(after).toEqual({ ...before, dailyFocus: { ...before.dailyFocus, morningTime: '08:30' } });
+    expect((await getAutomaticTemplate('focus-morning')).enabled).toBe(false);
+    expect((await rootAgent.get('/api/admin/automatic-messages/focus-morning/history').expect(200)).body.data.rows).toHaveLength(1);
+  });
+  it('rejects invalid or unsupported timing before changing the message', async () => {
+    const variants = { en: { title: 'Morning', body: '{legacyMessage}' }, ar: { title: 'صباح', body: '{legacyMessage}' } };
+    await rootAgent.put('/api/admin/automatic-messages/focus-morning').set(header).send({ enabled: true, variants, timing: { morningTime: '23:00' } }).expect(422);
+    await rootAgent.put('/api/admin/automatic-messages/focus-morning').set(header).send({ enabled: true, variants, timing: { workerEnabled: false } }).expect(422);
+    await staffAgent.put('/api/admin/automatic-messages/focus-morning').set(header).send({ enabled: true, variants, timing: { morningTime: '08:30' } }).expect(403);
+    expect((await getAutomaticTemplate('focus-morning')).revision).toBe(0);
+    expect((await rootAgent.get('/api/admin/settings/automation').expect(200)).body.data.dailyFocus.morningTime).toBe('08:00');
+  });
+  it('previews unsaved content with realistic data without mutating a template', async () => {
+    const content = { enabled: false, variants: { en: { title: 'Payment for {personName}', body: '{remainingAmount} {currency} due {dueDate}' }, ar: { title: 'الدفع', body: '{legacyMessage}' } }, buttons: [] };
+    const preview = await rootAgent.post('/api/admin/automatic-messages/debt-act/preview').set(header).send({ language: 'en', content }).expect(200);
+    expect(preview.body.data.title).toBe('Payment for Ahmed');
+    expect(preview.body.data.message).toBe('2,500 DZD due 12 Nov 2026');
+    expect((await getAutomaticTemplate('debt-act')).revision).toBe(0);
+    content.variants.en.body = '<script>bad</script>';
+    await rootAgent.post('/api/admin/automatic-messages/debt-act/preview').set(header).send({ content }).expect(422);
+  });
+});
